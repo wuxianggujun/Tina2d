@@ -4,25 +4,35 @@
 #include "../Precompiled.h"
 
 #include "../Core/Profiler.h"
+#ifndef URHO3D_2D_ONLY
 #include "../Graphics/AnimatedModel.h"
 #include "../Graphics/Animation.h"
 #include "../Graphics/AnimationController.h"
+#endif
 #include "../Graphics/Camera.h"
+#ifndef URHO3D_2D_ONLY
 #include "../Graphics/CustomGeometry.h"
+#endif
 #include "../Graphics/DebugRenderer.h"
+#ifndef URHO3D_2D_ONLY
 #include "../Graphics/DecalSet.h"
+#endif
 #include "../Graphics/Graphics.h"
 #include "../Graphics/GraphicsEvents.h"
 #include "../Graphics/Material.h"
 #include "../Graphics/Octree.h"
+#ifndef URHO3D_2D_ONLY
 #include "../Graphics/ParticleEffect.h"
 #include "../Graphics/ParticleEmitter.h"
 #include "../Graphics/RibbonTrail.h"
 #include "../Graphics/Skybox.h"
 #include "../Graphics/StaticModelGroup.h"
+#endif
 #include "../Graphics/Technique.h"
+#ifndef URHO3D_2D_ONLY
 #include "../Graphics/Terrain.h"
 #include "../Graphics/TerrainPatch.h"
+#endif
 #include "../Graphics/Zone.h"
 #include "../GraphicsAPI/GraphicsImpl.h"
 #include "../GraphicsAPI/Shader.h"

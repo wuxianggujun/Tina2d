@@ -160,6 +160,8 @@ set (EXCLUDE_3D_PATTERNS
     "Graphics/Skybox\\.[^;]+"
     "Graphics/Particle(Effect|Emitter)\\.[^;]+"
     "UI/Text3D\\.[^;]+"
+    "UI/View3D\\.[^;]+"
+    "UI/UIComponent\\.[^;]+"
 )
 list (APPEND EXCLUDE_PATTERNS ${EXCLUDE_3D_PATTERNS})
 
