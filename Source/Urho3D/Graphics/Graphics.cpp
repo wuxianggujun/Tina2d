@@ -2183,9 +2183,13 @@ unsigned Graphics::GetFormat(const String& formatName)
 
 void RegisterGraphicsLibrary(Context* context)
 {
+    #ifndef URHO3D_2D_ONLY
     Animation::RegisterObject(context);
+    #endif
     Material::RegisterObject(context);
+    #ifndef URHO3D_2D_ONLY
     Model::RegisterObject(context);
+    #endif
     Shader::RegisterObject(context);
     Technique::RegisterObject(context);
     Texture2D::RegisterObject(context);
@@ -2194,7 +2198,10 @@ void RegisterGraphicsLibrary(Context* context)
     TextureCube::RegisterObject(context);
     Camera::RegisterObject(context);
     Drawable::RegisterObject(context);
+    #ifndef URHO3D_2D_ONLY
     Light::RegisterObject(context);
+    #endif
+    #ifndef URHO3D_2D_ONLY
     StaticModel::RegisterObject(context);
     StaticModelGroup::RegisterObject(context);
     Skybox::RegisterObject(context);
@@ -2208,6 +2215,7 @@ void RegisterGraphicsLibrary(Context* context)
     DecalSet::RegisterObject(context);
     Terrain::RegisterObject(context);
     TerrainPatch::RegisterObject(context);
+    #endif
     DebugRenderer::RegisterObject(context);
     Octree::RegisterObject(context);
     Zone::RegisterObject(context);

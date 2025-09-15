@@ -2196,9 +2196,13 @@ void RegisterUILibrary(Context* context)
     CheckBox::RegisterObject(context);
     Cursor::RegisterObject(context);
     Text::RegisterObject(context);
+#ifndef URHO3D_2D_ONLY
     Text3D::RegisterObject(context);
+#endif
     Window::RegisterObject(context);
+#ifndef URHO3D_2D_ONLY
     View3D::RegisterObject(context);
+#endif
     LineEdit::RegisterObject(context);
     Slider::RegisterObject(context);
     ScrollBar::RegisterObject(context);

@@ -137,7 +137,35 @@ endif ()
 if (APPLE AND NOT ARM)
     set (GLOB_OBJC_PATTERN *.m)     # Should only pick up MacFileWatcher.m for macOS platform at the moment
 endif ()
+
+# 强制 2D-only：排除 3D 子系统目录（避免缓存中旧值导致仍然编译）
+set (URHO3D_2D_ONLY 1)
+add_definitions(-DURHO3D_2D_ONLY)
+list (APPEND EXCLUDED_SOURCE_DIRS Navigation Physics)
 string (REPLACE ";" "/[^;]+;" EXCLUDE_PATTERNS "${EXCLUDED_SOURCE_DIRS};")
+
+# 剔除 3D 相关的高层图形类（保留 2D 渲染所需的基础设施：Camera/Drawable/Geometry/Material/Technique/Renderer/View/Octree 等）
+set (EXCLUDE_3D_PATTERNS
+    # 使用 [^;]+ 避免跨越分号，防止误删其它文件项
+    "Graphics/AnimatedModel\\.[^;]+"
+    "Graphics/Animation(Controller|State)?\\.[^;]+"
+    "Graphics/BillboardSet\\.[^;]+"
+    "Graphics/CustomGeometry\\.[^;]+"
+    "Graphics/DecalSet\\.[^;]+"
+    "Graphics/Model\\.[^;]+"
+    "Graphics/StaticModel(Group)?\\.[^;]+"
+    "Graphics/Terrain(Patch)?\\.[^;]+"
+    "Graphics/RibbonTrail\\.[^;]+"
+    "Graphics/Skeleton\\.[^;]+"
+    "Graphics/Skybox\\.[^;]+"
+    "Graphics/Particle(Effect|Emitter)\\.[^;]+"
+    "UI/Text3D\\.[^;]+"
+)
+list (APPEND EXCLUDE_PATTERNS ${EXCLUDE_3D_PATTERNS})
+
+# 标记 2D-only 构建，便于在源码中屏蔽 3D 注册等逻辑
+add_definitions(-DURHO3D_2D_ONLY)
+
 define_source_files (EXCLUDE_PATTERNS ${EXCLUDE_PATTERNS} GLOB_CPP_PATTERNS *.cpp ${GLOB_OBJC_PATTERN} RECURSE GROUP)
 
 if (URHO3D_GENERATEBINDINGS)

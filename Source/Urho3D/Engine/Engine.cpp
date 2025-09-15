@@ -131,7 +131,7 @@ Engine::Engine(Context* context) :
     RegisterIKLibrary(context_);
 #endif
 
-#ifdef URHO3D_PHYSICS
+#if defined(URHO3D_PHYSICS) && !defined(URHO3D_2D_ONLY)
     RegisterPhysicsLibrary(context_);
 #endif
 
@@ -139,7 +139,7 @@ Engine::Engine(Context* context) :
     RegisterPhysics2DLibrary(context_);
 #endif
 
-#ifdef URHO3D_NAVIGATION
+#if defined(URHO3D_NAVIGATION) && !defined(URHO3D_2D_ONLY)
     RegisterNavigationLibrary(context_);
 #endif
 
