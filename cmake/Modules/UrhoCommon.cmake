@@ -510,6 +510,9 @@ endif ()
 if (MSVC)
     # VS-specific setup
     add_definitions (-D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS)
+    # 统一按 UTF-8 解析源码，避免中文注释触发 C4819 警告
+    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /utf-8")
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /utf-8")
     if (URHO3D_STATIC_RUNTIME)
         set (RELEASE_RUNTIME /MT)
         set (DEBUG_RUNTIME /MTd)

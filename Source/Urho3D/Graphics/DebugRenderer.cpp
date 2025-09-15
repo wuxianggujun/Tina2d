@@ -245,10 +245,10 @@ void DebugRenderer::AddSphere(const Sphere& sphere, const Color& color, bool dep
     {
         for (auto i = 0; i < 360; i += 45)
         {
-            Vector3 p1 = sphere.GetPoint(i, j);
-            Vector3 p2 = sphere.GetPoint(i + 45, j);
-            Vector3 p3 = sphere.GetPoint(i, j + 45);
-            Vector3 p4 = sphere.GetPoint(i + 45, j + 45);
+            Vector3 p1 = sphere.GetPoint(static_cast<float>(i), static_cast<float>(j));
+            Vector3 p2 = sphere.GetPoint(static_cast<float>(i + 45), static_cast<float>(j));
+            Vector3 p3 = sphere.GetPoint(static_cast<float>(i), static_cast<float>(j + 45));
+            Vector3 p4 = sphere.GetPoint(static_cast<float>(i + 45), static_cast<float>(j + 45));
 
             AddLine(p1, p2, uintColor, depthTest);
             AddLine(p3, p4, uintColor, depthTest);
