@@ -7,6 +7,14 @@ cmake_minimum_required (VERSION 3.15)
 # Set project name
 project (Urho3D)
 
+# 设定较新的 CMake 策略，消除开发期策略告警
+if (POLICY CMP0127)
+    cmake_policy (SET CMP0127 NEW)
+endif ()
+if (POLICY CMP0177)
+    cmake_policy (SET CMP0177 NEW)
+endif ()
+
 # Show command line options
 get_cmake_property (CACHE_VARS CACHE_VARIABLES)
 foreach (CACHE_VAR ${CACHE_VARS})
