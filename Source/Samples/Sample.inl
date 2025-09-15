@@ -240,6 +240,7 @@ void Sample::HandleKeyDown(StringHash /*eventType*/, VariantMap& eventData)
     // Common rendering quality controls, only when UI has no focused element
     else if (!GetSubsystem<UI>()->GetFocusElement())
     {
+#ifndef URHO3D_2D_ONLY
         Renderer* renderer = GetSubsystem<Renderer>();
 
         // Preferences / Pause
@@ -328,6 +329,17 @@ void Sample::HandleKeyDown(StringHash /*eventType*/, VariantMap& eventData)
             screenshot.SavePNG(GetSubsystem<FileSystem>()->GetProgramDir() + "Data/Screenshot_" +
                 Time::GetTimeStamp().Replaced(':', '_').Replaced('.', '_').Replaced(' ', '_') + ".png");
         }
+#else
+        // 2D-only：保留截图快捷键，其它 3D 相关切换均省略
+        if (key == '9')
+        {
+            Graphics* graphics = GetSubsystem<Graphics>();
+            Image screenshot(context_);
+            graphics->TakeScreenShot(screenshot);
+            screenshot.SavePNG(GetSubsystem<FileSystem>()->GetProgramDir() + "Data/Screenshot_" +
+                Time::GetTimeStamp().Replaced(':', '_').Replaced('.', '_').Replaced(' ', '_') + ".png");
+        }
+#endif
     }
 }
 
