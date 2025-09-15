@@ -337,8 +337,7 @@ execute_process (COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_B
 file (REMOVE ${CMAKE_CURRENT_BINARY_DIR}/Urho3D.h.new)
 source_group ("Source Files\\Generated" FILES ${CMAKE_CURRENT_BINARY_DIR}/Urho3D.h)
 
-# Precompile the header after the export header file has been generated
-enable_pch (Precompiled.h)
+# 已移除预编译头（PCH）支持，此处不再进行任何 PCH 相关操作
 
 if (NOT ANDROID AND NOT WEB)
     file (READ .soversion SOVERSION)

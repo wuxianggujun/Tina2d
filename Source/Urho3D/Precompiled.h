@@ -1,5 +1,6 @@
-// Copyright (c) 2008-2023 the Urho3D project
-// License: MIT
+// 该文件不再作为“预编译头（PCH）”使用，仅作为普通聚合头存在，
+// 以保持各源码文件中对 "Precompiled.h" 的包含语句不需要修改。
+// 如需最小化依赖，可按需精简下面的包含列表。
 
 #ifdef __cplusplus
 
@@ -14,3 +15,4 @@
 #endif
 
 #endif
+
