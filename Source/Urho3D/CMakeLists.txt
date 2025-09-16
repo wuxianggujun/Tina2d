@@ -40,6 +40,8 @@ get_directory_property (URHO3D_COMPILE_DEFINITIONS DIRECTORY ${CMAKE_CURRENT_SOU
 
 # Define preprocessor macros (for building the Urho3D library)
 add_definitions (-DURHO3D_IS_BUILDING)
+# 显式移除可能遗留的 IK 预处理宏，避免包含已删除的 ThirdParty/ik
+remove_definitions(-DURHO3D_IK)
 if (ANDROID AND DEFINED ENV{ASSET_DIR_INDICATOR})
     add_definitions (-DASSET_DIR_INDICATOR=\"$ENV{ASSET_DIR_INDICATOR}\")
 endif ()
@@ -138,9 +140,7 @@ if (APPLE AND NOT ARM)
     set (GLOB_OBJC_PATTERN *.m)     # Should only pick up MacFileWatcher.m for macOS platform at the moment
 endif ()
 
-# 强制 2D-only：排除 3D 子系统目录，并关闭对应选项与宏
-set (URHO3D_2D_ONLY 1)
-add_definitions(-DURHO3D_2D_ONLY)
+# 排除 3D 子系统目录，并关闭对应选项
 
 # 关闭 3D 子系统的 CMake 选项（默认 TRUE），并加入排除目录
 set (URHO3D_IK OFF CACHE BOOL "Disable IK for 2D-only" FORCE)
@@ -171,8 +171,7 @@ set (EXCLUDE_3D_PATTERNS
 )
 list (APPEND EXCLUDE_PATTERNS ${EXCLUDE_3D_PATTERNS})
 
-# 标记 2D-only 构建，便于在源码中屏蔽 3D 注册等逻辑
-add_definitions(-DURHO3D_2D_ONLY)
+# 已删除 3D 类与脚本系统，不再需要 2D-only 宏
 
 define_source_files (EXCLUDE_PATTERNS ${EXCLUDE_PATTERNS} GLOB_CPP_PATTERNS *.cpp ${GLOB_OBJC_PATTERN} RECURSE GROUP)
 
@@ -546,12 +545,10 @@ foreach (SUB ${OPTIONAL_SUBS})
         list (INSERT URHO_HEADERS ${FOUND_INDEX} "#if URHO3D_${SUB}")
     endif ()
 endforeach ()
-# 2D-only：从聚合头中过滤 3D 相关头（不影响实际安装，仅影响 Urho3DAll.h 内容）
+# 从聚合头中过滤 3D 相关头（不影响实际安装，仅影响 Urho3DAll.h 内容）
 string (REGEX REPLACE "include/[^;]+(DebugNew|Direct3D|GraphicsImpl|IKConverters|ODBC|OpenGL|Precompiled|SQLite|ToluaUtils|Urho3D|librevision|wrap\.h|aswrappedcall\.h)[^;]*;" "" URHO_HEADERS "${URHO_HEADERS};")
-if (URHO3D_2D_ONLY)
-    string (REGEX REPLACE "include/Urho3D/Graphics/(AnimatedModel|Animation[^/]*|BillboardSet|CustomGeometry|DecalSet|Model|StaticModel[^/]*|Terrain[^/]*|RibbonTrail|Skeleton|Skybox|Particle[^/]*|Light)\.h;" "" URHO_HEADERS "${URHO_HEADERS}")
-    string (REGEX REPLACE "include/Urho3D/UI/(Text3D|View3D|UIComponent)\.h;" "" URHO_HEADERS "${URHO_HEADERS}")
-endif ()
+string (REGEX REPLACE "include/Urho3D/Graphics/(AnimatedModel|Animation[^/]*|BillboardSet|CustomGeometry|DecalSet|Model|StaticModel[^/]*|Terrain[^/]*|RibbonTrail|Skeleton|Skybox|Particle[^/]*)\.h;" "" URHO_HEADERS "${URHO_HEADERS}")
+string (REGEX REPLACE "include/Urho3D/UI/(Text3D|View3D|UIComponent)\.h;" "" URHO_HEADERS "${URHO_HEADERS}")
 string (REGEX REPLACE "include/([^;]+)" "#include <\\1>" URHO_HEADERS "${GENERATED_HEADERS};;${URHO_HEADERS}")
 string (REPLACE ";" \n URHO_HEADERS "${URHO_HEADERS}")
 configure_file (${CMAKE_CURRENT_SOURCE_DIR}/Urho3DAll.h.in ${CMAKE_CURRENT_BINARY_DIR}/Urho3DAll.h)

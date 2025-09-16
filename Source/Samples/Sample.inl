@@ -7,9 +7,7 @@
 #include <Urho3D/Engine/DebugHud.h>
 #include <Urho3D/Engine/Engine.h>
 #include <Urho3D/Engine/EngineDefs.h>
-#include <Urho3D/Graphics/Camera.h>
 #include <Urho3D/Graphics/Graphics.h>
-#include <Urho3D/Graphics/Renderer.h>
 #include <Urho3D/GraphicsAPI/Texture2D.h>
 #include <Urho3D/Input/Input.h>
 #include <Urho3D/Input/InputEvents.h>
@@ -237,100 +235,9 @@ void Sample::HandleKeyDown(StringHash /*eventType*/, VariantMap& eventData)
     else if (key == KEY_F2)
         GetSubsystem<DebugHud>()->ToggleAll();
 
-    // Common rendering quality controls, only when UI has no focused element
+    // 仅保留截图快捷键，其它 3D 相关切换均移除
     else if (!GetSubsystem<UI>()->GetFocusElement())
     {
-#ifndef URHO3D_2D_ONLY
-        Renderer* renderer = GetSubsystem<Renderer>();
-
-        // Preferences / Pause
-        if (key == KEY_SELECT && touchEnabled_)
-        {
-            paused_ = !paused_;
-
-            Input* input = GetSubsystem<Input>();
-            if (screenJoystickSettingsIndex_ == M_MAX_UNSIGNED)
-            {
-                // Lazy initialization
-                ResourceCache* cache = GetSubsystem<ResourceCache>();
-                screenJoystickSettingsIndex_ = (unsigned)input->AddScreenJoystick(cache->GetResource<XMLFile>("UI/ScreenJoystickSettings_Samples.xml"), cache->GetResource<XMLFile>("UI/DefaultStyle.xml"));
-            }
-            else
-                input->SetScreenJoystickVisible(screenJoystickSettingsIndex_, paused_);
-        }
-
-        // Texture quality
-        else if (key == '1')
-        {
-            auto quality = (unsigned)renderer->GetTextureQuality();
-            ++quality;
-            if (quality > QUALITY_HIGH)
-                quality = QUALITY_LOW;
-            renderer->SetTextureQuality((MaterialQuality)quality);
-        }
-
-        // Material quality
-        else if (key == '2')
-        {
-            auto quality = (unsigned)renderer->GetMaterialQuality();
-            ++quality;
-            if (quality > QUALITY_HIGH)
-                quality = QUALITY_LOW;
-            renderer->SetMaterialQuality((MaterialQuality)quality);
-        }
-
-        // Specular lighting
-        else if (key == '3')
-            renderer->SetSpecularLighting(!renderer->GetSpecularLighting());
-
-        // Shadow rendering
-        else if (key == '4')
-            renderer->SetDrawShadows(!renderer->GetDrawShadows());
-
-        // Shadow map resolution
-        else if (key == '5')
-        {
-            int shadowMapSize = renderer->GetShadowMapSize();
-            shadowMapSize *= 2;
-            if (shadowMapSize > 2048)
-                shadowMapSize = 512;
-            renderer->SetShadowMapSize(shadowMapSize);
-        }
-
-        // Shadow depth and filtering quality
-        else if (key == '6')
-        {
-            ShadowQuality quality = renderer->GetShadowQuality();
-            quality = (ShadowQuality)(quality + 1);
-            if (quality > SHADOWQUALITY_BLUR_VSM)
-                quality = SHADOWQUALITY_SIMPLE_16BIT;
-            renderer->SetShadowQuality(quality);
-        }
-
-        // Occlusion culling
-        else if (key == '7')
-        {
-            bool occlusion = renderer->GetMaxOccluderTriangles() > 0;
-            occlusion = !occlusion;
-            renderer->SetMaxOccluderTriangles(occlusion ? 5000 : 0);
-        }
-
-        // Instancing
-        else if (key == '8')
-            renderer->SetDynamicInstancing(!renderer->GetDynamicInstancing());
-
-        // Take screenshot
-        else if (key == '9')
-        {
-            Graphics* graphics = GetSubsystem<Graphics>();
-            Image screenshot(context_);
-            graphics->TakeScreenShot(screenshot);
-            // Here we save in the Data folder with date and time appended
-            screenshot.SavePNG(GetSubsystem<FileSystem>()->GetProgramDir() + "Data/Screenshot_" +
-                Time::GetTimeStamp().Replaced(':', '_').Replaced('.', '_').Replaced(' ', '_') + ".png");
-        }
-#else
-        // 2D-only：保留截图快捷键，其它 3D 相关切换均省略
         if (key == '9')
         {
             Graphics* graphics = GetSubsystem<Graphics>();
@@ -339,41 +246,23 @@ void Sample::HandleKeyDown(StringHash /*eventType*/, VariantMap& eventData)
             screenshot.SavePNG(GetSubsystem<FileSystem>()->GetProgramDir() + "Data/Screenshot_" +
                 Time::GetTimeStamp().Replaced(':', '_').Replaced('.', '_').Replaced(' ', '_') + ".png");
         }
-#endif
     }
 }
 
 void Sample::HandleSceneUpdate(StringHash /*eventType*/, VariantMap& eventData)
 {
-    // Move the camera by touch, if the camera node is initialized by descendant sample class
-    if (touchEnabled_ && cameraNode_)
+    // 不涉及 3D 相机控制，仅处理触摸时的光标同步
+    if (touchEnabled_)
     {
         Input* input = GetSubsystem<Input>();
         for (i32 i = 0; i < input->GetNumTouches(); ++i)
         {
             TouchState* state = input->GetTouch(i);
-            if (!state->touchedElement_)    // Touch on empty space
+            if (!state->touchedElement_)
             {
-                if (state->delta_.x_ ||state->delta_.y_)
-                {
-                    Camera* camera = cameraNode_->GetComponent<Camera>();
-                    if (!camera)
-                        return;
-
-                    Graphics* graphics = GetSubsystem<Graphics>();
-                    yaw_ += TOUCH_SENSITIVITY * camera->GetFov() / graphics->GetHeight() * state->delta_.x_;
-                    pitch_ += TOUCH_SENSITIVITY * camera->GetFov() / graphics->GetHeight() * state->delta_.y_;
-
-                    // Construct new orientation for the camera scene node from yaw and pitch; roll is fixed to zero
-                    cameraNode_->SetRotation(Quaternion(pitch_, yaw_, 0.0f));
-                }
-                else
-                {
-                    // Move the cursor to the touch position
-                    Cursor* cursor = GetSubsystem<UI>()->GetCursor();
-                    if (cursor && cursor->IsVisible())
-                        cursor->SetPosition(state->position_);
-                }
+                Cursor* cursor = GetSubsystem<UI>()->GetCursor();
+                if (cursor && cursor->IsVisible())
+                    cursor->SetPosition(state->position_);
             }
         }
     }

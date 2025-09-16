@@ -11,11 +11,6 @@ project (Urho3D-Samples)
 # В IDE примеры будут помещаться в папку samples
 set (CMAKE_FOLDER samples)
 
-# 在 2D-only 构建下，确保样例目标也携带相同的预处理宏，避免误用 3D 代码路径
-if (URHO3D_2D_ONLY)
-    add_definitions(-DURHO3D_2D_ONLY)
-endif ()
-
 # Find Urho3D library
 find_package (Urho3D REQUIRED)
 include_directories (${URHO3D_INCLUDE_DIRS})
@@ -41,30 +36,24 @@ endmacro ()
 file (GLOB_RECURSE DIRS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} CMakeLists.txt)
 list (SORT DIRS)
 
-if (URHO3D_2D_ONLY)
-    # 仅构建 2D/通用 UI 示例，减少构建时间与3D依赖
-    set (ALLOWED_2D_SAMPLES
-        01_HelloWorld
-        02_HelloGUI
-        24_Urho2DSprite
-        25_Urho2DParticle
-        27_Physics2D
-        28_Physics2DRope
-        36_Urho2DTileMap
-        37_UIDrag
-        47_Typography
-        51_Urho2DStretchableSprite)
-endif ()
+# 仅构建 2D/通用 UI 示例，减少构建时间与依赖
+set (ALLOWED_2D_SAMPLES
+    01_HelloWorld
+    02_HelloGUI
+    24_Urho2DSprite
+    25_Urho2DParticle
+    27_Physics2D
+    28_Physics2DRope
+    36_Urho2DTileMap
+    37_UIDrag
+    47_Typography
+    51_Urho2DStretchableSprite)
 
 foreach (DIR ${DIRS})
     get_filename_component (DIR ${DIR} PATH)
     if (DIR)
-        if (URHO3D_2D_ONLY)
-            list (FIND ALLOWED_2D_SAMPLES ${DIR} ALLOWED_INDEX)
-            if (ALLOWED_INDEX GREATER -1)
-                add_sample_subdirectory (${DIR})
-            endif ()
-        else ()
+        list (FIND ALLOWED_2D_SAMPLES ${DIR} ALLOWED_INDEX)
+        if (ALLOWED_INDEX GREATER -1)
             add_sample_subdirectory (${DIR})
         endif ()
     endif ()

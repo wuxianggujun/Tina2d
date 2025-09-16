@@ -41,7 +41,6 @@ set (CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/Modules)
 include (UrhoCommon)
 
 # 2D-only 构建：在加入 Source 子目录前，统一关闭 3D/脚本系统以避免引用 3D 头和符号
-set (URHO3D_2D_ONLY          ON  CACHE BOOL "Build 2D-only" FORCE)
 set (URHO3D_TOOLS            OFF CACHE BOOL "Disable tools for 2D-only build" FORCE)
 set (URHO3D_SAMPLES          ON  CACHE BOOL "Enable samples for 2D-only build" FORCE)
 set (URHO3D_ANGELSCRIPT      OFF CACHE BOOL "Disable AngelScript for 2D-only" FORCE)

@@ -330,8 +330,7 @@ void DebugRenderer::AddCylinder(const Vector3& position, float radius, float hei
     AddLine(position - offsetZVec, position + heightVec - offsetZVec, color, depthTest);
 }
 
-#ifndef URHO3D_2D_ONLY
-#endif
+
 
 void DebugRenderer::AddTriangleMesh(const void* vertexData, unsigned vertexSize, const void* indexData,
     unsigned indexSize, unsigned indexStart, unsigned indexCount, const Matrix3x4& transform, const Color& color, bool depthTest)
