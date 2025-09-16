@@ -20,10 +20,14 @@
 #include "../IO/Log.h"
 #include "../IO/PackageFile.h"
 #ifdef URHO3D_IK
+#ifndef URHO3D_2D_ONLY
 #include "../IK/IK.h"
 #endif
+#endif
 #ifdef URHO3D_NAVIGATION
+#ifndef URHO3D_2D_ONLY
 #include "../Navigation/NavigationMesh.h"
+#endif
 #endif
 #ifdef URHO3D_NETWORK
 #include "../Network/Network.h"
@@ -32,8 +36,10 @@
 #include "../Database/Database.h"
 #endif
 #ifdef URHO3D_PHYSICS
+#ifndef URHO3D_2D_ONLY
 #include "../Physics/PhysicsWorld.h"
 #include "../Physics/RaycastVehicle.h"
+#endif
 #endif
 #ifdef URHO3D_PHYSICS2D
 #include "../Physics2D/Physics2D.h"
@@ -127,7 +133,7 @@ Engine::Engine(Context* context) :
     // Register object factories for libraries which are not automatically registered along with subsystem creation
     RegisterSceneLibrary(context_);
 
-#ifdef URHO3D_IK
+#if defined(URHO3D_IK) && !defined(URHO3D_2D_ONLY)
     RegisterIKLibrary(context_);
 #endif
 

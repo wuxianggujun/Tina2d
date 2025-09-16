@@ -54,6 +54,8 @@ add_subdirectory (Urho3D)
 
 # In order to get clean module segregation, always exclude player/samples from AAR
 if (NOT ANDROID)
+    # 将 2D-only 开关提升为上层缓存变量，供 Tools/Samples 等子目录感知
+    set (URHO3D_2D_ONLY ${URHO3D_2D_ONLY} CACHE BOOL "Build 2D-only" FORCE)
     add_subdirectory (Tools)
     add_subdirectory (Samples)
 endif ()

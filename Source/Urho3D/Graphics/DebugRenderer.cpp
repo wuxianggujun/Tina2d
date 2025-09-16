@@ -9,7 +9,9 @@
 #include "../Graphics/Camera.h"
 #include "../Graphics/DebugRenderer.h"
 #include "../Scene/Node.h"
+#ifndef URHO3D_2D_ONLY
 #include "../Graphics/Skeleton.h"
+#endif
 #include "../Graphics/Graphics.h"
 #include "../GraphicsAPI/ShaderVariation.h"
 #include "../GraphicsAPI/VertexBuffer.h"
@@ -331,6 +333,7 @@ void DebugRenderer::AddCylinder(const Vector3& position, float radius, float hei
     AddLine(position - offsetZVec, position + heightVec - offsetZVec, color, depthTest);
 }
 
+#ifndef URHO3D_2D_ONLY
 void DebugRenderer::AddSkeleton(const Skeleton& skeleton, const Color& color, bool depthTest)
 {
     const Vector<Bone>& bones = skeleton.GetBones();
@@ -364,6 +367,7 @@ void DebugRenderer::AddSkeleton(const Skeleton& skeleton, const Color& color, bo
         AddLine(start, end, uintColor, depthTest);
     }
 }
+#endif
 
 void DebugRenderer::AddTriangleMesh(const void* vertexData, unsigned vertexSize, const void* indexData,
     unsigned indexSize, unsigned indexStart, unsigned indexCount, const Matrix3x4& transform, const Color& color, bool depthTest)

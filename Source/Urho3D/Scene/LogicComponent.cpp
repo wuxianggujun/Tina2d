@@ -4,8 +4,10 @@
 #include "../Precompiled.h"
 
 #include "../IO/Log.h"
-#if defined(URHO3D_PHYSICS) || defined(URHO3D_PHYSICS2D)
+#if defined(URHO3D_PHYSICS)
 #include "../Physics/PhysicsEvents.h"
+#elif defined(URHO3D_PHYSICS2D)
+#include "../Physics2D/PhysicsEvents2D.h"
 #endif
 #include "../Scene/LogicComponent.h"
 #include "../Scene/Scene.h"

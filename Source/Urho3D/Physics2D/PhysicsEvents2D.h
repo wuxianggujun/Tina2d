@@ -5,9 +5,18 @@
 
 #include "../Core/Object.h"
 
-// For prestep / poststep events, which are the same for 2D and 3D physics. The events themselves don't depend
-// on whether 3D physics support or Bullet has been compiled in.
-#include "../Physics/PhysicsEvents.h"
+// 2D-only 构建：本地声明物理预/后步事件，避免依赖 3D 物理头
+URHO3D_EVENT(E_PHYSICSPRESTEP, PhysicsPreStep)
+{
+    URHO3D_PARAM(P_WORLD, World);       // PhysicsWorld* 或 PhysicsWorld2D*
+    URHO3D_PARAM(P_TIMESTEP, TimeStep); // float
+}
+
+URHO3D_EVENT(E_PHYSICSPOSTSTEP, PhysicsPostStep)
+{
+    URHO3D_PARAM(P_WORLD, World);       // PhysicsWorld* 或 PhysicsWorld2D*
+    URHO3D_PARAM(P_TIMESTEP, TimeStep); // float
+}
 
 namespace Urho3D
 {

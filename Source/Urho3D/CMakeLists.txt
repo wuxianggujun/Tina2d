@@ -138,10 +138,15 @@ if (APPLE AND NOT ARM)
     set (GLOB_OBJC_PATTERN *.m)     # Should only pick up MacFileWatcher.m for macOS platform at the moment
 endif ()
 
-# 强制 2D-only：排除 3D 子系统目录（避免缓存中旧值导致仍然编译）
+# 强制 2D-only：排除 3D 子系统目录，并关闭对应选项与宏
 set (URHO3D_2D_ONLY 1)
 add_definitions(-DURHO3D_2D_ONLY)
-list (APPEND EXCLUDED_SOURCE_DIRS Navigation Physics)
+
+# 关闭 3D 子系统的 CMake 选项（默认 TRUE），并加入排除目录
+set (URHO3D_IK OFF CACHE BOOL "Disable IK for 2D-only" FORCE)
+set (URHO3D_NAVIGATION OFF CACHE BOOL "Disable Navigation for 2D-only" FORCE)
+set (URHO3D_PHYSICS OFF CACHE BOOL "Disable 3D Physics for 2D-only" FORCE)
+list (APPEND EXCLUDED_SOURCE_DIRS IK Navigation Physics)
 string (REPLACE ";" "/[^;]+;" EXCLUDE_PATTERNS "${EXCLUDED_SOURCE_DIRS};")
 
 # 剔除 3D 相关的高层图形类（保留 2D 渲染所需的基础设施：Camera/Drawable/Geometry/Material/Technique/Renderer/View/Octree 等）

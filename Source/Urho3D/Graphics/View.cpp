@@ -16,7 +16,9 @@
 #include "../Graphics/Octree.h"
 #include "../Graphics/Renderer.h"
 #include "../Graphics/RenderPath.h"
+#ifndef URHO3D_2D_ONLY
 #include "../Graphics/Skybox.h"
+#endif
 #include "../Graphics/Technique.h"
 #include "../Graphics/View.h"
 #include "../GraphicsAPI/GraphicsImpl.h"
