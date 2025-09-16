@@ -40,6 +40,16 @@ set (CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/Modules)
 # Include UrhoCommon.cmake module after setting project name
 include (UrhoCommon)
 
+# 2D-only 构建：在加入 Source 子目录前，统一关闭 3D/脚本系统以避免引用 3D 头和符号
+set (URHO3D_2D_ONLY          ON  CACHE BOOL "Build 2D-only" FORCE)
+set (URHO3D_TOOLS            OFF CACHE BOOL "Disable tools for 2D-only build" FORCE)
+set (URHO3D_SAMPLES          ON  CACHE BOOL "Enable samples for 2D-only build" FORCE)
+set (URHO3D_ANGELSCRIPT      OFF CACHE BOOL "Disable AngelScript for 2D-only" FORCE)
+set (URHO3D_GENERATEBINDINGS OFF CACHE BOOL "Disable binding generation for 2D-only" FORCE)
+set (URHO3D_IK               OFF CACHE BOOL "Disable IK in 2D-only build" FORCE)
+set (URHO3D_NAVIGATION       OFF CACHE BOOL "Disable Navigation in 2D-only build" FORCE)
+set (URHO3D_PHYSICS          OFF CACHE BOOL "Disable 3D Physics in 2D-only build" FORCE)
+
 # Setup SDK install destinations
 set (PATH_SUFFIX Urho3D)
 if (WIN32)
