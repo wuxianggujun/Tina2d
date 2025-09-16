@@ -11,6 +11,11 @@ project (Urho3D-Samples)
 # В IDE примеры будут помещаться в папку samples
 set (CMAKE_FOLDER samples)
 
+# 在 2D-only 构建下，确保样例目标也携带相同的预处理宏，避免误用 3D 代码路径
+if (URHO3D_2D_ONLY)
+    add_definitions(-DURHO3D_2D_ONLY)
+endif ()
+
 # Find Urho3D library
 find_package (Urho3D REQUIRED)
 include_directories (${URHO3D_INCLUDE_DIRS})

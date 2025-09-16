@@ -56,7 +56,10 @@ add_subdirectory (Urho3D)
 if (NOT ANDROID)
     # 将 2D-only 开关提升为上层缓存变量，供 Tools/Samples 等子目录感知
     set (URHO3D_2D_ONLY ${URHO3D_2D_ONLY} CACHE BOOL "Build 2D-only" FORCE)
-    add_subdirectory (Tools)
+    # 仅当启用且目录存在时才加入 Tools
+    if (URHO3D_TOOLS AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Tools/CMakeLists.txt")
+        add_subdirectory (Tools)
+    endif ()
     add_subdirectory (Samples)
 endif ()
 
