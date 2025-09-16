@@ -8,5 +8,4 @@ project (Urho3D-Extras)
 find_package (Urho3D REQUIRED)
 include_directories (${URHO3D_INCLUDE_DIRS})
 
-# Urho3D extras
-add_subdirectory (OgreBatchConverter)
+# 2D-only 清理：移除 3D 相关额外工具（OgreBatchConverter 已删除）
