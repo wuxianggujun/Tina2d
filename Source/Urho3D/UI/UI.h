@@ -35,7 +35,6 @@ class UIElement;
 class XMLElement;
 class XMLFile;
 class RenderSurface;
-class UIComponent;
 
 /// %UI subsystem. Manages the graphical user interface.
 class URHO3D_API UI : public Object

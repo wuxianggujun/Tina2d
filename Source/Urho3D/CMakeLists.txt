@@ -146,6 +146,7 @@ add_definitions(-DURHO3D_2D_ONLY)
 set (URHO3D_IK OFF CACHE BOOL "Disable IK for 2D-only" FORCE)
 set (URHO3D_NAVIGATION OFF CACHE BOOL "Disable Navigation for 2D-only" FORCE)
 set (URHO3D_PHYSICS OFF CACHE BOOL "Disable 3D Physics for 2D-only" FORCE)
+set (URHO3D_ANGELSCRIPT OFF CACHE BOOL "Disable AngelScript for 2D-only cleanup" FORCE)
 list (APPEND EXCLUDED_SOURCE_DIRS IK Navigation Physics)
 string (REPLACE ";" "/[^;]+;" EXCLUDE_PATTERNS "${EXCLUDED_SOURCE_DIRS};")
 

@@ -17,7 +17,6 @@ class Drawable;
 class Light;
 class Matrix3x4;
 class Renderer;
-class Skeleton;
 class Sphere;
 class VertexBuffer;
 
@@ -117,7 +116,6 @@ public:
     /// Add a cylinder.
     void AddCylinder(const Vector3& position, float radius, float height, const Color& color, bool depthTest = true);
     /// Add a skeleton.
-    void AddSkeleton(const Skeleton& skeleton, const Color& color, bool depthTest = true);
     /// Add a triangle mesh.
     void AddTriangleMesh(const void* vertexData, unsigned vertexSize, const void* indexData,
         unsigned indexSize, unsigned indexStart, unsigned indexCount, const Matrix3x4& transform, const Color& color, bool depthTest = true);

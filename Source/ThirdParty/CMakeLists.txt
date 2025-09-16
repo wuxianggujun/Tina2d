@@ -5,9 +5,17 @@
 # В IDE сторонние библиотеки будут помещены в папку third-party libs
 set (CMAKE_FOLDER "third-party libs")
 
-foreach (TARGET ETCPACK FreeType LZ4 PugiXml rapidjson SDL StanHull STB)
-    add_subdirectory (${TARGET})
+# 基础第三方库：仅在目录存在时引入，避免裁剪后构建失败
+foreach (TARGET ETCPACK FreeType LZ4 PugiXml rapidjson SDL STB)
+    if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${TARGET}/CMakeLists.txt)
+        add_subdirectory (${TARGET})
+    endif ()
 endforeach ()
+
+# 可选：StanHull 在 3D 物理/导入场景中使用；2D-only 可裁剪
+if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/StanHull/CMakeLists.txt)
+    add_subdirectory (StanHull)
+endif ()
 
 if (URHO3D_ANGELSCRIPT)
     add_subdirectory (AngelScript)

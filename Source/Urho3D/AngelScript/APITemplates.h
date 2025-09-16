@@ -11,7 +11,7 @@
 #include "../Container/HashSet.h"
 #include "../Container/Sort.h"
 #include "../Graphics/Drawable.h"
-#include "../Graphics/StaticModel.h"
+// 已移除对 3D StaticModel 的引用
 #include "../GraphicsAPI/Texture.h"
 #include "../IO/File.h"
 #include "../IO/Log.h"

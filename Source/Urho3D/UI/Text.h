@@ -61,7 +61,6 @@ class URHO3D_API Text : public UISelectable
 {
     URHO3D_OBJECT(Text, UISelectable);
 
-    friend class Text3D;
 
 public:
     /// Construct.

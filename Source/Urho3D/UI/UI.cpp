@@ -36,16 +36,16 @@
 #include "../UI/Slider.h"
 #include "../UI/Sprite.h"
 #include "../UI/Text.h"
-#ifndef URHO3D_2D_ONLY
+#if 0
 #include "../UI/Text3D.h"
 #endif
 #include "../UI/ToolTip.h"
 #include "../UI/UI.h"
-#ifndef URHO3D_2D_ONLY
+#if 0
 #include "../UI/UIComponent.h"
 #endif
 #include "../UI/UIEvents.h"
-#ifndef URHO3D_2D_ONLY
+#if 0
 #include "../UI/View3D.h"
 #endif
 #include "../UI/Window.h"
@@ -2202,13 +2202,7 @@ void RegisterUILibrary(Context* context)
     CheckBox::RegisterObject(context);
     Cursor::RegisterObject(context);
     Text::RegisterObject(context);
-#ifndef URHO3D_2D_ONLY
-    Text3D::RegisterObject(context);
-#endif
     Window::RegisterObject(context);
-#ifndef URHO3D_2D_ONLY
-    View3D::RegisterObject(context);
-#endif
     LineEdit::RegisterObject(context);
     Slider::RegisterObject(context);
     ScrollBar::RegisterObject(context);
@@ -2220,9 +2214,6 @@ void RegisterUILibrary(Context* context)
     MessageBox::RegisterObject(context);
     ProgressBar::RegisterObject(context);
     ToolTip::RegisterObject(context);
-#ifndef URHO3D_2D_ONLY
-    UIComponent::RegisterObject(context);
-#endif
 }
 
 }

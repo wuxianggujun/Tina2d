@@ -27,7 +27,6 @@ class RenderPath;
 class RenderSurface;
 class ResourceCache;
 class Scene;
-class Skeleton;
 class OcclusionBuffer;
 class Technique;
 class Texture;

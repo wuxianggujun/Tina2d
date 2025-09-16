@@ -16,9 +16,7 @@
 #include "../Graphics/Octree.h"
 #include "../Graphics/Renderer.h"
 #include "../Graphics/RenderPath.h"
-#ifndef URHO3D_2D_ONLY
-#include "../Graphics/Skybox.h"
-#endif
+// 2D-only：移除 Skybox 相关引用
 #include "../Graphics/Technique.h"
 #include "../Graphics/View.h"
 #include "../GraphicsAPI/GraphicsImpl.h"

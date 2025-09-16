@@ -9,9 +9,6 @@
 #include "../Graphics/Camera.h"
 #include "../Graphics/DebugRenderer.h"
 #include "../Scene/Node.h"
-#ifndef URHO3D_2D_ONLY
-#include "../Graphics/Skeleton.h"
-#endif
 #include "../Graphics/Graphics.h"
 #include "../GraphicsAPI/ShaderVariation.h"
 #include "../GraphicsAPI/VertexBuffer.h"
@@ -334,39 +331,6 @@ void DebugRenderer::AddCylinder(const Vector3& position, float radius, float hei
 }
 
 #ifndef URHO3D_2D_ONLY
-void DebugRenderer::AddSkeleton(const Skeleton& skeleton, const Color& color, bool depthTest)
-{
-    const Vector<Bone>& bones = skeleton.GetBones();
-    if (!bones.Size())
-        return;
-
-    color32 uintColor = color.ToU32();
-
-    for (const Bone& bone : bones)
-    {
-        // Skip if bone contains no skinned geometry
-        if (bone.radius_ < M_EPSILON && bone.boundingBox_.Size().LengthSquared() < M_EPSILON)
-            continue;
-
-        Node* boneNode = bone.node_;
-        if (!boneNode)
-            continue;
-
-        Vector3 start = boneNode->GetWorldPosition();
-        Vector3 end;
-
-        i32 j = bone.parentIndex_;
-        Node* parentNode = boneNode->GetParent();
-
-        // If bone has a parent defined, and it also skins geometry, draw a line to it. Else draw the bone as a point
-        if (parentNode && (bones[j].radius_ >= M_EPSILON || bones[j].boundingBox_.Size().LengthSquared() >= M_EPSILON))
-            end = parentNode->GetWorldPosition();
-        else
-            end = start;
-
-        AddLine(start, end, uintColor, depthTest);
-    }
-}
 #endif
 
 void DebugRenderer::AddTriangleMesh(const void* vertexData, unsigned vertexSize, const void* indexData,
