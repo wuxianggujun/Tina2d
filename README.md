@@ -1,72 +1,96 @@
-***Активная работа над движком без сохранения обратной совместимости ведётся в форке [Dviglo](https://github.com/dviglo/dviglo).***
+# TINA2D
 
----
+**TINA2D** is a lightweight 2D game engine based on [Urho3D](https://github.com/urho3d/Urho3D).
 
-***The founder of Urho3D (Lasse Öörni) is currently working on [Turso3D](https://github.com/cadaver/turso3d).***
+English | [中文](README_zh.md)
 
----
+## Overview
 
-# Urho3D
+TINA2D is a fork of the Urho3D game engine specifically designed for 2D game development. All 3D-related functionality has been removed to provide an efficient and streamlined 2D game development experience.
 
-![](https://raw.githubusercontent.com/urho3d-learn/flappy-urho/main/screen.png)
+## Key Changes
 
-[![CI/CD](https://github.com/urho3d/Urho3D/workflows/CI/CD/badge.svg)](https://github.com/urho3d/Urho3D/actions?query=workflow%3ACI%2FCD)
-[![Coverity Scan Build Status](https://scan.coverity.com/projects/4954/badge.svg)](https://scan.coverity.com/projects/urho3d-urho3d)
+- **Removed 3D functionality**: Eliminated 60+ 3D-related classes and the entire 3D rendering pipeline
+- **Retained 2D core**: Preserved all Urho2D, Physics2D, UI system, and other 2D features
+- **SDL3 upgrade**: Upgraded the underlying SDL library from SDL2 to SDL3 for better performance and new features
+- **Streamlined build**: Removed dependencies including AngelScript, IK, Navigation, and 3D Physics
+- **Optimized samples**: Kept and optimized 2D-related samples while removing 3D examples
 
-**Urho3D** is a free lightweight, cross-platform 2D and 3D game engine.
+## Based on Open Source Project
+
+This project is based on the [Urho3D](https://github.com/urho3d/Urho3D) game engine, a powerful cross-platform 2D and 3D game engine.
+
+## Features
+
+- **2D-focused**: Pure 2D game engine without 3D functionality overhead
+- **High performance**: Modern graphics backend based on SDL3
+- **Rich 2D features**: Sprite rendering, particle systems, tile maps, physics engine
+- **Easy to use**: Simplified API with extensive sample code
+- **Cross-platform**: Supports Windows, Linux, macOS, and other platforms
+- **Lightweight**: Significantly reduced size and dependencies compared to full Urho3D
+
+## Build Requirements
+
+- CMake 3.15+
+- C++17 compatible compiler
+- SDL3 library (included)
+
+## Quick Start
+
+```bash
+# Clone the project
+git clone [your-repository-url]
+cd Tina2d
+
+# Build the project
+mkdir build && cd build
+cmake ..
+cmake --build .
+```
+
+## Sample Projects
+
+TINA2D includes multiple 2D game samples:
+
+- **Sprite Rendering** - 2D sprite display and animation
+- **Particle Systems** - 2D particle effects
+- **Physics Simulation** - 2D physics collision and constraints
+- **Tile Maps** - TMX format map support
+- **UI System** - Complete user interface components
+
+## Technical Architecture
+
+TINA2D retains Urho3D's core architecture but is specifically optimized for 2D:
+
+- **Renderer**: SDL3-based 2D rendering pipeline
+- **Scene System**: Node-component architecture
+- **Resource Management**: Efficient resource caching system
+- **Event System**: Publisher-subscriber pattern event handling
+- **Input Processing**: Keyboard, mouse, and touch input support
 
 ## License
 
-Licensed under the MIT license, see [LICENSE](licenses/urho3d/LICENSE) for details.<br>
-Licenses for third-party libraries: [licenses](licenses).<br>
-Credits: [licenses/urho3d/credits.md](licenses/urho3d/credits.md).
+TINA2D is licensed under the MIT License. See [LICENSE](licenses/urho3d/LICENSE) for details.
 
-## Important Links
+Third-party library licenses: [licenses](licenses)
 
-* [The last english version (1.9.0)](https://github.com/urho3d/urho3d/releases/tag/1.9.0)
-* [Documentation for 1.9.0 version](https://urho3d-doxygen.github.io/1_9_0_tutors/index.html)
-* [Documentation for latest version](https://urho3d-doxygen.github.io/latest/index.html)
-* [Wiki archive](https://github.com/urho3d-community/wiki-archive/wiki)
-* [Forum 🇬🇧](https://github.com/urho3d-community/discussions/discussions/categories/for-english-speakers)
-* [Old forum archive](https://urho3d-forum-archive.github.io)
-* [Web samples](https://urho3d-web-samples.github.io)
-* [Tools](https://github.com/urho3d-tools)
+Credits: [licenses/urho3d/credits.md](licenses/urho3d/credits.md)
+
+## Related Links
+
+### Original Project
+* [Urho3D Official Repository](https://github.com/urho3d/Urho3D)
+* [Urho3D Documentation](https://urho3d-doxygen.github.io/latest/index.html)
+* [Urho3D Community Forum](https://github.com/urho3d-community/discussions/discussions)
+
+### SDL3 Related
+* [SDL3 Official Documentation](https://wiki.libsdl.org/SDL3/FrontPage)
+* [SDL3 Migration Guide](https://github.com/libsdl-org/SDL/blob/main/docs/README-migration.md)
 
 ## Project Authors
 
-The founder of the project is [Lasse Öörni](https://github.com/cadaver). A huge contribution to the project was also made by
-[Yao Wei Tjong](https://github.com/weitjong), [asterj](https://github.com/aster2013)
-and many other developers, a list of which can be viewed [here](https://github.com/urho3d/Urho3D/graphs/contributors).
+**TINA2D** is based on the [Urho3D](https://github.com/urho3d/Urho3D) project.
 
----
+Urho3D was founded by [Lasse Öörni](https://github.com/cadaver). Huge contributions were also made by [Yao Wei Tjong](https://github.com/weitjong), [asterj](https://github.com/aster2013), and [many other contributors](https://github.com/urho3d/Urho3D/graphs/contributors).
 
-# Информация для русскоязычной аудитории
-
-**Urho3D** - это легковесный, кроссплатформенный 2D и 3D игровой движок.
-
-## Лицензия
-
-Urho3D распространяется под лицензией MIT.
-
-Тексты лицензий:
-* [Проект Urho3D](licenses/urho3d/LICENSE)
-* [Третьесторонние библиотеки](licenses)
-
-Папку [licenses](licenses) удобно распространять вместе с игрой.
-
-## Важные ссылки:
-
-* [Документация, сгенерированная Doxygen](https://urho3d-doxygen.github.io)
-* [Форум 🇷🇺](https://github.com/urho3d-community/discussions/discussions)
-* [Wiki](https://github.com/urho3d-community/wiki/wiki)
-* [Архив англоязычной Wiki](https://github.com/urho3d-community/wiki-archive/wiki)
-* [Обучающие материалы](https://github.com/urho3d-learn)
-* [Инструменты и утилиты](https://github.com/urho3d-tools)
-* [Примеры, скомпилированные для веб](https://urho3d-web-samples.github.io)
-* [Архив старого форума](https://urho3d-forum-archive.github.io)
-
-## Авторы проекта
-
-Основателем проекта является [Lasse Öörni](https://github.com/cadaver). Огромный вклад в развитие проекта также внесли
-[Yao Wei Tjong](https://github.com/weitjong), [asterj](https://github.com/aster2013)
-и многие другие разработчики, список которых можно посмотреть [тут](https://github.com/urho3d/Urho3D/graphs/contributors).
+The 2D-specific optimizations and SDL3 upgrade for TINA2D were completed by the project maintenance team.

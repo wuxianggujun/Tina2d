@@ -403,7 +403,7 @@ bool Graphics::SetScreenMode_OGL(int width, int height, const ScreenModeParams& 
 
 #ifndef __EMSCRIPTEN__
         if (newParams.highDPI_)
-            flags |= SDL_WINDOW_ALLOW_HIGHDPI;
+            flags |= SDL_WINDOW_HIGH_PIXEL_DENSITY; // SDL3: 旧 SDL_WINDOW_ALLOW_HIGHDPI 已更名
 #endif
 
         SDL_SetHint(SDL_HINT_ORIENTATIONS, orientations_.CString());
@@ -428,14 +428,37 @@ bool Graphics::SetScreenMode_OGL(int width, int height, const ScreenModeParams& 
                 }
 
                 if (!externalWindow_)
-                    window_ = SDL_CreateWindow(windowTitle_.CString(), x, y, width, height, flags);
+                {
+                    // SDL3: SDL_CreateWindow(title, w, h, flags)，位置需在创建后设置
+                    window_ = SDL_CreateWindow(windowTitle_.CString(), width, height, (SDL_WindowFlags)flags);
+                    if (window_)
+                        SDL_SetWindowPosition(window_, x, y);
+                }
                 else
                 {
-    #ifndef __EMSCRIPTEN__
+#ifndef __EMSCRIPTEN__
                     if (!window_)
-                        window_ = SDL_CreateWindowFrom(externalWindow_, SDL_WINDOW_OPENGL);
+                    {
+                        // SDL3: 通过属性从外部窗口句柄创建，同时显式声明 OpenGL 窗口
+                        SDL_PropertiesID props = SDL_CreateProperties();
+                        if (props)
+                        {
+                            SDL_SetStringProperty(props, SDL_PROP_WINDOW_CREATE_TITLE_STRING, windowTitle_.CString());
+                            SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, width);
+                            SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, height);
+                            SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN, (flags & SDL_WINDOW_RESIZABLE) != 0);
+                            SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_BORDERLESS_BOOLEAN, (flags & SDL_WINDOW_BORDERLESS) != 0);
+                            SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_OPENGL_BOOLEAN, true);
+#   if defined(_WIN32)
+                            SDL_SetPointerProperty(props, SDL_PROP_WINDOW_CREATE_WIN32_HWND_POINTER, externalWindow_);
+#   endif
+                            window_ = SDL_CreateWindowWithProperties(props);
+                            SDL_DestroyProperties(props);
+                        }
+                    }
+                    // 外部窗口不支持全屏
                     newParams.fullscreen_ = false;
-    #endif
+#endif
                 }
 
                 if (window_)
@@ -456,7 +479,7 @@ bool Graphics::SetScreenMode_OGL(int width, int height, const ScreenModeParams& 
             return false;
         }
 
-        // Reposition the window on the specified monitor
+        // Reposition the window on the specified monitor（已经在创建后按 x,y 设置了一次，这里确保全屏/无边框场景位于期望显示器）
         if (reposition)
             SDL_SetWindowPosition(window_, display_rect.x, display_rect.y);
 
@@ -2456,7 +2479,7 @@ void Graphics::Release_OGL(bool clearGPUObjects, bool closeWindow)
 
     if (closeWindow)
     {
-        SDL_ShowCursor(SDL_TRUE);
+        SDL_ShowCursor();
 
         // Do not destroy external window except when shutting down
         if (!externalWindow_ || clearGPUObjects)

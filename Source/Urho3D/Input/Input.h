@@ -13,6 +13,11 @@
 #include "../Input/InputEvents.h"
 #include "../UI/Cursor.h"
 
+// 前向声明 SDL 类型，避免在头文件中包含 SDL 头
+struct SDL_Joystick;
+struct SDL_Gamepad;
+typedef unsigned int SDL_JoystickID; // SDL3: typedef Uint32 SDL_JoystickID;
+
 namespace Urho3D
 {
 

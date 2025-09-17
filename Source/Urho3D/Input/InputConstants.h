@@ -8,10 +8,7 @@
 #include "../Container/FlagSet.h"
 #include "../Math/MathDefs.h"
 
-// SDL3：统一从 SDL.h 引入以启用旧名兼容（SDL_ENABLE_OLD_NAMES）
-#ifndef SDL_ENABLE_OLD_NAMES
-#define SDL_ENABLE_OLD_NAMES
-#endif
+// SDL3：直接引入主头，不再启用旧名兼容宏
 #include <SDL3/SDL.h>
 
 

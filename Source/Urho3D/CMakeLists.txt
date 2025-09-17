@@ -40,8 +40,7 @@ get_directory_property (URHO3D_COMPILE_DEFINITIONS DIRECTORY ${CMAKE_CURRENT_SOU
 
 # Define preprocessor macros (for building the Urho3D library)
 add_definitions (-DURHO3D_IS_BUILDING)
-# 兼容 SDL2 名称（迁移过渡期）。可后续逐步移除该定义并替换旧 API。
-add_definitions (-DSDL_ENABLE_OLD_NAMES)
+# 完全迁移 SDL3：不再启用旧名兼容宏 SDL_ENABLE_OLD_NAMES
 # 统一关闭 SDL 动态 API，确保以静态方式直接链接 SDL_* 实现
 # SDL3：启用旧名兼容，尽量减少迁移改动量
 # 显式移除可能遗留的 IK 预处理宏，避免包含已删除的 ThirdParty/ik

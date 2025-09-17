@@ -23,8 +23,8 @@
 #include "../../IO/Log.h"
 #include "../../Resource/ResourceCache.h"
 
-// 使用 SDL3 兼容层
-#include "../../ThirdParty/SDL3Compat.h"
+// 直接使用 SDL3 头文件
+#include <SDL3/SDL.h>
 
 #include "../../DebugNew.h"
 
@@ -231,7 +231,7 @@ void Graphics::Destructor_D3D11()
 
     if (window_)
     {
-        SDL_ShowCursor(SDL_TRUE);
+        SDL_ShowCursor();
         SDL_DestroyWindow(window_);
         window_ = nullptr;
     }
@@ -347,7 +347,7 @@ void Graphics::Close_D3D11()
 {
     if (window_)
     {
-        SDL_ShowCursor(SDL_TRUE);
+        SDL_ShowCursor();
         SDL_DestroyWindow(window_);
         window_ = nullptr;
     }
@@ -2064,8 +2064,8 @@ void Graphics::AdjustWindow_D3D11(int& newWidth, int& newHeight, bool& newFullsc
         // Hack fix: on SDL 2.0.4 a fullscreen->windowed transition results in a maximized window when the D3D device is reset, so hide before
         if (!newFullscreen) SDL_HideWindow(window_);
         SDL_SetWindowFullscreen(window_, newFullscreen);
-        SDL_SetWindowBordered(window_, newBorderless ? SDL_FALSE : SDL_TRUE);
-        SDL_SetWindowResizable(window_, newResizable ? SDL_TRUE : SDL_FALSE);
+        SDL_SetWindowBordered(window_, !newBorderless);
+        SDL_SetWindowResizable(window_, newResizable);
         if (!newFullscreen) SDL_ShowWindow(window_);
 
         // Resize now if was postponed

@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2019 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -18,119 +18,83 @@
      misrepresented as being the original software.
   3. This notice may not be removed or altered from any source distribution.
 */
-#include "../../SDL_internal.h"
+#include "SDL_internal.h"
 
-#if SDL_THREAD_PSP
+#ifdef SDL_THREAD_PSP
 
-/* An implementation of mutexes using semaphores */
+// An implementation of mutexes using semaphores
 
-#include "SDL_thread.h"
 #include "SDL_systhread_c.h"
 
+#include <pspthreadman.h>
+#include <pspkerror.h>
 
-struct SDL_mutex
+#define SCE_KERNEL_MUTEX_ATTR_RECURSIVE 0x0200U
+
+struct SDL_Mutex
 {
-    int recursive;
-    SDL_threadID owner;
-    SDL_sem *sem;
+    SceLwMutexWorkarea lock;
 };
 
-/* Create a mutex */
-SDL_mutex *
-SDL_CreateMutex(void)
+SDL_Mutex *SDL_CreateMutex(void)
 {
-    SDL_mutex *mutex;
-
-    /* Allocate mutex memory */
-    mutex = (SDL_mutex *) SDL_malloc(sizeof(*mutex));
+    SDL_Mutex *mutex = (SDL_Mutex *)SDL_malloc(sizeof(*mutex));
     if (mutex) {
-        /* Create the mutex semaphore, with initial value 1 */
-        mutex->sem = SDL_CreateSemaphore(1);
-        mutex->recursive = 0;
-        mutex->owner = 0;
-        if (!mutex->sem) {
+        const SceInt32 res = sceKernelCreateLwMutex(
+            &mutex->lock,
+            "SDL mutex",
+            SCE_KERNEL_MUTEX_ATTR_RECURSIVE,
+            0,
+            NULL);
+
+        if (res < 0) {
             SDL_free(mutex);
             mutex = NULL;
+            SDL_SetError("Error trying to create mutex: %lx", res);
         }
-    } else {
-        SDL_OutOfMemory();
     }
     return mutex;
 }
 
-/* Free the mutex */
-void
-SDL_DestroyMutex(SDL_mutex * mutex)
+void SDL_DestroyMutex(SDL_Mutex *mutex)
 {
     if (mutex) {
-        if (mutex->sem) {
-            SDL_DestroySemaphore(mutex->sem);
-        }
+        sceKernelDeleteLwMutex(&mutex->lock);
         SDL_free(mutex);
     }
 }
 
-/* Lock the semaphore */
-int
-SDL_mutexP(SDL_mutex * mutex)
+void SDL_LockMutex(SDL_Mutex *mutex) SDL_NO_THREAD_SAFETY_ANALYSIS  // clang doesn't know about NULL mutexes
 {
-#if SDL_THREADS_DISABLED
-    return 0;
-#else
-    SDL_threadID this_thread;
-
-    if (mutex == NULL) {
-        return SDL_SetError("Passed a NULL mutex");
+    if (mutex) {
+        const SceInt32 res = sceKernelLockLwMutex(&mutex->lock, 1, NULL);
+        SDL_assert(res == SCE_KERNEL_ERROR_OK);  // assume we're in a lot of trouble if this assert fails.
     }
-
-    this_thread = SDL_ThreadID();
-    if (mutex->owner == this_thread) {
-        ++mutex->recursive;
-    } else {
-        /* The order of operations is important.
-           We set the locking thread id after we obtain the lock
-           so unlocks from other threads will fail.
-         */
-        SDL_SemWait(mutex->sem);
-        mutex->owner = this_thread;
-        mutex->recursive = 0;
-    }
-
-    return 0;
-#endif /* SDL_THREADS_DISABLED */
 }
 
-/* Unlock the mutex */
-int
-SDL_mutexV(SDL_mutex * mutex)
+bool SDL_TryLockMutex(SDL_Mutex *mutex)
 {
-#if SDL_THREADS_DISABLED
-    return 0;
-#else
-    if (mutex == NULL) {
-        return SDL_SetError("Passed a NULL mutex");
+    bool result = true;
+    if (mutex) {
+        const SceInt32 res = sceKernelTryLockLwMutex(&mutex->lock, 1);
+        if (res == SCE_KERNEL_ERROR_OK) {
+            result = true;
+        } else if (res == SCE_KERNEL_ERROR_WAIT_TIMEOUT) {
+            result = false;
+        } else {
+            SDL_assert(res == SCE_KERNEL_ERROR_OK);  // assume we're in a lot of trouble if this assert fails.
+            result = false;
+        }
     }
-
-    /* If we don't own the mutex, we can't unlock it */
-    if (SDL_ThreadID() != mutex->owner) {
-        return SDL_SetError("mutex not owned by this thread");
-    }
-
-    if (mutex->recursive) {
-        --mutex->recursive;
-    } else {
-        /* The order of operations is important.
-           First reset the owner so another thread doesn't lock
-           the mutex and set the ownership before we reset it,
-           then release the lock semaphore.
-         */
-        mutex->owner = 0;
-        SDL_SemPost(mutex->sem);
-    }
-    return 0;
-#endif /* SDL_THREADS_DISABLED */
+    return result;
 }
 
-#endif /* SDL_THREAD_PSP */
+void SDL_UnlockMutex(SDL_Mutex *mutex) SDL_NO_THREAD_SAFETY_ANALYSIS  // clang doesn't know about NULL mutexes
+{
+    if (mutex) {
+        const SceInt32 res = sceKernelUnlockLwMutex(&mutex->lock, 1);
+        SDL_assert(res == SCE_KERNEL_ERROR_OK);  // assume we're in a lot of trouble if this assert fails.
+    }
+}
 
-/* vi: set ts=4 sw=4 expandtab: */
+#endif // SDL_THREAD_PSP

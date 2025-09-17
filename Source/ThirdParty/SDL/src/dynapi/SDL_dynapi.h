@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2019 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -19,8 +19,6 @@
   3. This notice may not be removed or altered from any source distribution.
 */
 
-// Modified by Lasse Oorni for Urho3D
-
 #ifndef SDL_dynapi_h_
 #define SDL_dynapi_h_
 
@@ -37,13 +35,43 @@
    updated SDL can transparently take advantage of them, but your program will
    not without this feature. Think hard before turning it off.
 */
-#ifdef SDL_DYNAMIC_API  /* Tried to force it on the command line? */
+#ifdef SDL_DYNAMIC_API // Tried to force it on the command line?
 #error Nope, you have to edit this file to force this off.
 #endif
 
-// Urho3D: disabled dynamic API
-#define SDL_DYNAMIC_API 0
-
+#ifdef SDL_PLATFORM_APPLE
+#include "TargetConditionals.h"
 #endif
 
-/* vi: set ts=4 sw=4 expandtab: */
+#if defined(SDL_PLATFORM_PRIVATE) // probably not useful on private platforms.
+#define SDL_DYNAMIC_API 0
+#elif defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE // probably not useful on iOS.
+#define SDL_DYNAMIC_API 0
+#elif defined(SDL_PLATFORM_ANDROID) // probably not useful on Android.
+#define SDL_DYNAMIC_API 0
+#elif defined(SDL_PLATFORM_EMSCRIPTEN) // probably not useful on Emscripten.
+#define SDL_DYNAMIC_API 0
+#elif defined(SDL_PLATFORM_PS2) && SDL_PLATFORM_PS2
+#define SDL_DYNAMIC_API 0
+#elif defined(SDL_PLATFORM_PSP) && SDL_PLATFORM_PSP
+#define SDL_DYNAMIC_API 0
+#elif defined(SDL_PLATFORM_RISCOS) // probably not useful on RISC OS, since dlopen() can't be used when using static linking.
+#define SDL_DYNAMIC_API 0
+#elif defined(__clang_analyzer__) || defined(__INTELLISENSE__) || defined(SDL_THREAD_SAFETY_ANALYSIS) || defined(__RESHARPER__)
+#define SDL_DYNAMIC_API 0 // Turn off for static analysis, so reports are more clear.
+#elif defined(SDL_PLATFORM_VITA)
+#define SDL_DYNAMIC_API 0 // vitasdk doesn't support dynamic linking
+#elif defined(SDL_PLATFORM_3DS)
+#define SDL_DYNAMIC_API 0 // devkitARM doesn't support dynamic linking
+#elif defined(SDL_PLATFORM_NGAGE)
+#define SDL_DYNAMIC_API 0
+#elif defined(DYNAPI_NEEDS_DLOPEN) && !defined(HAVE_DLOPEN)
+#define SDL_DYNAMIC_API 0 // we need dlopen(), but don't have it....
+#endif
+
+// everyone else. This is where we turn on the API if nothing forced it off.
+#ifndef SDL_DYNAMIC_API
+#define SDL_DYNAMIC_API 1
+#endif
+
+#endif

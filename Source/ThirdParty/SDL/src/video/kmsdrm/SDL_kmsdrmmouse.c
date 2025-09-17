@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2019 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -19,9 +19,9 @@
   3. This notice may not be removed or altered from any source distribution.
 */
 
-#include "../../SDL_internal.h"
+#include "SDL_internal.h"
 
-#if SDL_VIDEO_DRIVER_KMSDRM
+#ifdef SDL_VIDEO_DRIVER_KMSDRM
 
 #include "SDL_kmsdrmvideo.h"
 #include "SDL_kmsdrmmouse.h"
@@ -30,419 +30,321 @@
 #include "../../events/SDL_mouse_c.h"
 #include "../../events/default_cursor.h"
 
-static SDL_Cursor *KMSDRM_CreateDefaultCursor(void);
-static SDL_Cursor *KMSDRM_CreateCursor(SDL_Surface * surface, int hot_x, int hot_y);
-static int KMSDRM_ShowCursor(SDL_Cursor * cursor);
-static void KMSDRM_MoveCursor(SDL_Cursor * cursor);
-static void KMSDRM_FreeCursor(SDL_Cursor * cursor);
-static void KMSDRM_WarpMouse(SDL_Window * window, int x, int y);
-static int KMSDRM_WarpMouseGlobal(int x, int y);
+#include "../SDL_pixels_c.h"
 
-static SDL_Cursor *
-KMSDRM_CreateDefaultCursor(void)
+static SDL_Cursor *KMSDRM_CreateDefaultCursor(void);
+static SDL_Cursor *KMSDRM_CreateCursor(SDL_Surface *surface, int hot_x, int hot_y);
+static bool KMSDRM_ShowCursor(SDL_Cursor *cursor);
+static bool KMSDRM_MoveCursor(SDL_Cursor *cursor);
+static void KMSDRM_FreeCursor(SDL_Cursor *cursor);
+
+/**************************************************************************************/
+// BEFORE CODING ANYTHING MOUSE/CURSOR RELATED, REMEMBER THIS.
+// How does SDL manage cursors internally? First, mouse =! cursor. The mouse can have
+// many cursors in mouse->cursors.
+// -SDL tells us to create a cursor with KMSDRM_CreateCursor(). It can create many
+// cursosr with this, not only one.
+// -SDL stores those cursors in a cursors array, in mouse->cursors.
+// -Whenever it wants (or the programmer wants) takes a cursor from that array
+// and shows it on screen with KMSDRM_ShowCursor().
+// KMSDRM_ShowCursor() simply shows or hides the cursor it receives: it does NOT
+// mind if it's mouse->cur_cursor, etc.
+// -If KMSDRM_ShowCursor() returns successfully, that cursor becomes
+// mouse->cur_cursor and mouse->cursor_visible is 1.
+/**************************************************************************************/
+
+static SDL_Cursor *KMSDRM_CreateDefaultCursor(void)
 {
     return SDL_CreateCursor(default_cdata, default_cmask, DEFAULT_CWIDTH, DEFAULT_CHEIGHT, DEFAULT_CHOTX, DEFAULT_CHOTY);
 }
 
-/* Evaluate if a given cursor size is supported or not. Notably, current Intel gfx only support 64x64 and up. */
-static SDL_bool
-KMSDRM_IsCursorSizeSupported (int w, int h, uint32_t bo_format) {
+/* Given a display's internal, destroy the cursor BO for it.
+   To be called from KMSDRM_DestroyWindow(), as that's where we
+   destroy the internal for the window's display. */
+void KMSDRM_DestroyCursorBO(SDL_VideoDevice *_this, SDL_VideoDisplay *display)
+{
+    SDL_DisplayData *dispdata = display->internal;
+
+    // Destroy the curso GBM BO.
+    if (dispdata->cursor_bo) {
+        KMSDRM_gbm_bo_destroy(dispdata->cursor_bo);
+        dispdata->cursor_bo = NULL;
+        dispdata->cursor_bo_drm_fd = -1;
+    }
+}
+
+/* Given a display's internal, create the cursor BO for it.
+   To be called from KMSDRM_CreateWindow(), as that's where we
+   build a window and assign a display to it. */
+bool KMSDRM_CreateCursorBO(SDL_VideoDisplay *display)
+{
 
     SDL_VideoDevice *dev = SDL_GetVideoDevice();
-    SDL_VideoData *vdata = ((SDL_VideoData *)dev->driverdata);
-    int ret;
+    SDL_VideoData *viddata = dev->internal;
+    SDL_DisplayData *dispdata = display->internal;
+
+    if (!KMSDRM_gbm_device_is_format_supported(viddata->gbm_dev,
+                                               GBM_FORMAT_ARGB8888,
+                                               GBM_BO_USE_CURSOR | GBM_BO_USE_WRITE)) {
+        return SDL_SetError("Unsupported pixel format for cursor");
+    }
+
+    if (KMSDRM_drmGetCap(viddata->drm_fd,
+                         DRM_CAP_CURSOR_WIDTH, &dispdata->cursor_w) ||
+        KMSDRM_drmGetCap(viddata->drm_fd, DRM_CAP_CURSOR_HEIGHT,
+                         &dispdata->cursor_h)) {
+        return SDL_SetError("Could not get the recommended GBM cursor size");
+    }
+
+    if (dispdata->cursor_w == 0 || dispdata->cursor_h == 0) {
+        return SDL_SetError("Could not get an usable GBM cursor size");
+    }
+
+    dispdata->cursor_bo = KMSDRM_gbm_bo_create(viddata->gbm_dev,
+                                               dispdata->cursor_w, dispdata->cursor_h,
+                                               GBM_FORMAT_ARGB8888, GBM_BO_USE_CURSOR | GBM_BO_USE_WRITE | GBM_BO_USE_LINEAR);
+
+    if (!dispdata->cursor_bo) {
+        return SDL_SetError("Could not create GBM cursor BO");
+    }
+
+    dispdata->cursor_bo_drm_fd = viddata->drm_fd;
+    return true;
+}
+
+// Remove a cursor buffer from a display's DRM cursor BO.
+static bool KMSDRM_RemoveCursorFromBO(SDL_VideoDisplay *display)
+{
+    bool result = true;
+
+    SDL_DisplayData *dispdata = display->internal;
+    SDL_VideoDevice *video_device = SDL_GetVideoDevice();
+    SDL_VideoData *viddata = video_device->internal;
+
+    const int rc = KMSDRM_drmModeSetCursor(viddata->drm_fd, dispdata->crtc->crtc_id, 0, 0, 0);
+    if (rc < 0) {
+        result = SDL_SetError("drmModeSetCursor() failed: %s", strerror(-rc));
+    }
+    return result;
+}
+
+// Dump a cursor buffer to a display's DRM cursor BO.
+static bool KMSDRM_DumpCursorToBO(SDL_VideoDisplay *display, SDL_Cursor *cursor)
+{
+    SDL_DisplayData *dispdata = display->internal;
+    SDL_CursorData *curdata = cursor->internal;
+    SDL_VideoDevice *video_device = SDL_GetVideoDevice();
+    SDL_VideoData *viddata = video_device->internal;
+
     uint32_t bo_handle;
-    struct gbm_bo *bo = KMSDRM_gbm_bo_create(vdata->gbm, w, h, bo_format,
-                                       GBM_BO_USE_CURSOR | GBM_BO_USE_WRITE);
+    size_t bo_stride;
+    size_t bufsize;
+    uint8_t *ready_buffer = NULL;
+    uint8_t *src_row;
 
-    if (bo == NULL) {
-        SDL_SetError("Could not create GBM cursor BO width size %dx%d for size testing", w, h);
+    int i, rc;
+    bool result = true;
+
+    if (!curdata || !dispdata->cursor_bo) {
+        return SDL_SetError("Cursor or display not initialized properly.");
+    }
+
+    /* Prepare a buffer we can dump to our GBM BO (different
+       size, alpha premultiplication...) */
+    bo_stride = KMSDRM_gbm_bo_get_stride(dispdata->cursor_bo);
+    bufsize = bo_stride * dispdata->cursor_h;
+
+    ready_buffer = (uint8_t *)SDL_calloc(1, bufsize);
+
+    if (!ready_buffer) {
+        result = false;
         goto cleanup;
     }
 
-    bo_handle = KMSDRM_gbm_bo_get_handle(bo).u32;
-    ret = KMSDRM_drmModeSetCursor(vdata->drm_fd, vdata->crtc_id, bo_handle, w, h);
+    // Copy from the cursor buffer to a buffer that we can dump to the GBM BO.
+    for (i = 0; i < curdata->h; i++) {
+        src_row = &((uint8_t *)curdata->buffer)[i * curdata->w * 4];
+        SDL_memcpy(ready_buffer + (i * bo_stride), src_row, (size_t)4 * curdata->w);
+    }
 
-    if (ret) {
+    // Dump the cursor buffer to our GBM BO.
+    if (KMSDRM_gbm_bo_write(dispdata->cursor_bo, ready_buffer, bufsize)) {
+        result = SDL_SetError("Could not write to GBM cursor BO");
         goto cleanup;
     }
-    else {
-        KMSDRM_gbm_bo_destroy(bo);
-        return SDL_TRUE;
+
+    // Put the GBM BO buffer on screen using the DRM interface.
+    bo_handle = KMSDRM_gbm_bo_get_handle(dispdata->cursor_bo).u32;
+    if (curdata->hot_x == 0 && curdata->hot_y == 0) {
+        rc = KMSDRM_drmModeSetCursor(viddata->drm_fd, dispdata->crtc->crtc_id,
+                                      bo_handle, dispdata->cursor_w, dispdata->cursor_h);
+    } else {
+        rc = KMSDRM_drmModeSetCursor2(viddata->drm_fd, dispdata->crtc->crtc_id,
+                                       bo_handle, dispdata->cursor_w, dispdata->cursor_h, curdata->hot_x, curdata->hot_y);
+    }
+    if (rc < 0) {
+        result = SDL_SetError("Failed to set DRM cursor: %s", strerror(-rc));
+        goto cleanup;
     }
 
 cleanup:
-    if (bo != NULL) {
-        KMSDRM_gbm_bo_destroy(bo);
+
+    if (ready_buffer) {
+        SDL_free(ready_buffer);
     }
-    return SDL_FALSE;
+    return result;
 }
 
-/* Create a cursor from a surface */
-static SDL_Cursor *
-KMSDRM_CreateCursor(SDL_Surface * surface, int hot_x, int hot_y)
+// This is only for freeing the SDL_cursor.
+static void KMSDRM_FreeCursor(SDL_Cursor *cursor)
 {
-    SDL_VideoDevice *dev = SDL_GetVideoDevice();
-    SDL_VideoData *vdata = ((SDL_VideoData *)dev->driverdata);
-    SDL_PixelFormat *pixlfmt = surface->format;
-    KMSDRM_CursorData *curdata;
-    SDL_Cursor *cursor;
-    SDL_bool cursor_supported = SDL_FALSE;
-    int i, ret, usable_cursor_w, usable_cursor_h;
-    uint32_t bo_format, bo_stride;
-    char *buffer = NULL;
-    size_t bufsize;
+    SDL_CursorData *curdata;
 
-    switch(pixlfmt->format) {
-    case SDL_PIXELFORMAT_RGB332:
-        bo_format = GBM_FORMAT_RGB332;
-        break;
-    case SDL_PIXELFORMAT_ARGB4444:
-        bo_format = GBM_FORMAT_ARGB4444;
-        break;
-    case SDL_PIXELFORMAT_RGBA4444:
-        bo_format = GBM_FORMAT_RGBA4444;
-        break;
-    case SDL_PIXELFORMAT_ABGR4444:
-        bo_format = GBM_FORMAT_ABGR4444;
-        break;
-    case SDL_PIXELFORMAT_BGRA4444:
-        bo_format = GBM_FORMAT_BGRA4444;
-        break;
-    case SDL_PIXELFORMAT_ARGB1555:
-        bo_format = GBM_FORMAT_ARGB1555;
-        break;
-    case SDL_PIXELFORMAT_RGBA5551:
-        bo_format = GBM_FORMAT_RGBA5551;
-        break;
-    case SDL_PIXELFORMAT_ABGR1555:
-        bo_format = GBM_FORMAT_ABGR1555;
-        break;
-    case SDL_PIXELFORMAT_BGRA5551:
-        bo_format = GBM_FORMAT_BGRA5551;
-        break;
-    case SDL_PIXELFORMAT_RGB565:
-        bo_format = GBM_FORMAT_RGB565;
-        break;
-    case SDL_PIXELFORMAT_BGR565:
-        bo_format = GBM_FORMAT_BGR565;
-        break;
-    case SDL_PIXELFORMAT_RGB888:
-    case SDL_PIXELFORMAT_RGB24:
-        bo_format = GBM_FORMAT_RGB888;
-        break;
-    case SDL_PIXELFORMAT_BGR888:
-    case SDL_PIXELFORMAT_BGR24:
-        bo_format = GBM_FORMAT_BGR888;
-        break;
-    case SDL_PIXELFORMAT_RGBX8888:
-        bo_format = GBM_FORMAT_RGBX8888;
-        break;
-    case SDL_PIXELFORMAT_BGRX8888:
-        bo_format = GBM_FORMAT_BGRX8888;
-        break;
-    case SDL_PIXELFORMAT_ARGB8888:
-        bo_format = GBM_FORMAT_ARGB8888;
-        break;
-    case SDL_PIXELFORMAT_RGBA8888:
-        bo_format = GBM_FORMAT_RGBA8888;
-        break;
-    case SDL_PIXELFORMAT_ABGR8888:
-        bo_format = GBM_FORMAT_ABGR8888;
-        break;
-    case SDL_PIXELFORMAT_BGRA8888:
-        bo_format = GBM_FORMAT_BGRA8888;
-        break;
-    case SDL_PIXELFORMAT_ARGB2101010:
-        bo_format = GBM_FORMAT_ARGB2101010;
-        break;
-    default:
-        SDL_SetError("Unsupported pixel format for cursor");
-        return NULL;
-    }
-
-    if (!KMSDRM_gbm_device_is_format_supported(vdata->gbm, bo_format, GBM_BO_USE_CURSOR | GBM_BO_USE_WRITE)) {
-        SDL_SetError("Unsupported pixel format for cursor");
-        return NULL;
-    }
-
-    cursor = (SDL_Cursor *) SDL_calloc(1, sizeof(*cursor));
-    if (cursor == NULL) {
-        SDL_OutOfMemory();
-        return NULL;
-    }
-    curdata = (KMSDRM_CursorData *) SDL_calloc(1, sizeof(*curdata));
-    if (curdata == NULL) {
-        SDL_OutOfMemory();
-        SDL_free(cursor);
-        return NULL;
-    }
-
-    /* We have to know beforehand if a cursor with the same size as the surface is supported.
-     * If it's not, we have to find an usable cursor size and use an intermediate and clean buffer.
-     * If we can't find a cursor size supported by the hardware, we won't go on trying to 
-     * call SDL_SetCursor() later. */
-
-    usable_cursor_w = surface->w;
-    usable_cursor_h = surface->h;
-
-    while (usable_cursor_w <= MAX_CURSOR_W && usable_cursor_h <= MAX_CURSOR_H) { 
-        if (KMSDRM_IsCursorSizeSupported(usable_cursor_w, usable_cursor_h, bo_format)) {
-            cursor_supported = SDL_TRUE;
-            break;
+    // Even if the cursor is not ours, free it.
+    if (cursor) {
+        curdata = cursor->internal;
+        // Free cursor buffer
+        if (curdata->buffer) {
+            SDL_free(curdata->buffer);
+            curdata->buffer = NULL;
         }
-        usable_cursor_w += usable_cursor_w;
-        usable_cursor_h += usable_cursor_h;
+        // Free cursor itself
+        if (cursor->internal) {
+            SDL_free(cursor->internal);
+        }
+        SDL_free(cursor);
     }
+}
 
-    if (!cursor_supported) {
-        SDL_SetError("Could not find a cursor size supported by the kernel driver");
+/* This simply gets the cursor soft-buffer ready.
+   We don't copy it to a GBO BO until ShowCursor() because the cusor GBM BO (living
+   in dispata) is destroyed and recreated when we recreate windows, etc. */
+static SDL_Cursor *KMSDRM_CreateCursor(SDL_Surface *surface, int hot_x, int hot_y)
+{
+    SDL_CursorData *curdata;
+    SDL_Cursor *cursor, *result;
+
+    curdata = NULL;
+    result = NULL;
+
+    cursor = (SDL_Cursor *)SDL_calloc(1, sizeof(*cursor));
+    if (!cursor) {
+        goto cleanup;
+    }
+    curdata = (SDL_CursorData *)SDL_calloc(1, sizeof(*curdata));
+    if (!curdata) {
         goto cleanup;
     }
 
+    // hox_x and hot_y are the coordinates of the "tip of the cursor" from it's base.
     curdata->hot_x = hot_x;
     curdata->hot_y = hot_y;
-    curdata->w = usable_cursor_w;
-    curdata->h = usable_cursor_h;
+    curdata->w = surface->w;
+    curdata->h = surface->h;
+    curdata->buffer = NULL;
 
-    curdata->bo = KMSDRM_gbm_bo_create(vdata->gbm, usable_cursor_w, usable_cursor_h, bo_format,
-                                       GBM_BO_USE_CURSOR | GBM_BO_USE_WRITE);
+    /* Configure the cursor buffer info.
+       This buffer has the original size of the cursor surface we are given. */
+    curdata->buffer_pitch = surface->w;
+    curdata->buffer_size = (size_t)surface->w * surface->h * 4;
+    curdata->buffer = (uint32_t *)SDL_malloc(curdata->buffer_size);
 
-    if (curdata->bo == NULL) {
-        SDL_SetError("Could not create GBM cursor BO");
+    if (!curdata->buffer) {
         goto cleanup;
     }
 
-    bo_stride = KMSDRM_gbm_bo_get_stride(curdata->bo);
-    bufsize = bo_stride * curdata->h;
+    /* All code below assumes ARGB8888 format for the cursor surface,
+       like other backends do. Also, the GBM BO pixels have to be
+       alpha-premultiplied, but the SDL surface we receive has
+       straight-alpha pixels, so we always have to convert. */
+    SDL_PremultiplyAlpha(surface->w, surface->h,
+                         surface->format, surface->pixels, surface->pitch,
+                         SDL_PIXELFORMAT_ARGB8888, curdata->buffer, surface->w * 4, true);
 
-    if (surface->pitch != bo_stride) {
-        /* pitch doesn't match stride, must be copied to temp buffer  */
-        buffer = SDL_malloc(bufsize);
-        if (buffer == NULL) {
-            SDL_OutOfMemory();
-            goto cleanup;
-        }
+    cursor->internal = curdata;
 
-        if (SDL_MUSTLOCK(surface)) {
-            if (SDL_LockSurface(surface) < 0) {
-                /* Could not lock surface */
-                goto cleanup;
-            }
-        }
-
-        /* Clean the whole temporary buffer */
-        SDL_memset(buffer, 0x00, bo_stride * curdata->h);
-
-        /* Copy to temporary buffer */
-        for (i = 0; i < surface->h; i++) {
-            SDL_memcpy(buffer + (i * bo_stride),
-                       ((char *)surface->pixels) + (i * surface->pitch),
-                       surface->w * pixlfmt->BytesPerPixel);
-        }
-
-        if (SDL_MUSTLOCK(surface)) {
-            SDL_UnlockSurface(surface);
-        }
-
-        if (KMSDRM_gbm_bo_write(curdata->bo, buffer, bufsize)) {
-            SDL_SetError("Could not write to GBM cursor BO");
-            goto cleanup;
-        }
-
-        /* Free temporary buffer */
-        SDL_free(buffer);
-        buffer = NULL;
-    } else {
-        /* surface matches BO format */
-        if (SDL_MUSTLOCK(surface)) {
-            if (SDL_LockSurface(surface) < 0) {
-                /* Could not lock surface */
-                goto cleanup;
-            }
-        }
-
-        ret = KMSDRM_gbm_bo_write(curdata->bo, surface->pixels, bufsize);
-
-        if (SDL_MUSTLOCK(surface)) {
-            SDL_UnlockSurface(surface);
-        }
-
-        if (ret) {
-            SDL_SetError("Could not write to GBM cursor BO");
-            goto cleanup;
-        }
-    }
-
-    cursor->driverdata = curdata;
-
-    return cursor;
+    result = cursor;
 
 cleanup:
-    if (buffer != NULL) {
-        SDL_free(buffer);
-    }
-    if (cursor != NULL) {
-        SDL_free(cursor);
-    }
-    if (curdata != NULL) {
-        if (curdata->bo != NULL) {
-            KMSDRM_gbm_bo_destroy(curdata->bo);
-        }
-        SDL_free(curdata);
-    }
-    return NULL;
-}
-
-/* Show the specified cursor, or hide if cursor is NULL */
-static int
-KMSDRM_ShowCursor(SDL_Cursor * cursor)
-{
-    SDL_VideoDevice *dev = SDL_GetVideoDevice();
-    SDL_VideoData *vdata = ((SDL_VideoData *)dev->driverdata);
-    SDL_Mouse *mouse;
-    KMSDRM_CursorData *curdata;
-    SDL_VideoDisplay *display = NULL;
-    SDL_DisplayData *ddata = NULL;
-    int ret;
-    uint32_t bo_handle;
-
-    mouse = SDL_GetMouse();
-    if (mouse == NULL) {
-        return SDL_SetError("No mouse.");
-    }
-
-    if (mouse->focus != NULL) {
-        display = SDL_GetDisplayForWindow(mouse->focus);
-        if (display != NULL) {
-            ddata = (SDL_DisplayData*) display->driverdata;
-        }
-    }
-
-    if (cursor == NULL) {
-        /* Hide current cursor */
-        if ( mouse->cur_cursor != NULL && mouse->cur_cursor->driverdata != NULL) {
-            curdata = (KMSDRM_CursorData *) mouse->cur_cursor->driverdata;
-
-            if (curdata->crtc_id != 0) {
-                ret = KMSDRM_drmModeSetCursor(vdata->drm_fd, curdata->crtc_id, 0, 0, 0);
-                if (ret) {
-                    SDL_SetError("Could not hide current cursor with drmModeSetCursor().");
-                    return ret;
-                }
-                /* Mark previous cursor as not-displayed */
-                curdata->crtc_id = 0;
-
-                return 0;
+    if (!result) {
+        if (curdata) {
+            if (curdata->buffer) {
+                SDL_free(curdata->buffer);
             }
+            SDL_free(curdata);
         }
-        /* otherwise if possible, hide global cursor */
-        if (ddata != NULL && ddata->crtc_id != 0) {
-            ret = KMSDRM_drmModeSetCursor(vdata->drm_fd, ddata->crtc_id, 0, 0, 0);
-            if (ret) {
-                SDL_SetError("Could not hide display's cursor with drmModeSetCursor().");
-                return ret;
-            }
-            return 0;
+        if (cursor) {
+            SDL_free(cursor);
         }
-
-        return SDL_SetError("Couldn't find cursor to hide.");
-    }
-    /* If cursor != NULL, show new cursor on display */
-    if (display == NULL) {
-        return SDL_SetError("Could not get display for mouse.");
-    }
-    if (ddata == NULL) {
-        return SDL_SetError("Could not get display driverdata.");
     }
 
-    curdata = (KMSDRM_CursorData *) cursor->driverdata;
-    if (curdata == NULL || curdata->bo == NULL) {
-        return SDL_SetError("Cursor not initialized properly.");
-    }
-
-    bo_handle = KMSDRM_gbm_bo_get_handle(curdata->bo).u32;
-    if (curdata->hot_x == 0 && curdata->hot_y == 0) {
-        ret = KMSDRM_drmModeSetCursor(vdata->drm_fd, ddata->crtc_id, bo_handle,
-                                      curdata->w, curdata->h);
-    } else {
-        ret = KMSDRM_drmModeSetCursor2(vdata->drm_fd, ddata->crtc_id, bo_handle,
-                                       curdata->w, curdata->h,
-                                       curdata->hot_x, curdata->hot_y);
-    }
-    if (ret) {
-        SDL_SetError("drmModeSetCursor failed.");
-        return ret;
-    }
-
-    curdata->crtc_id = ddata->crtc_id;
-
-    return 0;
+    return result;
 }
 
-/* Free a window manager cursor */
-static void
-KMSDRM_FreeCursor(SDL_Cursor * cursor)
+// Show the specified cursor, or hide if cursor is NULL or has no focus.
+static bool KMSDRM_ShowCursor(SDL_Cursor *cursor)
 {
-    KMSDRM_CursorData *curdata;
-    int drm_fd;
-
-    if (cursor != NULL) {
-        curdata = (KMSDRM_CursorData *) cursor->driverdata;
-
-        if (curdata != NULL) {
-            if (curdata->bo != NULL) {
-                if (curdata->crtc_id != 0) {
-                    drm_fd = KMSDRM_gbm_device_get_fd(KMSDRM_gbm_bo_get_device(curdata->bo));
-                    /* Hide the cursor if previously shown on a CRTC */
-                    KMSDRM_drmModeSetCursor(drm_fd, curdata->crtc_id, 0, 0, 0);
-                    curdata->crtc_id = 0;
-                }
-                KMSDRM_gbm_bo_destroy(curdata->bo);
-                curdata->bo = NULL;
-            }
-            SDL_free(cursor->driverdata);
-        }
-        SDL_free(cursor);
-    }
-}
-
-/* Warp the mouse to (x,y) */
-static void
-KMSDRM_WarpMouse(SDL_Window * window, int x, int y)
-{
-    /* Only one global/fullscreen window is supported */
-    KMSDRM_WarpMouseGlobal(x, y);
-}
-
-/* Warp the mouse to (x,y) */
-static int
-KMSDRM_WarpMouseGlobal(int x, int y)
-{
-    KMSDRM_CursorData *curdata;
+    SDL_VideoDisplay *display;
+    SDL_Window *window;
     SDL_Mouse *mouse = SDL_GetMouse();
 
-    if (mouse != NULL && mouse->cur_cursor != NULL && mouse->cur_cursor->driverdata != NULL) {
-        /* Update internal mouse position. */
-        SDL_SendMouseMotion(mouse->focus, mouse->mouseID, 0, x, y);
+    int i;
+    bool result = true;
 
-        /* And now update the cursor graphic position on screen. */
-        curdata = (KMSDRM_CursorData *) mouse->cur_cursor->driverdata;
-        if (curdata->bo != NULL) {
+    // Get the mouse focused window, if any.
+    window = mouse->focus;
 
-            if (curdata->crtc_id != 0) {
-                int ret, drm_fd;
-                drm_fd = KMSDRM_gbm_device_get_fd(KMSDRM_gbm_bo_get_device(curdata->bo));
-                ret = KMSDRM_drmModeMoveCursor(drm_fd, curdata->crtc_id, x, y);
-
-                if (ret) {
-                    SDL_SetError("drmModeMoveCursor() failed.");
-                }
-
-                return ret;
-            } else {
-                return SDL_SetError("Cursor is not currently shown.");
+    if (!window || !cursor) {
+        /* If no window is focused by mouse or cursor is NULL,
+           since we have no window (no mouse->focus) and hence
+           we have no display, we simply hide mouse on all displays.
+           This happens on video quit, where we get here after
+           the mouse focus has been unset, yet SDL wants to
+           restore the system default cursor (makes no sense here). */
+        SDL_DisplayID *displays = SDL_GetDisplays(NULL);
+        if (displays) {
+            // Iterate on the displays, hiding the cursor.
+            for (i = 0; i < displays[i]; i++) {
+                display = SDL_GetVideoDisplay(displays[i]);
+                result = KMSDRM_RemoveCursorFromBO(display);
             }
+            SDL_free(displays);
+        }
+    } else {
+        display = SDL_GetVideoDisplayForWindow(window);
+        if (display) {
+            if (cursor) {
+                /* Dump the cursor to the display DRM cursor BO so it becomes visible
+                   on that display. */
+                result = KMSDRM_DumpCursorToBO(display, cursor);
+            } else {
+                // Hide the cursor on that display.
+                result = KMSDRM_RemoveCursorFromBO(display);
+            }
+        }
+    }
+
+    return result;
+}
+
+static bool KMSDRM_WarpMouseGlobal(float x, float y)
+{
+    SDL_Mouse *mouse = SDL_GetMouse();
+
+    if (mouse && mouse->cur_cursor && mouse->focus) {
+        SDL_Window *window = mouse->focus;
+        SDL_DisplayData *dispdata = SDL_GetDisplayDriverDataForWindow(window);
+
+        // Update internal mouse position.
+        SDL_SendMouseMotion(0, mouse->focus, SDL_GLOBAL_MOUSE_ID, false, x, y);
+
+        // And now update the cursor graphic position on screen.
+        if (dispdata->cursor_bo) {
+            const int rc = KMSDRM_drmModeMoveCursor(dispdata->cursor_bo_drm_fd, dispdata->crtc->crtc_id, (int)x, (int)y);
+            if (rc < 0) {
+                return SDL_SetError("drmModeMoveCursor() failed: %s", strerror(-rc));
+            }
+            return true;
         } else {
             return SDL_SetError("Cursor not initialized properly.");
         }
@@ -451,13 +353,16 @@ KMSDRM_WarpMouseGlobal(int x, int y)
     }
 }
 
-void
-KMSDRM_InitMouse(_THIS)
+static bool KMSDRM_WarpMouse(SDL_Window *window, float x, float y)
 {
-    /* FIXME: Using UDEV it should be possible to scan all mice
-     * but there's no point in doing so as there's no multimice support...yet!
-     */
+    // Only one global/fullscreen window is supported
+    return KMSDRM_WarpMouseGlobal(x, y);
+}
+
+void KMSDRM_InitMouse(SDL_VideoDevice *_this, SDL_VideoDisplay *display)
+{
     SDL_Mouse *mouse = SDL_GetMouse();
+    SDL_DisplayData *dispdata = display->internal;
 
     mouse->CreateCursor = KMSDRM_CreateCursor;
     mouse->ShowCursor = KMSDRM_ShowCursor;
@@ -466,36 +371,40 @@ KMSDRM_InitMouse(_THIS)
     mouse->WarpMouse = KMSDRM_WarpMouse;
     mouse->WarpMouseGlobal = KMSDRM_WarpMouseGlobal;
 
-    SDL_SetDefaultCursor(KMSDRM_CreateDefaultCursor());
-}
-
-void
-KMSDRM_QuitMouse(_THIS)
-{
-    /* TODO: ? */
-}
-
-/* This is called when a mouse motion event occurs */
-static void
-KMSDRM_MoveCursor(SDL_Cursor * cursor)
-{
-    SDL_Mouse *mouse = SDL_GetMouse();
-    KMSDRM_CursorData *curdata;
-    int drm_fd, ret;
-
-    /* We must NOT call SDL_SendMouseMotion() here or we will enter recursivity!
-       That's why we move the cursor graphic ONLY. */
-    if (mouse != NULL && mouse->cur_cursor != NULL && mouse->cur_cursor->driverdata != NULL) {
-        curdata = (KMSDRM_CursorData *) mouse->cur_cursor->driverdata;
-        drm_fd = KMSDRM_gbm_device_get_fd(KMSDRM_gbm_bo_get_device(curdata->bo));
-        ret = KMSDRM_drmModeMoveCursor(drm_fd, curdata->crtc_id, mouse->x, mouse->y);
-
-        if (ret) {
-            SDL_SetError("drmModeMoveCursor() failed.");
-        }
+    /* Only create the default cursor for this display if we haven't done so before,
+       we don't want several cursors to be created for the same display. */
+    if (!dispdata->default_cursor_init) {
+        SDL_SetDefaultCursor(KMSDRM_CreateDefaultCursor());
+        dispdata->default_cursor_init = true;
     }
 }
 
-#endif /* SDL_VIDEO_DRIVER_KMSDRM */
+void KMSDRM_QuitMouse(SDL_VideoDevice *_this)
+{
+    // TODO: ?
+}
 
-/* vi: set ts=4 sw=4 expandtab: */
+// This is called when a mouse motion event occurs
+static bool KMSDRM_MoveCursor(SDL_Cursor *cursor)
+{
+    SDL_Mouse *mouse = SDL_GetMouse();
+
+    /* We must NOT call SDL_SendMouseMotion() here or we will enter recursivity!
+       That's why we move the cursor graphic ONLY. */
+    if (mouse && mouse->cur_cursor && mouse->focus) {
+        SDL_Window *window = mouse->focus;
+        SDL_DisplayData *dispdata = SDL_GetDisplayDriverDataForWindow(window);
+
+        if (!dispdata->cursor_bo) {
+            return SDL_SetError("Cursor not initialized properly.");
+        }
+
+        const int rc = KMSDRM_drmModeMoveCursor(dispdata->cursor_bo_drm_fd, dispdata->crtc->crtc_id, (int)mouse->x, (int)mouse->y);
+        if (rc < 0) {
+            return SDL_SetError("drmModeMoveCursor() failed: %s", strerror(-rc));
+        }
+    }
+    return true;
+}
+
+#endif // SDL_VIDEO_DRIVER_KMSDRM
