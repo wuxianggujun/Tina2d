@@ -40,13 +40,17 @@ list (SORT DIRS)
 set (ALLOWED_2D_SAMPLES
     01_HelloWorld
     02_HelloGUI
+    03_Sprites
     24_Urho2DSprite
     25_Urho2DParticle
     27_Physics2D
     28_Physics2DRope
+    33_Urho2DSpriterAnimation
     36_Urho2DTileMap
     37_UIDrag
     47_Typography
+    49_Urho2DIsometricDemo
+    50_Urho2DPlatformer
     51_Urho2DStretchableSprite)
 
 foreach (DIR ${DIRS})
