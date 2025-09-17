@@ -118,8 +118,8 @@ struct JoystickState
     SDL_Joystick* joystick_{};
     /// SDL joystick instance ID.
     SDL_JoystickID joystickID_{};
-    /// SDL game controller.
-    SDL_GameController* controller_{};
+    /// SDL3 gamepad。
+    SDL_Gamepad* controller_{};
     /// UI element containing the screen joystick.
     UIElement* screenJoystick_{};
     /// Joystick name.
@@ -194,7 +194,7 @@ public:
      *
      *  This method should only be called in main thread.
      */
-    SDL_JoystickID AddScreenJoystick(XMLFile* layoutFile = nullptr, XMLFile* styleFile = nullptr);
+    int AddScreenJoystick(XMLFile* layoutFile = nullptr, XMLFile* styleFile = nullptr);
     /// Remove screen joystick by instance ID.
     /** Return true if successful.
      *
@@ -203,7 +203,7 @@ public:
     bool RemoveScreenJoystick(SDL_JoystickID id);
     /// Set whether the virtual joystick is visible.
     /// @property
-    void SetScreenJoystickVisible(SDL_JoystickID id, bool enable);
+    void SetScreenJoystickVisible(int id, bool enable);
     /// Show or hide on-screen keyboard on platforms that support it. When shown, keypresses from it are delivered as key events.
     /// @property
     void SetScreenKeyboardVisible(bool enable);
@@ -392,9 +392,9 @@ private:
 
 #ifndef __EMSCRIPTEN__
     /// Set SDL mouse mode relative.
-    void SetMouseModeRelative(SDL_bool enable);
+    void SetMouseModeRelative(bool enable);
     /// Set SDL mouse mode absolute.
-    void SetMouseModeAbsolute(SDL_bool enable);
+    void SetMouseModeAbsolute(bool enable);
 #else
     /// Set whether the operating system mouse cursor is visible (Emscripten platform only).
     void SetMouseVisibleEmscripten(bool enable, bool suppressEvent = false);

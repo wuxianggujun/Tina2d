@@ -5,7 +5,7 @@
 
 #include "../IO/File.h"
 
-#include <SDL/SDL_rwops.h>
+#include <SDL3/SDL_iostream.h>
 
 namespace Urho3D
 {

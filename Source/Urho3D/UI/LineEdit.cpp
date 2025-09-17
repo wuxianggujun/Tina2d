@@ -5,14 +5,14 @@
 
 #include "../Core/Context.h"
 #include "../Input/Input.h"
+#include "../Graphics/Graphics.h"
 #include "../UI/LineEdit.h"
 #include "../UI/Text.h"
 #include "../UI/UI.h"
 #include "../UI/UIEvents.h"
 
 #include "../DebugNew.h"
-
-#include <SDL/SDL.h>
+#include <SDL3/SDL.h>
 
 namespace Urho3D
 {
@@ -593,7 +593,9 @@ void LineEdit::UpdateCursor()
 
     IntVector2 screenPosition = ElementToScreen(cursor_->GetPosition());
     SDL_Rect rect = {screenPosition.x_, screenPosition.y_, cursor_->GetSize().x_, cursor_->GetSize().y_};
-    SDL_SetTextInputRect(&rect);
+    if (auto* graphics = GetSubsystem<Graphics>())
+        if (SDL_Window* win = graphics->GetWindow())
+            SDL_SetTextInputArea(win, &rect, 0);
 
     // Scroll if necessary
     i32 sx = -GetChildOffset().x_;

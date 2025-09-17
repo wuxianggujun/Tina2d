@@ -24,7 +24,7 @@
 #include "../../IO/Log.h"
 #include "../../Resource/ResourceCache.h"
 
-#include <SDL/SDL.h>
+#include <SDL3/SDL.h>
 
 #include "../../DebugNew.h"
 

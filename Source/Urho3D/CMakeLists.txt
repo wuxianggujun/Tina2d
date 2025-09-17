@@ -40,6 +40,10 @@ get_directory_property (URHO3D_COMPILE_DEFINITIONS DIRECTORY ${CMAKE_CURRENT_SOU
 
 # Define preprocessor macros (for building the Urho3D library)
 add_definitions (-DURHO3D_IS_BUILDING)
+# 兼容 SDL2 名称（迁移过渡期）。可后续逐步移除该定义并替换旧 API。
+add_definitions (-DSDL_ENABLE_OLD_NAMES)
+# 统一关闭 SDL 动态 API，确保以静态方式直接链接 SDL_* 实现
+# SDL3：启用旧名兼容，尽量减少迁移改动量
 # 显式移除可能遗留的 IK 预处理宏，避免包含已删除的 ThirdParty/ik
 remove_definitions(-DURHO3D_IK)
 if (ANDROID AND DEFINED ENV{ASSET_DIR_INDICATOR})
@@ -259,6 +263,8 @@ add_custom_command (OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/librevision.h
     COMMENT "")     # Suppress the comment as the header file may or may not be re-generated
 source_group ("Source Files\\Generated" FILES ${CMAKE_CURRENT_BINARY_DIR}/librevision.h)
 
+# 注意：此处暂时不链接 SDL，待目标创建后再链接（见下方 setup_library 之后的逻辑）
+
 if (URHO3D_LUA)
     # The host tool must be built natively
     if (CMAKE_CROSSCOMPILING OR URHO3D_LUAJIT)
@@ -344,6 +350,8 @@ if (IOS OR TVOS)
     set (EXCLUDE_FROM_ALL EXCLUDE_FROM_ALL)
 endif ()
 setup_library (${URHO3D_LIB_TYPE} ${EXCLUDE_FROM_ALL})
+
+# SDL 依赖的链接改由 define_dependency_libs() 统一处理，避免混用 target_link_libraries 的不同签名导致配置错误。
 
 # Workaround for Xcode parrallel build failing: Add the generated sources as a custom target that Urho3D depends on so they are generated first.
 if (URHO3D_LUA)

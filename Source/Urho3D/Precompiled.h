@@ -12,7 +12,8 @@
 #include "Container/Sort.h"
 #include "Container/Str.h"
 
-#endif
+// SDL 相关：各翻译单元按需直接包含 <SDL3/SDL.h>
 
 #endif
 
+#endif

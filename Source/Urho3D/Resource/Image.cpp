@@ -10,7 +10,7 @@
 #include "../IO/Log.h"
 #include "../Resource/Decompress.h"
 
-#include <SDL/SDL_surface.h>
+#include <SDL3/SDL_surface.h>
 #define STB_IMAGE_IMPLEMENTATION
 #include <STB/stb_image.h>
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -2254,24 +2254,57 @@ SDL_Surface* Image::GetSDLSurface(const IntRect& rect) const
     int width = imageRect.Width();
     int height = imageRect.Height();
 
-    // Assume little-endian for all the supported platforms
-    unsigned rMask = 0x000000ff;
-    unsigned gMask = 0x0000ff00;
-    unsigned bMask = 0x00ff0000;
-    unsigned aMask = 0xff000000;
+    // SDL3: 使用 SDL_CreateSurface 指定像素格式
+    SDL_PixelFormat fmt = SDL_PIXELFORMAT_RGBA8888;
+    if (components_ == 3)
+        fmt = SDL_PIXELFORMAT_RGB24;
+    else if (components_ == 4)
+        fmt = SDL_PIXELFORMAT_RGBA8888;
 
-    SDL_Surface* surface = SDL_CreateRGBSurface(0, width, height, components_ * 8, rMask, gMask, bMask, aMask);
+    SDL_Surface* surface = SDL_CreateSurface(width, height, fmt);
     if (surface)
     {
         SDL_LockSurface(surface);
 
         auto* destination = reinterpret_cast<unsigned char*>(surface->pixels);
         unsigned char* source = data_ + components_ * (imageWidth * imageRect.top_ + imageRect.left_);
-        for (int i = 0; i < height; ++i)
+        if (components_ == 3 || components_ == 4)
         {
-            memcpy(destination, source, (size_t)components_ * width);
-            destination += surface->pitch;
-            source += components_ * imageWidth;
+            // 行拷贝
+            const size_t rowSrcBytes = (size_t)components_ * width;
+            for (int i = 0; i < height; ++i)
+            {
+                memcpy(destination, source, rowSrcBytes);
+                destination += surface->pitch;
+                source += (size_t)components_ * imageWidth;
+            }
+        }
+        else
+        {
+            // 其它情况，扩展为 RGBA8888
+            for (int y = 0; y < height; ++y)
+            {
+                unsigned char* dst = destination + (size_t)y * surface->pitch;
+                unsigned char* src = source + (size_t)y * imageWidth * components_;
+                for (int x = 0; x < width; ++x)
+                {
+                    unsigned char r = 0, g = 0, b = 0, a = 255;
+                    if (components_ == 1)
+                    {
+                        r = g = b = src[x];
+                    }
+                    else if (components_ == 2)
+                    {
+                        r = g = b = src[2 * x + 0];
+                        a = src[2 * x + 1];
+                    }
+                    // 写入 RGBA8888
+                    dst[4 * x + 0] = r;
+                    dst[4 * x + 1] = g;
+                    dst[4 * x + 2] = b;
+                    dst[4 * x + 3] = a;
+                }
+            }
         }
 
         SDL_UnlockSurface(surface);

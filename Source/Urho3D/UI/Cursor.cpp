@@ -10,7 +10,7 @@
 #include "../Resource/ResourceCache.h"
 #include "../UI/UI.h"
 
-#include <SDL/SDL_mouse.h>
+#include <SDL3/SDL_mouse.h>
 
 #include "../DebugNew.h"
 
@@ -272,7 +272,7 @@ void Cursor::ApplyOSCursorShape()
                 info.systemDefined_ = false;
                 if (!info.osCursor_)
                     URHO3D_LOGERROR("Could not create cursor from image " + info.image_->GetName());
-                SDL_FreeSurface(surface);
+                SDL_DestroySurface(surface);
             }
         }
     }

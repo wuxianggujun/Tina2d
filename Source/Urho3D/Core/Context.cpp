@@ -8,7 +8,7 @@
 #include "../IO/Log.h"
 
 #ifndef MINI_URHO
-#include <SDL/SDL.h>
+#include <SDL3/SDL.h>
 #endif
 
 #include "../DebugNew.h"
@@ -225,11 +225,12 @@ bool Context::RequireSDL(unsigned int sdlFlags)
     // what happens.
     ++sdlInitCounter;
 
-    // Need to call SDL_Init() at least once before SDL_InitSubsystem()
+    // SDL3：SDL_Init/SDL_InitSubSystem 返回布尔值，true 表示成功。
+    // 需要至少调用一次 SDL_Init() 以保证后续子系统初始化正常。
     if (sdlInitCounter == 1)
     {
         URHO3D_LOGDEBUG("Initialising SDL");
-        if (SDL_Init(0) != 0)
+        if (!SDL_Init(0))
         {
             URHO3D_LOGERRORF("Failed to initialise SDL: %s", SDL_GetError());
             return false;
@@ -239,7 +240,7 @@ bool Context::RequireSDL(unsigned int sdlFlags)
     Uint32 remainingFlags = sdlFlags & ~SDL_WasInit(0);
     if (remainingFlags != 0)
     {
-        if (SDL_InitSubSystem(remainingFlags) != 0)
+        if (!SDL_InitSubSystem(remainingFlags))
         {
             URHO3D_LOGERRORF("Failed to initialise SDL subsystem: %s", SDL_GetError());
             return false;
@@ -256,7 +257,11 @@ void Context::ReleaseSDL()
     if (sdlInitCounter == 0)
     {
         URHO3D_LOGDEBUG("Quitting SDL");
-        SDL_QuitSubSystem(SDL_INIT_EVERYTHING);
+        // SDL3 无 SDL_INIT_EVERYTHING，按子系统位掩码统一退出
+        const Uint32 kAll = SDL_INIT_AUDIO | SDL_INIT_VIDEO | SDL_INIT_JOYSTICK |
+            SDL_INIT_HAPTIC | SDL_INIT_GAMEPAD | SDL_INIT_EVENTS |
+            SDL_INIT_SENSOR | SDL_INIT_CAMERA;
+        SDL_QuitSubSystem(kAll);
         SDL_Quit();
     }
 

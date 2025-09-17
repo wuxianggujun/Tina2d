@@ -14,12 +14,10 @@
 #include "../IO/IOEvents.h"
 #include "../IO/Log.h"
 
-#ifdef __ANDROID__
-#include <SDL/SDL_rwops.h>
-#endif
+// SDL3 移除了 SDL_rwops 头，Android 相关功能不依赖该头文件
 
 #ifndef MINI_URHO
-#include <SDL/SDL_filesystem.h>
+#include <SDL3/SDL_filesystem.h>
 #endif
 
 #include <sys/stat.h>

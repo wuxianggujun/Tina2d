@@ -23,8 +23,8 @@
 #include "../../IO/Log.h"
 #include "../../Resource/ResourceCache.h"
 
-#include <SDL/SDL.h>
-#include <SDL/SDL_syswm.h>
+// 使用 SDL3 兼容层
+#include "../../ThirdParty/SDL3Compat.h"
 
 #include "../../DebugNew.h"
 
@@ -161,11 +161,9 @@ static void GetD3DPrimitiveType(unsigned elementCount, PrimitiveType type, unsig
 
 static HWND GetWindowHandle(SDL_Window* window)
 {
-    SDL_SysWMinfo sysInfo;
-
-    SDL_VERSION(&sysInfo.version);
-    SDL_GetWindowWMInfo(window, &sysInfo);
-    return sysInfo.info.win.window;
+    SDL_PropertiesID props = SDL_GetWindowProperties(window);
+    void* hwnd = SDL_GetPointerProperty(props, SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr);
+    return static_cast<HWND>(hwnd);
 }
 
 void Graphics::Constructor_D3D11()
@@ -253,9 +251,17 @@ bool Graphics::SetScreenMode_D3D11(int width, int height, const ScreenModeParams
     AdjustScreenMode(width, height, newParams, maximize);
 
     // Find out the full screen mode display format (match desktop color depth)
-    SDL_DisplayMode mode;
-    SDL_GetDesktopDisplayMode(newParams.monitor_, &mode);
-    const DXGI_FORMAT fullscreenFormat = SDL_BITSPERPIXEL(mode.format) == 16 ? DXGI_FORMAT_B5G6R5_UNORM : DXGI_FORMAT_R8G8B8A8_UNORM;
+    int __count = 0;
+    SDL_DisplayID* __displays = SDL_GetDisplays(&__count);
+    SDL_DisplayID __id = 0;
+    if (__displays && newParams.monitor_ >= 0 && newParams.monitor_ < __count)
+        __id = __displays[newParams.monitor_];
+    else
+        __id = SDL_GetPrimaryDisplay();
+    if (__displays)
+        SDL_free(__displays);
+    const SDL_DisplayMode* __mode = SDL_GetDesktopDisplayMode(__id);
+    const DXGI_FORMAT fullscreenFormat = (__mode && SDL_BITSPERPIXEL(__mode->format) == 16) ? DXGI_FORMAT_B5G6R5_UNORM : DXGI_FORMAT_R8G8B8A8_UNORM;
 
     // If nothing changes, do not reset the device
     if (width == width_ && height == height_ && newParams == screenParams_)
@@ -1979,10 +1985,27 @@ bool Graphics::OpenWindow_D3D11(int width, int height, bool resizable, bool bord
         if (borderless)
             flags |= SDL_WINDOW_BORDERLESS;
 
-        window_ = SDL_CreateWindow(windowTitle_.CString(), position_.x_, position_.y_, width, height, flags);
+        // SDL3: SDL_CreateWindow(title, w, h, flags)，位置在创建后设置
+        window_ = SDL_CreateWindow(windowTitle_.CString(), width, height, (SDL_WindowFlags)flags);
+        if (window_ && position_.x_ != SDL_WINDOWPOS_UNDEFINED && position_.y_ != SDL_WINDOWPOS_UNDEFINED)
+            SDL_SetWindowPosition(window_, position_.x_, position_.y_);
     }
     else
-        window_ = SDL_CreateWindowFrom(externalWindow_, 0);
+    {
+        // SDL3: 通过属性包装外部窗口
+        SDL_PropertiesID props = SDL_CreateProperties();
+        if (props)
+        {
+            SDL_SetStringProperty(props, SDL_PROP_WINDOW_CREATE_TITLE_STRING, windowTitle_.CString());
+            SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, width);
+            SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, height);
+            SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN, resizable);
+            SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_BORDERLESS_BOOLEAN, borderless);
+            SDL_SetPointerProperty(props, SDL_PROP_WINDOW_CREATE_WIN32_HWND_POINTER, externalWindow_);
+            window_ = SDL_CreateWindowWithProperties(props);
+            SDL_DestroyProperties(props);
+        }
+    }
 
     if (!window_)
     {
@@ -2013,7 +2036,14 @@ void Graphics::AdjustWindow_D3D11(int& newWidth, int& newHeight, bool& newFullsc
         else
         {
             SDL_Rect display_rect;
-            SDL_GetDisplayBounds(monitor, &display_rect);
+            // SDL3: 把 monitor 索引转成显示 ID
+            int __count = 0;
+            SDL_DisplayID* __displays = SDL_GetDisplays(&__count);
+            SDL_DisplayID __id = SDL_GetPrimaryDisplay();
+            if (__displays && monitor >= 0 && monitor < __count)
+                __id = __displays[monitor];
+            if (__displays) SDL_free(__displays);
+            SDL_GetDisplayBounds(__id, &display_rect);
 
             reposition = newFullscreen || (newBorderless && newWidth >= display_rect.w && newHeight >= display_rect.h);
             if (reposition)
@@ -2030,10 +2060,10 @@ void Graphics::AdjustWindow_D3D11(int& newWidth, int& newHeight, bool& newFullsc
         }
 
         // Turn off window fullscreen mode so it gets repositioned to the correct monitor
-        SDL_SetWindowFullscreen(window_, SDL_FALSE);
+        SDL_SetWindowFullscreen(window_, false);
         // Hack fix: on SDL 2.0.4 a fullscreen->windowed transition results in a maximized window when the D3D device is reset, so hide before
         if (!newFullscreen) SDL_HideWindow(window_);
-        SDL_SetWindowFullscreen(window_, newFullscreen ? SDL_WINDOW_FULLSCREEN : 0);
+        SDL_SetWindowFullscreen(window_, newFullscreen);
         SDL_SetWindowBordered(window_, newBorderless ? SDL_FALSE : SDL_TRUE);
         SDL_SetWindowResizable(window_, newResizable ? SDL_TRUE : SDL_FALSE);
         if (!newFullscreen) SDL_ShowWindow(window_);

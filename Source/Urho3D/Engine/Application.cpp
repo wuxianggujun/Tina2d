@@ -9,7 +9,7 @@
 
 #if defined(IOS) || defined(TVOS)
 #include "../Graphics/Graphics.h"
-#include <SDL/SDL.h>
+#include <SDL3/SDL.h>
 #endif
 
 #include "../DebugNew.h"

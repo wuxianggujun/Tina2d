@@ -965,6 +965,12 @@ macro (define_dependency_libs TARGET)
                 list (APPEND ABSOLUTE_PATH_LIBS ${URHO3D_LIBRARIES})
             endif ()
         endif ()
+
+        # 使用系统 SDL3：将 SDL3::SDL3 链接到依赖 Urho3D 的最终目标（可执行/工具等），
+        # 而不是尝试将其合并进 Urho3D 静态库中。这样避免重复定义并符合上游推荐用法。
+        if (TARGET SDL3::SDL3)
+            list (APPEND LIBS SDL3::SDL3)
+        endif ()
     endif ()
 endmacro ()
 

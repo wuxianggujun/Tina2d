@@ -120,6 +120,8 @@ private:
     Mutex audioMutex_;
     /// SDL audio device ID.
     u32 deviceID_{};
+    /// SDL3 音频流句柄（通过 SDL_OpenAudioDeviceStream 创建并绑定到设备）。
+    void* audioStream_{};
     /// Sample size.
     u32 sampleSize_{};
     /// Clip buffer size in samples.

@@ -13,7 +13,7 @@
 #include "../Core/Profiler.h"
 #include "../IO/Log.h"
 
-#include <SDL/SDL.h>
+#include <SDL3/SDL.h>
 
 #include "../DebugNew.h"
 
@@ -28,6 +28,7 @@ static const i32 MAX_MIXRATE = 48000;
 static const StringHash SOUND_MASTER_HASH("Master");
 
 static void SDLAudioCallback(void* userdata, Uint8* stream, i32 len);
+static void SDLAudioStreamGetCallback(void* userdata, SDL_AudioStream* stream, int additional_amount, int /*total_amount*/);
 
 Audio::Audio(Context* context) :
     Object(context)
@@ -56,58 +57,34 @@ bool Audio::SetMode(i32 bufferLengthMSec, i32 mixRate, bool stereo, bool interpo
     bufferLengthMSec = Max(bufferLengthMSec, MIN_BUFFERLENGTH);
     mixRate = Clamp(mixRate, MIN_MIXRATE, MAX_MIXRATE);
 
-    SDL_AudioSpec desired;
-    SDL_AudioSpec obtained;
-
+    SDL_AudioSpec desired{};
     desired.freq = mixRate;
+    desired.format = SDL_AUDIO_S16;
+    desired.channels = stereo ? 2 : 1;
 
-    desired.format = AUDIO_S16;
-    desired.callback = SDLAudioCallback;
-    desired.userdata = this;
-
-    // SDL uses power of two audio fragments. Determine the closest match
-    i32 bufferSamples = mixRate * bufferLengthMSec / 1000;
-    desired.samples = (Uint16)NextPowerOfTwo((u32)bufferSamples);
-    if (Abs((i32)desired.samples / 2 - bufferSamples) < Abs((i32)desired.samples - bufferSamples))
-        desired.samples /= 2;
-
-    // Intentionally disallow format change so that the obtained format will always be the desired format, even though that format
-    // is not matching the device format, however in doing it will enable the SDL's internal audio stream with audio conversion.
-    // Also disallow channels change to avoid issues on multichannel audio device (5.1, 7.1, etc)
-    i32 allowedChanges = SDL_AUDIO_ALLOW_ANY_CHANGE & ~SDL_AUDIO_ALLOW_FORMAT_CHANGE & ~SDL_AUDIO_ALLOW_CHANNELS_CHANGE;
-
-    if (stereo)
+    // 打开默认播放设备（SDL3 新 API）
+    deviceID_ = SDL_OpenAudioDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &desired);
+    if (!deviceID_)
     {
-        desired.channels = 2;
-        deviceID_ = SDL_OpenAudioDevice(nullptr, SDL_FALSE, &desired, &obtained, allowedChanges);
+        URHO3D_LOGERROR("Could not initialize audio output");
+        return false;
     }
 
-    // If stereo requested but not available then fall back into mono
-    if (!stereo || !deviceID_)
+    // 在设备上创建并绑定音频流，使用拉取回调补充数据
+    audioStream_ = SDL_OpenAudioDeviceStream(deviceID_, &desired, SDLAudioStreamGetCallback, this);
+    if (!audioStream_)
     {
-        desired.channels = 1;
-        deviceID_ = SDL_OpenAudioDevice(nullptr, SDL_FALSE, &desired, &obtained, allowedChanges);
-
-        if (!deviceID_)
-        {
-            URHO3D_LOGERROR("Could not initialize audio output");
-            return false;
-        }
-    }
-
-    if (obtained.format != AUDIO_S16)
-    {
-        URHO3D_LOGERROR("Could not initialize audio output, 16-bit buffer format not supported");
+        URHO3D_LOGERROR("Could not create audio stream");
         SDL_CloseAudioDevice(deviceID_);
         deviceID_ = 0;
         return false;
     }
 
-    stereo_ = obtained.channels == 2;
+    stereo_ = stereo;
     sampleSize_ = (u32)(stereo_ ? sizeof(i32) : sizeof(i16));
-    // Guarantee a fragment size that is low enough so that Vorbis decoding buffers do not wrap
-    fragmentSize_ = Min(NextPowerOfTwo((u32)mixRate >> 6u), (u32)obtained.samples);
-    mixRate_ = obtained.freq;
+    // 选择保守的片段大小用于内部混音（不再依赖设备 samples）
+    fragmentSize_ = NextPowerOfTwo((u32)mixRate >> 6u);
+    mixRate_ = mixRate;
     interpolation_ = interpolation;
     clipBuffer_ = new i32[stereo ? fragmentSize_ << 1u : fragmentSize_];
 
@@ -135,7 +112,9 @@ bool Audio::Play()
         return false;
     }
 
-    SDL_PauseAudioDevice(deviceID_, 0);
+    // 设备由流驱动，恢复流绑定的输出
+    if (audioStream_)
+        SDL_ResumeAudioStreamDevice((SDL_AudioStream*)audioStream_);
 
     // Update sound sources before resuming playback to make sure 3D positions are up to date
     UpdateInternal(0.0f);
@@ -253,6 +232,24 @@ void SDLAudioCallback(void* userdata, Uint8* stream, i32 len)
     }
 }
 
+// SDL3 音频拉取回调：当设备需要更多数据时调用，在此填充并推入音频流
+void SDLAudioStreamGetCallback(void* userdata, SDL_AudioStream* stream, int additional_amount, int /*total_amount*/)
+{
+    auto* audio = static_cast<Audio*>(userdata);
+    if (additional_amount <= 0)
+        return;
+
+    MutexLock Lock(audio->GetMutex());
+    const int samples = additional_amount / (int)audio->GetSampleSize();
+    if (samples <= 0)
+        return;
+
+    // 生成所需的 PCM 数据并推入流
+    SharedArrayPtr<u8> tmp(new u8[(size_t)additional_amount]);
+    audio->MixOutput(tmp.Get(), (u32)samples);
+    SDL_PutAudioStreamData(stream, tmp.Get(), additional_amount);
+}
+
 void Audio::MixOutput(void* dest, u32 samples)
 {
     if (!playing_ || !clipBuffer_)
@@ -307,12 +304,17 @@ void Audio::Release()
 {
     Stop();
 
+    if (audioStream_)
+    {
+        SDL_DestroyAudioStream((SDL_AudioStream*)audioStream_);
+        audioStream_ = nullptr;
+    }
     if (deviceID_)
     {
         SDL_CloseAudioDevice(deviceID_);
         deviceID_ = 0;
-        clipBuffer_.Reset();
     }
+    clipBuffer_.Reset();
 }
 
 void Audio::UpdateInternal(float timeStep)
