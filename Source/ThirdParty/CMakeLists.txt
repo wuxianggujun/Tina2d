@@ -94,3 +94,13 @@ endif ()
 # в scope папки Source.
 # Возможно вместо этого стоит использовать GLOBAL property в качестве глобальной переменной
 set (STATIC_LIBRARY_TARGETS ${STATIC_LIBRARY_TARGETS} PARENT_SCOPE)
+
+# 可选引入 bgfx（本地优先且仅本地）：要求存在目录 Source/ThirdParty/bgfx.cmake
+if (URHO3D_BGFX)
+    if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/bgfx.cmake/CMakeLists.txt)
+        message (STATUS "Using local bgfx.cmake at ThirdParty/bgfx.cmake (no FetchContent)")
+        add_subdirectory (bgfx.cmake)
+    else ()
+        message (FATAL_ERROR "URHO3D_BGFX=ON 但未找到本地 ThirdParty/bgfx.cmake。请先将 bgfx.cmake 克隆到 Source/ThirdParty/bgfx.cmake 再配置构建。")
+    endif ()
+endif ()

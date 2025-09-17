@@ -57,6 +57,11 @@ if (TARGET GLEW)
     # These macros are required because Urho3D (OpenGL) headers are exposed to GLEW headers
     add_definitions (-DGLEW_STATIC -DGLEW_NO_GLU)
 endif ()
+
+# 启用 bgfx 后端的编译宏
+if (URHO3D_BGFX)
+    add_definitions (-DURHO3D_BGFX)
+endif ()
 if (HAVE_SINCOSF)
     add_definitions (-DHAVE_SINCOSF)
 elseif (HAVE___SINCOSF)
@@ -335,6 +340,28 @@ if (URHO3D_LUA)
     # Lua/LuaJIT library depends on its own include dir to be added in the header search path
     # This is more practical than patching its header files in many places to make them work with relative path
     list (APPEND INCLUDE_DIRS ${THIRD_PARTY_INCLUDE_DIR}/Lua${JIT})
+endif ()
+
+# 当启用 bgfx 时，将其导出的头文件包含目录注入到 Urho3D 目标的编译包含路径中。
+if (URHO3D_BGFX)
+    if (TARGET bgfx)
+        get_target_property(BGFX_INC_DIRS bgfx INTERFACE_INCLUDE_DIRECTORIES)
+        if (BGFX_INC_DIRS)
+            list (APPEND INCLUDE_DIRS ${BGFX_INC_DIRS})
+        endif ()
+    endif ()
+    if (TARGET bx)
+        get_target_property(BX_INC_DIRS bx INTERFACE_INCLUDE_DIRECTORIES)
+        if (BX_INC_DIRS)
+            list (APPEND INCLUDE_DIRS ${BX_INC_DIRS})
+        endif ()
+    endif ()
+    if (TARGET bimg)
+        get_target_property(BIMG_INC_DIRS bimg INTERFACE_INCLUDE_DIRECTORIES)
+        if (BIMG_INC_DIRS)
+            list (APPEND INCLUDE_DIRS ${BIMG_INC_DIRS})
+        endif ()
+    endif ()
 endif ()
 # Workaround for GCC 5.4 and above when building a SHARED lib type for Linux platform to fix the undefined symbol "__cpu_model" issue (see #1519)
 if (CMAKE_COMPILER_IS_GNUCXX AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 5.3.1 AND CMAKE_SYSTEM_NAME STREQUAL Linux AND URHO3D_LIB_TYPE STREQUAL SHARED)  # 5.3.1 was the last known good version

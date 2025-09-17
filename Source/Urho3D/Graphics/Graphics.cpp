@@ -19,6 +19,9 @@
 #include "../GraphicsAPI/Texture2DArray.h"
 #include "../GraphicsAPI/Texture3D.h"
 #include "../GraphicsAPI/TextureCube.h"
+#ifdef URHO3D_BGFX
+#include "../Graphics/GraphicsBgfx.h"
+#endif
 #include "../IO/FileSystem.h"
 #include "../IO/Log.h"
 
@@ -636,12 +639,21 @@ void Graphics::OnScreenModeChanged()
     eventData[P_MONITOR] = screenParams_.monitor_;
     eventData[P_REFRESHRATE] = screenParams_.refreshRate_;
     SendEvent(E_SCREENMODE, eventData);
+
+#ifdef URHO3D_BGFX
+    if (bgfx_ && bgfx_->IsInitialized())
+        bgfx_->Reset((unsigned)width_, (unsigned)height_);
+#endif
 }
 
 Graphics::Graphics(Context* context, GAPI gapi)
     : Object(context)
 {
     Graphics::gapi = gapi;
+
+#ifdef URHO3D_BGFX
+    bgfx_ = new GraphicsBgfx();
+#endif
 
 #ifdef URHO3D_OPENGL
     if (gapi == GAPI_OPENGL)
@@ -663,6 +675,11 @@ Graphics::Graphics(Context* context, GAPI gapi)
 Graphics::~Graphics()
 {
     GAPI gapi = Graphics::GetGAPI();
+
+#ifdef URHO3D_BGFX
+    delete bgfx_;
+    bgfx_ = nullptr;
+#endif
 
 #ifdef URHO3D_OPENGL
     if (gapi == GAPI_OPENGL)
@@ -794,6 +811,23 @@ bool Graphics::BeginFrame()
 {
     GAPI gapi = Graphics::GetGAPI();
 
+#ifdef URHO3D_BGFX
+    // 宏开关：当启用 bgfx 时，以 bgfx 为主进行帧提交，便于与原管线对比。
+    if (bgfx_)
+    {
+        if (!bgfx_->IsInitialized() && window_)
+        {
+            // 使用 SDL 窗口进行初始化（提取原生句柄）。
+            bgfx_->InitializeFromSDL(window_, (unsigned)width_, (unsigned)height_);
+        }
+        if (bgfx_->IsInitialized())
+        {
+            bgfx_->BeginFrame();
+            return true;
+        }
+    }
+#endif
+
 #ifdef URHO3D_OPENGL
     if (gapi == GAPI_OPENGL)
         return BeginFrame_OGL();
@@ -810,6 +844,14 @@ bool Graphics::BeginFrame()
 void Graphics::EndFrame()
 {
     GAPI gapi = Graphics::GetGAPI();
+
+#ifdef URHO3D_BGFX
+    if (bgfx_ && bgfx_->IsInitialized())
+    {
+        bgfx_->EndFrame();
+        return;
+    }
+#endif
 
 #ifdef URHO3D_OPENGL
     if (gapi == GAPI_OPENGL)
@@ -1654,6 +1696,12 @@ bool Graphics::IsInitialized() const
 {
     GAPI gapi = Graphics::GetGAPI();
 
+#ifdef URHO3D_BGFX
+    // 若 bgfx 已初始化，则认为图形系统可用（以便 Renderer 不再依赖旧后端的状态）。
+    if (bgfx_ && bgfx_->IsInitialized())
+        return true;
+#endif
+
 #ifdef URHO3D_OPENGL
     if (gapi == GAPI_OPENGL)
         return IsInitialized_OGL();
@@ -1666,6 +1714,13 @@ bool Graphics::IsInitialized() const
 
     return {}; // Prevent warning
 }
+
+#ifdef URHO3D_BGFX
+bool Graphics::IsBgfxActive() const
+{
+    return bgfx_ && bgfx_->IsInitialized();
+}
+#endif
 
 bool Graphics::GetDither() const
 {

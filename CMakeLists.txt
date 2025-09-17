@@ -49,6 +49,17 @@ set (URHO3D_IK               OFF CACHE BOOL "Disable IK in 2D-only build" FORCE)
 set (URHO3D_NAVIGATION       OFF CACHE BOOL "Disable Navigation in 2D-only build" FORCE)
 set (URHO3D_PHYSICS          OFF CACHE BOOL "Disable 3D Physics in 2D-only build" FORCE)
 
+# 可选启用：bgfx 渲染后端（实验性）。
+# 仅接入依赖与骨架，不改变现有 OpenGL/D3D 渲染路径，后续可渐进式切换。
+option(URHO3D_BGFX "启用 bgfx 渲染后端（实验性）" ON)
+
+if (URHO3D_BGFX)
+    # 通过 bgfx.cmake，统一构建 bgfx + bx + bimg。
+    # 关闭示例，按需启用工具（shaderc 等）供着色器编译使用。
+    set (BGFX_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+    set (BGFX_BUILD_TOOLS    ON  CACHE BOOL "" FORCE)
+endif ()
+
 # Setup SDK install destinations
 set (PATH_SUFFIX Urho3D)
 if (WIN32)

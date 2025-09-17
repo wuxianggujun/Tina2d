@@ -947,6 +947,20 @@ macro (define_dependency_libs TARGET)
             list (APPEND LIBS ${DIRECT3D_LIBRARIES})
         endif ()
 
+        # 可选：bgfx 渲染后端依赖（当启用 URHO3D_BGFX 时）。
+        # 此处只声明链接依赖，包含路径通过 Urho3D 目标的 INCLUDE_DIRS 注入。
+        if (URHO3D_BGFX)
+            if (TARGET bgfx)
+                list (APPEND LIBS bgfx)
+            endif ()
+            if (TARGET bimg)
+                list (APPEND LIBS bimg)
+            endif ()
+            if (TARGET bx)
+                list (APPEND LIBS bx)
+            endif ()
+        endif ()
+
         # Database
         if (URHO3D_DATABASE_ODBC)
             list (APPEND LIBS ${ODBC_LIBRARIES})

@@ -674,7 +674,16 @@ void Renderer::Update(float timeStep)
 
 void Renderer::Render()
 {
-    // Engine does not render when window is closed or device is lost
+    // 在启用 bgfx 集成时，不再走旧的渲染路径，避免混用导致崩溃。
+#ifdef URHO3D_BGFX
+    if (graphics_ && graphics_->IsBgfxActive())
+    {
+        // 最小闭环：由 Graphics::BeginFrame/EndFrame 驱动 bgfx 帧提交，这里直接返回。
+        return;
+    }
+#endif
+
+    // Engine does not render when window is closed or device is lost（旧后端路径）
     assert(graphics_ && graphics_->IsInitialized() && !graphics_->IsDeviceLost());
 
     URHO3D_PROFILE(RenderViews);

@@ -36,6 +36,10 @@ class Vector3;
 class Vector4;
 class VertexBuffer;
 
+#ifdef URHO3D_BGFX
+class GraphicsBgfx; // bgfx 封装前置声明
+#endif
+
 #ifdef URHO3D_OPENGL
 class GraphicsImpl_OGL;
 #endif
@@ -357,6 +361,11 @@ public:
     /// Return graphics API name.
     /// @property
     const String& GetApiName() const { return apiName_; }
+
+#ifdef URHO3D_BGFX
+    /// 返回是否正在使用并已初始化 bgfx 后端。
+    bool IsBgfxActive() const;
+#endif
 
     /// Return window position.
     /// @property
@@ -1187,6 +1196,10 @@ private:
     String orientations_;
     /// Graphics API name.
     String apiName_;
+#ifdef URHO3D_BGFX
+    /// bgfx 渲染后端句柄（实验性，用于宏切换对比）。
+    GraphicsBgfx* bgfx_{};
+#endif
 #ifdef URHO3D_OPENGL
     /// Renderer name (usually GPU name)
     String rendererName_;
