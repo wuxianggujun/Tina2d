@@ -6,7 +6,9 @@
 
 #pragma once
 
-// 无需显式包含 Context；该封装与 Urho3D 的 Context 解耦
+#include "../GraphicsAPI/GraphicsDefs.h"
+#include "../Math/Rect.h"
+#include "../Math/Color.h"
 
 namespace Urho3D
 {
@@ -38,13 +40,33 @@ public:
     /// 帧结束：提交并翻转。
     void EndFrame();
 
+    /// 设置视口矩形（映射到 view 0）。
+    void SetViewport(const IntRect& rect);
+
+    /// 清屏：flags 使用 Urho3D 的 CLEAR_* 标志位。
+    void Clear(ClearTargetFlags flags, const Color& color, float depth, u32 stencil);
+
+    // 渲染状态设置（2D 需要的最小子集）
+    void SetBlendMode(BlendMode mode, bool alphaToCoverage);
+    void SetColorWrite(bool enable);
+    void SetCullMode(CullMode mode);
+    void SetDepthTest(CompareMode mode);
+    void SetDepthWrite(bool enable);
+    void SetScissor(bool enable, const IntRect& rect);
+
     /// 是否已完成初始化。
     bool IsInitialized() const { return initialized_; }
+
+private:
+    void ApplyState();
 
 private:
     bool initialized_{};
     unsigned width_{};
     unsigned height_{};
+    uint64_t state_{};     // bgfx 渲染状态位
+    bool scissorEnabled_{};
+    IntRect scissorRect_{};
 };
 
 } // namespace Urho3D

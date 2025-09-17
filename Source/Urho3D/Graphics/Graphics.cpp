@@ -868,6 +868,11 @@ void Graphics::Clear(ClearTargetFlags flags, const Color& color, float depth, un
 {
     GAPI gapi = Graphics::GetGAPI();
 
+#ifdef URHO3D_BGFX
+    if (bgfx_ && bgfx_->IsInitialized())
+        return bgfx_->Clear(flags, color, depth, stencil);
+#endif
+
 #ifdef URHO3D_OPENGL
     if (gapi == GAPI_OPENGL)
         return Clear_OGL(flags, color, depth, stencil);
@@ -1500,6 +1505,11 @@ void Graphics::SetViewport(const IntRect& rect)
 {
     GAPI gapi = Graphics::GetGAPI();
 
+#ifdef URHO3D_BGFX
+    if (bgfx_ && bgfx_->IsInitialized())
+        return bgfx_->SetViewport(rect);
+#endif
+
 #ifdef URHO3D_OPENGL
     if (gapi == GAPI_OPENGL)
         return SetViewport_OGL(rect);
@@ -1514,6 +1524,11 @@ void Graphics::SetViewport(const IntRect& rect)
 void Graphics::SetBlendMode(BlendMode mode, bool alphaToCoverage)
 {
     GAPI gapi = Graphics::GetGAPI();
+
+#ifdef URHO3D_BGFX
+    if (bgfx_ && bgfx_->IsInitialized())
+        return bgfx_->SetBlendMode(mode, alphaToCoverage);
+#endif
 
 #ifdef URHO3D_OPENGL
     if (gapi == GAPI_OPENGL)
@@ -1530,6 +1545,11 @@ void Graphics::SetColorWrite(bool enable)
 {
     GAPI gapi = Graphics::GetGAPI();
 
+#ifdef URHO3D_BGFX
+    if (bgfx_ && bgfx_->IsInitialized())
+        return bgfx_->SetColorWrite(enable);
+#endif
+
 #ifdef URHO3D_OPENGL
     if (gapi == GAPI_OPENGL)
         return SetColorWrite_OGL(enable);
@@ -1544,6 +1564,11 @@ void Graphics::SetColorWrite(bool enable)
 void Graphics::SetCullMode(CullMode mode)
 {
     GAPI gapi = Graphics::GetGAPI();
+
+#ifdef URHO3D_BGFX
+    if (bgfx_ && bgfx_->IsInitialized())
+        return bgfx_->SetCullMode(mode);
+#endif
 
 #ifdef URHO3D_OPENGL
     if (gapi == GAPI_OPENGL)
@@ -1575,6 +1600,11 @@ void Graphics::SetDepthTest(CompareMode mode)
 {
     GAPI gapi = Graphics::GetGAPI();
 
+#ifdef URHO3D_BGFX
+    if (bgfx_ && bgfx_->IsInitialized())
+        return bgfx_->SetDepthTest(mode);
+#endif
+
 #ifdef URHO3D_OPENGL
     if (gapi == GAPI_OPENGL)
         return SetDepthTest_OGL(mode);
@@ -1589,6 +1619,11 @@ void Graphics::SetDepthTest(CompareMode mode)
 void Graphics::SetDepthWrite(bool enable)
 {
     GAPI gapi = Graphics::GetGAPI();
+
+#ifdef URHO3D_BGFX
+    if (bgfx_ && bgfx_->IsInitialized())
+        return bgfx_->SetDepthWrite(enable);
+#endif
 
 #ifdef URHO3D_OPENGL
     if (gapi == GAPI_OPENGL)
@@ -1635,6 +1670,15 @@ void Graphics::SetScissorTest(bool enable, const Rect& rect, bool borderInclusiv
 {
     GAPI gapi = Graphics::GetGAPI();
 
+#ifdef URHO3D_BGFX
+    if (bgfx_ && bgfx_->IsInitialized())
+    {
+        IntRect ir(IntVector2((int)rect.min_.x_, (int)rect.min_.y_), IntVector2((int)rect.max_.x_, (int)rect.max_.y_));
+        bgfx_->SetScissor(enable, ir);
+        return;
+    }
+#endif
+
 #ifdef URHO3D_OPENGL
     if (gapi == GAPI_OPENGL)
         return SetScissorTest_OGL(enable, rect, borderInclusive);
@@ -1649,6 +1693,11 @@ void Graphics::SetScissorTest(bool enable, const Rect& rect, bool borderInclusiv
 void Graphics::SetScissorTest(bool enable, const IntRect& rect)
 {
     GAPI gapi = Graphics::GetGAPI();
+
+#ifdef URHO3D_BGFX
+    if (bgfx_ && bgfx_->IsInitialized())
+        return bgfx_->SetScissor(enable, rect);
+#endif
 
 #ifdef URHO3D_OPENGL
     if (gapi == GAPI_OPENGL)
