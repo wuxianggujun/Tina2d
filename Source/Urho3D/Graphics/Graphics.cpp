@@ -2231,6 +2231,10 @@ unsigned Graphics::GetAlphaFormat()
 {
     GAPI gapi = Graphics::GetGAPI();
 
+#ifdef URHO3D_BGFX
+    if (gapi == GAPI_BGFX)
+        return BGFX_FMT_ALPHA8;
+#endif
 #ifdef URHO3D_OPENGL
     if (gapi == GAPI_OPENGL)
         return GetAlphaFormat_OGL();
@@ -2248,6 +2252,10 @@ unsigned Graphics::GetLuminanceFormat()
 {
     GAPI gapi = Graphics::GetGAPI();
 
+#ifdef URHO3D_BGFX
+    if (gapi == GAPI_BGFX)
+        return BGFX_FMT_ALPHA8; // 作为占位，2D-only 不使用此格式
+#endif
 #ifdef URHO3D_OPENGL
     if (gapi == GAPI_OPENGL)
         return GetLuminanceFormat_OGL();
@@ -2265,6 +2273,10 @@ unsigned Graphics::GetLuminanceAlphaFormat()
 {
     GAPI gapi = Graphics::GetGAPI();
 
+#ifdef URHO3D_BGFX
+    if (gapi == GAPI_BGFX)
+        return BGFX_FMT_RGB8; // 占位
+#endif
 #ifdef URHO3D_OPENGL
     if (gapi == GAPI_OPENGL)
         return GetLuminanceAlphaFormat_OGL();
@@ -2282,6 +2294,10 @@ unsigned Graphics::GetRGBFormat()
 {
     GAPI gapi = Graphics::GetGAPI();
 
+#ifdef URHO3D_BGFX
+    if (gapi == GAPI_BGFX)
+        return BGFX_FMT_RGB8;
+#endif
 #ifdef URHO3D_OPENGL
     if (gapi == GAPI_OPENGL)
         return GetRGBFormat_OGL();
@@ -2299,6 +2315,10 @@ unsigned Graphics::GetRGBAFormat()
 {
     GAPI gapi = Graphics::GetGAPI();
 
+#ifdef URHO3D_BGFX
+    if (gapi == GAPI_BGFX)
+        return BGFX_FMT_RGBA8;
+#endif
 #ifdef URHO3D_OPENGL
     if (gapi == GAPI_OPENGL)
         return GetRGBAFormat_OGL();

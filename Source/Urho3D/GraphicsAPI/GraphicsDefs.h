@@ -33,6 +33,13 @@ enum GAPI
 #endif
 };
 
+#ifdef URHO3D_BGFX
+// BGFX-only: 引擎内部用于 Texture2D::format_ 的一致性比较常量
+static const unsigned BGFX_FMT_ALPHA8 = 0xB001;
+static const unsigned BGFX_FMT_RGB8   = 0xB002;
+static const unsigned BGFX_FMT_RGBA8  = 0xB003;
+#endif
+
 #if defined(DESKTOP_GRAPHICS) || defined(URHO3D_GLES3)
 #define DESKTOP_GRAPHICS_OR_GLES3
 #endif
