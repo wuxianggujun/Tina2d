@@ -13,6 +13,7 @@
     #include <bgfx/platform.h>
 #endif
 #include <algorithm>
+#include <vector>
 
 #include "../Resource/ResourceCache.h"
 #include "../IO/File.h"
@@ -298,6 +299,21 @@ void GraphicsBgfx::SetScissor(bool enable, const IntRect& rect)
 #ifdef URHO3D_BGFX
     scissorEnabled_ = enable;
     scissorRect_ = rect;
+    if (initialized_)
+    {
+        if (scissorEnabled_)
+        {
+            const uint16_t w = static_cast<uint16_t>(std::max(0, scissorRect_.Width()));
+            const uint16_t h = static_cast<uint16_t>(std::max(0, scissorRect_.Height()));
+            const uint16_t x = static_cast<uint16_t>(std::max(0, scissorRect_.left_));
+            const uint16_t y = static_cast<uint16_t>(std::max(0, scissorRect_.top_));
+            bgfx::setScissor(x, y, w, h);
+        }
+        else
+        {
+            bgfx::setScissor(UINT16_MAX);
+        }
+    }
 #else
     (void)enable; (void)rect;
 #endif
@@ -468,8 +484,11 @@ void GraphicsBgfx::DebugDrawHello()
     bgfx::UniformHandle stex2; stex2.idx = ui_.s_texAlt;
     bgfx::TextureHandle wtex; wtex.idx = ui_.whiteTex;
     bgfx::setUniform(umvp, mvp);
+    // 注意：不可在同一纹理单元(stage)上为两个不同的采样器uniform重复绑定，
+    // 否则后一条会覆盖前一条，导致着色器实际使用的采样器未被绑定。
+    // 约定：stage 0 绑定 s_texColor；stage 1 绑定 s_tex（兼容 Basic2D 等）。
     bgfx::setTexture(0, stex1, wtex);
-    bgfx::setTexture(0, stex2, wtex);
+    bgfx::setTexture(1, stex2, wtex);
 
     // 应用状态并提交 drawcall（最小：颜色可写）
     bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A);
@@ -489,21 +508,61 @@ unsigned short GraphicsBgfx::GetOrCreateTexture(Texture2D* tex)
     if (it != textureCache_.end())
         return it->second;
 
-    SharedPtr<Image> img = tex->GetImage();
-    if (!img)
-        return ui_.whiteTex;
-    SharedPtr<Image> rgba = img->IsCompressed() ? img->GetDecompressedImage() : img;
-    if (!rgba)
-        return ui_.whiteTex;
-    if (rgba->GetComponents() != 4)
-        rgba = rgba->ConvertToRGBA();
-    if (!rgba)
-        return ui_.whiteTex;
+    // 优先根据纹理格式决定获取像素的方式，避免对非 RGBA/RGB 纹理调用 GetImage() 触发错误日志
+    const unsigned fmt = tex->GetFormat();
+    const unsigned alphaFmt = Graphics::GetAlphaFormat();
+    const unsigned rgbaFmt = Graphics::GetRGBAFormat();
+    const unsigned rgbFmt  = Graphics::GetRGBFormat();
 
-    const uint32_t w = (uint32_t)rgba->GetWidth();
-    const uint32_t h = (uint32_t)rgba->GetHeight();
-    const uint32_t size = w * h * 4u;
-    const bgfx::Memory* mem = bgfx::copy(rgba->GetData(), size);
+    uint32_t w = 0, h = 0;
+    const bgfx::Memory* mem = nullptr;
+
+    if (fmt == alphaFmt)
+    {
+        // 单通道 Alpha 纹理：读取 A8 数据并扩展为 BGRA8(FFFFFF,A)
+        w = (uint32_t)tex->GetWidth();
+        h = (uint32_t)tex->GetHeight();
+        const uint32_t aSize = w * h; // A8
+        std::vector<unsigned char> a8(aSize);
+        if (!tex->GetData(0, a8.data()))
+            return ui_.whiteTex;
+        std::vector<unsigned char> bgra; bgra.resize(w * h * 4u);
+        unsigned char* dst = bgra.data();
+        for (uint32_t i = 0; i < aSize; ++i)
+        {
+            const unsigned char a = a8[i];
+            // BGRA 排列：B,G,R = 255，A = alpha
+            dst[i*4 + 0] = 0xFF;
+            dst[i*4 + 1] = 0xFF;
+            dst[i*4 + 2] = 0xFF;
+            dst[i*4 + 3] = a;
+        }
+        mem = bgfx::copy(bgra.data(), (uint32_t)bgra.size());
+    }
+    else if (fmt == rgbaFmt || fmt == rgbFmt)
+    {
+        SharedPtr<Image> img = tex->GetImage();
+        if (!img)
+            return ui_.whiteTex;
+        SharedPtr<Image> rgba = img->IsCompressed() ? img->GetDecompressedImage() : img;
+        if (!rgba)
+            return ui_.whiteTex;
+        if (rgba->GetComponents() != 4)
+            rgba = rgba->ConvertToRGBA();
+        if (!rgba)
+            return ui_.whiteTex;
+
+        w = (uint32_t)rgba->GetWidth();
+        h = (uint32_t)rgba->GetHeight();
+        const uint32_t size = w * h * 4u;
+        mem = bgfx::copy(rgba->GetData(), size);
+    }
+    else
+    {
+        // 其它格式（压缩/深度等）暂不支持读取为 CPU 图像，回退为白纹理
+        return ui_.whiteTex;
+    }
+
     bgfx::TextureHandle th = bgfx::createTexture2D(
         (uint16_t)w, (uint16_t)h, false, 1,
         bgfx::TextureFormat::BGRA8,
@@ -578,7 +637,7 @@ bool GraphicsBgfx::DrawQuads(const void* qvertices, int numVertices, Texture2D* 
     bgfx::TextureHandle texh; texh.idx = GetOrCreateTexture(texture);
     bgfx::setUniform(umvp, mvpArr);
     bgfx::setTexture(0, stex1, texh);
-    bgfx::setTexture(0, stex2, texh);
+    bgfx::setTexture(1, stex2, texh);
 
     // 提交
     bgfx::ProgramHandle ph; ph.idx = ui_.programDiff;
@@ -613,6 +672,8 @@ bool GraphicsBgfx::DrawTriangles(const void* tvertices, int numVertices, Resourc
     struct Vtx { float x,y,z; uint32_t abgr; float u,v; };
     const int vcount = numVertices;
     bgfx::TransientVertexBuffer tvb;
+    if (bgfx::getAvailTransientVertexBuffer((uint32_t)vcount, layout) < (uint32_t)vcount)
+        return false;
     bgfx::allocTransientVertexBuffer(&tvb, (uint32_t)vcount, layout);
     auto* vdst = reinterpret_cast<Vtx*>(tvb.data);
     // TVertex: Vector3 position_, u32 color_
@@ -636,12 +697,25 @@ bool GraphicsBgfx::DrawTriangles(const void* tvertices, int numVertices, Resourc
     bgfx::TextureHandle texh; texh.idx = ui_.whiteTex;
     bgfx::setUniform(umvp, mvpArr);
     bgfx::setTexture(0, stex1, texh);
-    bgfx::setTexture(0, stex2, texh);
+    bgfx::setTexture(1, stex2, texh);
+
+    // 使用顺序索引而非 setVertexCount，避免因 API 约束导致的 fatal
+    if (numVertices > 0xFFFF)
+        return false; // 防御：UI 批次异常大时避免 16-bit 索引溢出
+    bgfx::TransientIndexBuffer tib;
+    if (bgfx::getAvailTransientIndexBuffer((uint32_t)numVertices) < (uint32_t)numVertices)
+        return false;
+    bgfx::allocTransientIndexBuffer(&tib, (uint32_t)numVertices);
+    {
+        auto* idst = reinterpret_cast<uint16_t*>(tib.data);
+        for (int i = 0; i < numVertices; ++i)
+            idst[i] = (uint16_t)i;
+    }
 
     bgfx::ProgramHandle ph; ph.idx = ui_.programDiff;
     bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_BLEND_ALPHA);
     bgfx::setVertexBuffer(0, &tvb);
-    bgfx::setVertexCount((uint32_t)numVertices);
+    bgfx::setIndexBuffer(&tib);
     bgfx::submit(0, ph);
     return true;
 #else
@@ -667,6 +741,8 @@ bool GraphicsBgfx::DrawUITriangles(const float* vertices, int numVertices, Textu
         .end();
 
     bgfx::TransientVertexBuffer tvb;
+    if (bgfx::getAvailTransientVertexBuffer((uint32_t)numVertices, layout) < (uint32_t)numVertices)
+        return false;
     bgfx::allocTransientVertexBuffer(&tvb, (uint32_t)numVertices, layout);
     struct Vtx { float x,y,z; uint32_t abgr; float u,v; };
     auto* vdst = reinterpret_cast<Vtx*>(tvb.data);
@@ -689,7 +765,7 @@ bool GraphicsBgfx::DrawUITriangles(const float* vertices, int numVertices, Textu
     bgfx::TextureHandle texh; texh.idx = GetOrCreateTexture(texture);
     bgfx::setUniform(umvp, mvpArr);
     bgfx::setTexture(0, stex1, texh);
-    bgfx::setTexture(0, stex2, texh);
+    bgfx::setTexture(1, stex2, texh);
 
     // 按纹理格式与混合模式选择像素程序
     unsigned short programIdx = ui_.programDiff;
@@ -707,10 +783,23 @@ bool GraphicsBgfx::DrawUITriangles(const float* vertices, int numVertices, Textu
             programIdx = ui_.programDiff;
     }
 
+    // 使用顺序索引而非 setVertexCount
+    if (numVertices > 0xFFFF)
+        return false; // 防御：UI 批次异常大时避免 16-bit 索引溢出
+    bgfx::TransientIndexBuffer tib;
+    if (bgfx::getAvailTransientIndexBuffer((uint32_t)numVertices) < (uint32_t)numVertices)
+        return false;
+    bgfx::allocTransientIndexBuffer(&tib, (uint32_t)numVertices);
+    {
+        auto* idst = reinterpret_cast<uint16_t*>(tib.data);
+        for (int i = 0; i < numVertices; ++i)
+            idst[i] = (uint16_t)i;
+    }
+
     bgfx::ProgramHandle ph; ph.idx = programIdx;
     bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_BLEND_ALPHA);
     bgfx::setVertexBuffer(0, &tvb);
-    bgfx::setVertexCount((uint32_t)numVertices);
+    bgfx::setIndexBuffer(&tib);
     bgfx::submit(0, ph);
     return true;
 #else
