@@ -397,6 +397,11 @@ if (URHO3D_LUA)
     add_dependencies(${TARGET_NAME} LuaGenCppFiles)
 endif()
 
+# 确保 Urho3D 库在构建前已生成 bgfx 着色器
+if (URHO3D_BGFX AND TARGET tina2d_bgfx_shaders)
+    add_dependencies(${TARGET_NAME} tina2d_bgfx_shaders)
+endif()
+
 # Generate platform specific export header file (can only be called after the target has been added)
 if (MSVC)
     set (APPENDIX "\n#pragma warning(disable: 4251)\n#pragma warning(disable: 4275)\n\n#if _MSC_VER < 1900\n#define strtoll _strtoi64\n#define strtoull _strtoui64\n#endif\n")

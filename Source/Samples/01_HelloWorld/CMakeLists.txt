@@ -10,10 +10,7 @@ define_source_files (EXTRA_H_FILES ${COMMON_SAMPLE_H_FILES})
 # Setup target with resource copying
 setup_main_executable ()
 
-# 确保示例在构建前已生成 bgfx 着色器
-if (TARGET tina2d_bgfx_shaders)
-    add_dependencies (${TARGET_NAME} tina2d_bgfx_shaders)
-endif ()
+# 注意：着色器依赖已通过 Urho3D 库传递，无需在示例中重复声明
 
 # Setup test cases
 setup_test ()
