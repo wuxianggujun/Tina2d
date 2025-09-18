@@ -565,10 +565,16 @@ unsigned short GraphicsBgfx::GetOrCreateTexture(Texture2D* tex, ResourceCache* c
 {
 #ifdef URHO3D_BGFX
     if (!tex)
+    {
+        URHO3D_LOGDEBUG("GetOrCreateTexture: tex is null, returning white texture");
         return ui_.whiteTex;
+    }
     auto it = textureCache_.find(tex);
     if (it != textureCache_.end())
         return it->second;
+    
+    URHO3D_LOGDEBUGF("GetOrCreateTexture: Creating bgfx texture for %s (format=%u, size=%dx%d)", 
+        tex->GetName().CString(), tex->GetFormat(), tex->GetWidth(), tex->GetHeight());
 
     // 优先根据纹理格式决定获取像素的方式，避免对非 RGBA/RGB 纹理调用 GetImage() 触发错误日志
     const unsigned fmt = tex->GetFormat();
@@ -589,7 +595,10 @@ unsigned short GraphicsBgfx::GetOrCreateTexture(Texture2D* tex, ResourceCache* c
         const uint32_t aSize = w * h; // A8
         std::vector<unsigned char> a8(aSize);
         if (!tex->GetData(0, a8.data()))
+        {
+            URHO3D_LOGERRORF("GetOrCreateTexture: Failed to get A8 data from texture %s", tex->GetName().CString());
             return ui_.whiteTex;
+        }
         std::vector<unsigned char> bgra; bgra.resize(w * h * 4u);
         unsigned char* dst = bgra.data();
         for (uint32_t i = 0; i < aSize; ++i)
@@ -605,9 +614,13 @@ unsigned short GraphicsBgfx::GetOrCreateTexture(Texture2D* tex, ResourceCache* c
     }
     else if (fmt == rgbaFmt || fmt == rgbFmt)
     {
+        URHO3D_LOGDEBUGF("GetOrCreateTexture: Processing RGBA/RGB texture %s", tex->GetName().CString());
         SharedPtr<Image> img = tex->GetImage();
         if (!img)
+        {
+            URHO3D_LOGERRORF("GetOrCreateTexture: Failed to get Image from texture %s", tex->GetName().CString());
             return ui_.whiteTex;
+        }
         SharedPtr<Image> rgba = img->IsCompressed() ? img->GetDecompressedImage() : img;
         if (!rgba)
             return ui_.whiteTex;
@@ -672,7 +685,11 @@ unsigned short GraphicsBgfx::GetOrCreateTexture(Texture2D* tex, ResourceCache* c
         tflags,
         mem);
     if (!bgfx::isValid(th))
+    {
+        URHO3D_LOGERRORF("GetOrCreateTexture: Failed to create bgfx texture for %s", tex->GetName().CString());
         return ui_.whiteTex;
+    }
+    URHO3D_LOGDEBUGF("GetOrCreateTexture: Successfully created bgfx texture for %s (handle=%u)", tex->GetName().CString(), th.idx);
     textureCache_[tex] = th.idx;
     return th.idx;
 #else
