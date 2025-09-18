@@ -216,7 +216,6 @@ if (URHO3D_BGFX)
     
     # 编译CoreData中的BGFX着色器
     set(BGFX_SHADER_DIR "${CMAKE_SOURCE_DIR}/bin/CoreData/Shaders/BGFX")
-    if (EXISTS "${BGFX_SHADER_DIR}")
         add_shader_compile_dir(
             ${BGFX_SHADER_DIR}
             Basic2D  # 编译 Basic2D_vs.sc + Basic2D_fs.sc
@@ -225,8 +224,7 @@ if (URHO3D_BGFX)
         if (TARGET tina2d_bgfx_shaders AND TARGET shaders)
             add_dependencies(tina2d_bgfx_shaders shaders)
         endif ()
-    endif()
-endif ()
+endif()
 
 # Urho3D documentation
 add_subdirectory (Docs)

@@ -9,6 +9,7 @@
 #include "../Graphics/Camera.h"
 #include "../Graphics/Geometry.h"
 #include "../Graphics/GraphicsEvents.h"
+#include "../Graphics/Graphics.h"
 #include "../Graphics/Material.h"
 #include "../Graphics/OctreeQuery.h"
 #include "../Graphics/Technique.h"
@@ -351,6 +352,44 @@ void Renderer2D::HandleBeginViewUpdate(StringHash eventType, VariantMap& eventDa
         viewBatchInfo.vertexBuffer_ = new VertexBuffer(context_);
 
     UpdateViewBatchInfo(viewBatchInfo, camera);
+
+#ifdef URHO3D_BGFX
+    // 在 BGFX 后端下，直接用 bgfx 提交 2D 批次并阻止老管线重复绘制
+    if (auto* graphics = GetSubsystem<Graphics>())
+    {
+        if (graphics->IsBgfxActive())
+        {
+            const Matrix4 proj = camera->GetGPUProjection();
+            const Matrix3x4& v3 = camera->GetView();
+            const Matrix4 view(
+                v3.m00_, v3.m01_, v3.m02_, v3.m03_,
+                v3.m10_, v3.m11_, v3.m12_, v3.m13_,
+                v3.m20_, v3.m21_, v3.m22_, v3.m23_,
+                0.0f,    0.0f,    0.0f,    1.0f
+            );
+            const Matrix4 mvp = proj * view;
+
+            // 逐批提交（按 material 分组已在 UpdateViewBatchInfo 中完成并排序）
+            for (const SourceBatch2D* src : viewBatchInfo.sourceBatches_)
+            {
+                if (!src || src->vertices_.Empty())
+                    continue;
+
+                Texture2D* tex = nullptr;
+                if (src->material_)
+                    tex = static_cast<Texture2D*>(src->material_->GetTexture(TU_DIFFUSE));
+
+                // Vertex2D 布局为: Vector3 position_, u32 color_, Vector2 uv_，与 BgfxDrawQuads 的 QVertex 对齐
+                graphics->BgfxDrawQuads(src->vertices_.Buffer(), src->vertices_.Size(), tex, mvp);
+            }
+
+            // 清空批次数，避免旧管线继续绘制
+            viewBatchInfo.batchCount_ = 0;
+            batches_.Clear();
+            return;
+        }
+    }
+#endif
 
     // Go through the drawables to form geometries & batches and calculate the total vertex / index count,
     // but upload the actual vertex data later. The idea is that the View class copies our batch vector to

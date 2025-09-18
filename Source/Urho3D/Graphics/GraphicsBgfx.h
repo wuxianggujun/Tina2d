@@ -62,9 +62,9 @@ public:
     /// 是否已完成初始化。
     bool IsInitialized() const { return initialized_; }
 
-    /// 载入最小示例着色器程序（vs_hello/fs_hello），从资源系统读取 BGFX 编译产物。
+    /// 载入 UI 所需着色器程序（vs_ui + fs_ui_diff/fs_ui_alpha），从资源系统读取 BGFX 编译产物。
     /// 需要 ResourceCache 可用（CoreData/Shaders/BGFX）。
-    bool LoadHelloProgram(class ResourceCache* cache);
+    bool LoadUIPrograms(class ResourceCache* cache);
     /// 使用最小示例程序绘制一个测试四边形（验证渲染/着色器/管线）。
     void DebugDrawHello();
 
@@ -86,14 +86,18 @@ private:
     IntRect scissorRect_{};
 
     // 简单示例程序与资源
-    struct HelloHandles
+    struct UIHandles
     {
-        unsigned short program{0xFFFF};
+        unsigned short programDiff{0xFFFF};   // Basic+DIFFMAP+VERTEXCOLOR
+        unsigned short programAlpha{0xFFFF};  // Basic+ALPHAMAP+VERTEXCOLOR（字体）
+        unsigned short programMask{0xFFFF};   // Basic+DIFFMAP+ALPHAMASK+VERTEXCOLOR
         unsigned short u_mvp{0xFFFF};
-        unsigned short s_tex{0xFFFF};
+        // s_tex 约定为 s_texColor（主采样器），s_texAlt 兼容 Basic2D 等使用 s_tex 的着色器
+        unsigned short s_tex{0xFFFF};      // "s_texColor"
+        unsigned short s_texAlt{0xFFFF};   // "s_tex"
         unsigned short whiteTex{0xFFFF};
         bool ready{};
-    } hello_;
+    } ui_;
 
     // 纹理缓存：Urho3D Texture2D* -> bgfx::TextureHandle.idx
     std::unordered_map<const Texture2D*, unsigned short> textureCache_;

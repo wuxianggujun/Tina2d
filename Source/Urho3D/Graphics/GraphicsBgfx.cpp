@@ -18,6 +18,7 @@
 #include "../IO/File.h"
 #include "../GraphicsAPI/Texture2D.h"
 #include "../Resource/Image.h"
+#include "../Graphics/Graphics.h"
 
 namespace Urho3D
 {
@@ -302,12 +303,12 @@ void GraphicsBgfx::SetScissor(bool enable, const IntRect& rect)
 #endif
 }
 
-bool GraphicsBgfx::LoadHelloProgram(ResourceCache* cache)
+bool GraphicsBgfx::LoadUIPrograms(ResourceCache* cache)
 {
 #ifdef URHO3D_BGFX
     if (!initialized_ || !cache)
         return false;
-    if (hello_.ready)
+    if (ui_.ready)
         return true;
 
     // 按当前渲染后端推断 profile 子目录（与 ShaderUtils.cmake 的 _bgfx_get_profile_path_ext 对齐）
@@ -340,16 +341,16 @@ bool GraphicsBgfx::LoadHelloProgram(ResourceCache* cache)
 
     auto findShader = [&](const char* base) -> SharedPtr<File>
     {
-        // 尝试平铺输出（旧方案）：Shaders/BGFX/base.bin
+        // 尝试平铺输出：Shaders/BGFX/base.bin
         if (auto f = tryOpen(String("Shaders/BGFX/") + base + ".bin"))
             return f;
-        // 尝试平铺但带 .sc 后缀（防御式）：base.sc.bin
+        // 尝试平铺但带 .sc 后缀：base.sc.bin
         if (auto f = tryOpen(String("Shaders/BGFX/") + base + ".sc.bin"))
             return f;
-        // 尝试 profile 子目录（ShaderUtils.cmake 默认行为）：profile/base.bin
+        // 尝试 profile 子目录：profile/base.bin
         if (auto f = tryOpen(String("Shaders/BGFX/") + profile + "/" + base + ".bin"))
             return f;
-        // 尝试 profile 子目录 + .sc.bin（bgfx_compile_shaders 输出名）
+        // 尝试 profile 子目录 + .sc.bin
         if (auto f = tryOpen(String("Shaders/BGFX/") + profile + "/" + base + ".sc.bin"))
             return f;
         return SharedPtr<File>();
@@ -368,37 +369,63 @@ bool GraphicsBgfx::LoadHelloProgram(ResourceCache* cache)
         return bgfx::createShader(mem);
     };
 
-    SharedPtr<File> fsv = findShader("vs_hello");
-    SharedPtr<File> fsf = findShader("fs_hello");
-    if (!fsv || !fsf)
+    // 遵循 add_shader_compile_dir 的命名：<Base>_vs / <Base>_fs
+    auto findPair = [&](const char* base) -> std::pair<SharedPtr<File>, SharedPtr<File>>
+    {
+        String b(base);
+        return { findShader((b + "_vs").CString()), findShader((b + "_fs").CString()) };
+    };
+
+    auto [sv_vc, sf_vc] = findPair("Basic_VC");
+    auto [sv_diff, sf_diff] = findPair("Basic_Diff_VC");
+    auto [sv_alpha, sf_alpha] = findPair("Basic_Alpha_VC");
+    auto [sv_mask, sf_mask] = findPair("Basic_DiffAlphaMask_VC");
+    // 至少需要 Diff 版本
+    if (!sv_diff || !sf_diff)
         return false;
 
-    auto vsh = loadShader(fsv);
-    auto fsh = loadShader(fsf);
-    if (!bgfx::isValid(vsh) || !bgfx::isValid(fsh))
+    // programDiff（各自持有自己的 shader，便于销毁）
+    auto vsh_diff = loadShader(sv_diff);
+    auto fsh_diff = loadShader(sf_diff);
+    if (!bgfx::isValid(vsh_diff) || !bgfx::isValid(fsh_diff))
         return false;
+    ui_.programDiff = bgfx::createProgram(vsh_diff, fsh_diff, true /* destroy shaders */).idx;
 
-    hello_.program = bgfx::createProgram(vsh, fsh, true /* destroy shaders */).idx;
-    bgfx::ProgramHandle ph; ph.idx = hello_.program;
-    if (!bgfx::isValid(ph))
-        return false;
+    // programAlpha（可选）
+    if (sv_alpha && sf_alpha)
+    {
+        auto vsh_alpha = loadShader(sv_alpha);
+        auto fsh_alpha = loadShader(sf_alpha);
+        if (bgfx::isValid(vsh_alpha) && bgfx::isValid(fsh_alpha))
+            ui_.programAlpha = bgfx::createProgram(vsh_alpha, fsh_alpha, true).idx;
+    }
 
-    // uniforms
-    hello_.u_mvp = bgfx::createUniform("u_mvp", bgfx::UniformType::Mat4).idx;
-    hello_.s_tex = bgfx::createUniform("s_texColor", bgfx::UniformType::Sampler).idx;
+    if (sv_mask && sf_mask)
+    {
+        auto vsh_mask = loadShader(sv_mask);
+        auto fsh_mask = loadShader(sf_mask);
+        if (bgfx::isValid(vsh_mask) && bgfx::isValid(fsh_mask))
+            ui_.programMask = bgfx::createProgram(vsh_mask, fsh_mask, true).idx;
+    }
+
+    // uniforms（通用）
+    ui_.u_mvp = bgfx::createUniform("u_mvp", bgfx::UniformType::Mat4).idx;
+    ui_.s_tex = bgfx::createUniform("s_texColor", bgfx::UniformType::Sampler).idx;
+    ui_.s_texAlt = bgfx::createUniform("s_tex", bgfx::UniformType::Sampler).idx;
 
     // 创建 1x1 白色纹理
     const uint32_t white = 0xFFFFFFFFu;
     const bgfx::Memory* tmem = bgfx::copy(&white, sizeof(white));
-    hello_.whiteTex = bgfx::createTexture2D(1, 1, false, 1, bgfx::TextureFormat::BGRA8,
+    ui_.whiteTex = bgfx::createTexture2D(1, 1, false, 1, bgfx::TextureFormat::BGRA8,
         (BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP | BGFX_SAMPLER_W_CLAMP | BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT), tmem).idx;
 
-    bgfx::UniformHandle umvp; umvp.idx = hello_.u_mvp;
-    bgfx::UniformHandle stex; stex.idx = hello_.s_tex;
-    bgfx::TextureHandle wtex; wtex.idx = hello_.whiteTex;
-    hello_.ready = bgfx::isValid(ph) && bgfx::isValid(umvp)
+    bgfx::ProgramHandle phDiff{ ui_.programDiff };
+    bgfx::UniformHandle umvp{ ui_.u_mvp };
+    bgfx::UniformHandle stex{ ui_.s_tex };
+    bgfx::TextureHandle wtex{ ui_.whiteTex };
+    ui_.ready = bgfx::isValid(phDiff) && bgfx::isValid(umvp)
         && bgfx::isValid(stex) && bgfx::isValid(wtex);
-    return hello_.ready;
+    return ui_.ready;
 #else
     (void)cache; return false;
 #endif
@@ -407,7 +434,7 @@ bool GraphicsBgfx::LoadHelloProgram(ResourceCache* cache)
 void GraphicsBgfx::DebugDrawHello()
 {
 #ifdef URHO3D_BGFX
-    if (!initialized_ || !hello_.ready)
+    if (!initialized_ || !ui_.ready)
         return;
 
     // 顶点声明：pos(3f), color0(ub4n), texcoord0(2f)
@@ -436,17 +463,19 @@ void GraphicsBgfx::DebugDrawHello()
 
     // 设定 uniform（单位矩阵），并绑定白色纹理
     float mvp[16] = {1,0,0,0,  0,1,0,0,  0,0,1,0,  0,0,0,1};
-    bgfx::UniformHandle umvp; umvp.idx = hello_.u_mvp;
-    bgfx::UniformHandle stex; stex.idx = hello_.s_tex;
-    bgfx::TextureHandle wtex; wtex.idx = hello_.whiteTex;
+    bgfx::UniformHandle umvp; umvp.idx = ui_.u_mvp;
+    bgfx::UniformHandle stex1; stex1.idx = ui_.s_tex;
+    bgfx::UniformHandle stex2; stex2.idx = ui_.s_texAlt;
+    bgfx::TextureHandle wtex; wtex.idx = ui_.whiteTex;
     bgfx::setUniform(umvp, mvp);
-    bgfx::setTexture(0, stex, wtex);
+    bgfx::setTexture(0, stex1, wtex);
+    bgfx::setTexture(0, stex2, wtex);
 
     // 应用状态并提交 drawcall（最小：颜色可写）
     bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A);
     bgfx::setVertexBuffer(0, &tvb);
     bgfx::setIndexBuffer(&tib);
-    bgfx::ProgramHandle ph2; ph2.idx = hello_.program;
+    bgfx::ProgramHandle ph2; ph2.idx = ui_.programDiff;
     bgfx::submit(0, ph2);
 #endif
 }
@@ -455,21 +484,21 @@ unsigned short GraphicsBgfx::GetOrCreateTexture(Texture2D* tex)
 {
 #ifdef URHO3D_BGFX
     if (!tex)
-        return hello_.whiteTex;
+        return ui_.whiteTex;
     auto it = textureCache_.find(tex);
     if (it != textureCache_.end())
         return it->second;
 
     SharedPtr<Image> img = tex->GetImage();
     if (!img)
-        return hello_.whiteTex;
+        return ui_.whiteTex;
     SharedPtr<Image> rgba = img->IsCompressed() ? img->GetDecompressedImage() : img;
     if (!rgba)
-        return hello_.whiteTex;
+        return ui_.whiteTex;
     if (rgba->GetComponents() != 4)
         rgba = rgba->ConvertToRGBA();
     if (!rgba)
-        return hello_.whiteTex;
+        return ui_.whiteTex;
 
     const uint32_t w = (uint32_t)rgba->GetWidth();
     const uint32_t h = (uint32_t)rgba->GetHeight();
@@ -481,7 +510,7 @@ unsigned short GraphicsBgfx::GetOrCreateTexture(Texture2D* tex)
         (BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP | BGFX_SAMPLER_W_CLAMP | BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT),
         mem);
     if (!bgfx::isValid(th))
-        return hello_.whiteTex;
+        return ui_.whiteTex;
     textureCache_[tex] = th.idx;
     return th.idx;
 #else
@@ -494,7 +523,7 @@ bool GraphicsBgfx::DrawQuads(const void* qvertices, int numVertices, Texture2D* 
 #ifdef URHO3D_BGFX
     if (!initialized_)
         return false;
-    if (!LoadHelloProgram(cache))
+    if (!LoadUIPrograms(cache))
         return false;
     if (numVertices <= 0)
         return true;
@@ -543,14 +572,16 @@ bool GraphicsBgfx::DrawQuads(const void* qvertices, int numVertices, Texture2D* 
         mvp.m02_, mvp.m12_, mvp.m22_, mvp.m32_,
         mvp.m03_, mvp.m13_, mvp.m23_, mvp.m33_,
     };
-    bgfx::UniformHandle umvp; umvp.idx = hello_.u_mvp;
-    bgfx::UniformHandle stex; stex.idx = hello_.s_tex;
+    bgfx::UniformHandle umvp; umvp.idx = ui_.u_mvp;
+    bgfx::UniformHandle stex1; stex1.idx = ui_.s_tex;
+    bgfx::UniformHandle stex2; stex2.idx = ui_.s_texAlt;
     bgfx::TextureHandle texh; texh.idx = GetOrCreateTexture(texture);
     bgfx::setUniform(umvp, mvpArr);
-    bgfx::setTexture(0, stex, texh);
+    bgfx::setTexture(0, stex1, texh);
+    bgfx::setTexture(0, stex2, texh);
 
     // 提交
-    bgfx::ProgramHandle ph; ph.idx = hello_.program;
+    bgfx::ProgramHandle ph; ph.idx = ui_.programDiff;
     bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_BLEND_ALPHA);
     bgfx::setVertexBuffer(0, &tvb);
     bgfx::setIndexBuffer(&tib);
@@ -566,7 +597,7 @@ bool GraphicsBgfx::DrawTriangles(const void* tvertices, int numVertices, Resourc
 #ifdef URHO3D_BGFX
     if (!initialized_)
         return false;
-    if (!LoadHelloProgram(cache))
+    if (!LoadUIPrograms(cache))
         return false;
     if (numVertices <= 0)
         return true;
@@ -599,13 +630,15 @@ bool GraphicsBgfx::DrawTriangles(const void* tvertices, int numVertices, Resourc
         mvp.m02_, mvp.m12_, mvp.m22_, mvp.m32_,
         mvp.m03_, mvp.m13_, mvp.m23_, mvp.m33_,
     };
-    bgfx::UniformHandle umvp; umvp.idx = hello_.u_mvp;
-    bgfx::UniformHandle stex; stex.idx = hello_.s_tex;
-    bgfx::TextureHandle texh; texh.idx = hello_.whiteTex;
+    bgfx::UniformHandle umvp; umvp.idx = ui_.u_mvp;
+    bgfx::UniformHandle stex1; stex1.idx = ui_.s_tex;
+    bgfx::UniformHandle stex2; stex2.idx = ui_.s_texAlt;
+    bgfx::TextureHandle texh; texh.idx = ui_.whiteTex;
     bgfx::setUniform(umvp, mvpArr);
-    bgfx::setTexture(0, stex, texh);
+    bgfx::setTexture(0, stex1, texh);
+    bgfx::setTexture(0, stex2, texh);
 
-    bgfx::ProgramHandle ph; ph.idx = hello_.program;
+    bgfx::ProgramHandle ph; ph.idx = ui_.programDiff;
     bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_BLEND_ALPHA);
     bgfx::setVertexBuffer(0, &tvb);
     bgfx::setVertexCount((uint32_t)numVertices);
@@ -621,7 +654,7 @@ bool GraphicsBgfx::DrawUITriangles(const float* vertices, int numVertices, Textu
 #ifdef URHO3D_BGFX
     if (!initialized_)
         return false;
-    if (!LoadHelloProgram(cache))
+    if (!LoadUIPrograms(cache))
         return false;
     if (numVertices <= 0 || vertices == nullptr)
         return true;
@@ -650,13 +683,31 @@ bool GraphicsBgfx::DrawUITriangles(const float* vertices, int numVertices, Textu
         mvp.m02_, mvp.m12_, mvp.m22_, mvp.m32_,
         mvp.m03_, mvp.m13_, mvp.m23_, mvp.m33_,
     };
-    bgfx::UniformHandle umvp; umvp.idx = hello_.u_mvp;
-    bgfx::UniformHandle stex; stex.idx = hello_.s_tex;
+    bgfx::UniformHandle umvp; umvp.idx = ui_.u_mvp;
+    bgfx::UniformHandle stex1; stex1.idx = ui_.s_tex;
+    bgfx::UniformHandle stex2; stex2.idx = ui_.s_texAlt;
     bgfx::TextureHandle texh; texh.idx = GetOrCreateTexture(texture);
     bgfx::setUniform(umvp, mvpArr);
-    bgfx::setTexture(0, stex, texh);
+    bgfx::setTexture(0, stex1, texh);
+    bgfx::setTexture(0, stex2, texh);
 
-    bgfx::ProgramHandle ph; ph.idx = hello_.program;
+    // 按纹理格式与混合模式选择像素程序
+    unsigned short programIdx = ui_.programDiff;
+    if (texture)
+    {
+        unsigned alphaFormat = Graphics::GetAlphaFormat();
+        const bool isAlphaTex = texture->GetFormat() == alphaFormat;
+        const uint64_t blendMask = (state_ & BGFX_STATE_BLEND_MASK);
+        const bool hasBlend = (blendMask != 0);
+        if (isAlphaTex && ui_.programAlpha != bgfx::kInvalidHandle)
+            programIdx = ui_.programAlpha;
+        else if (!isAlphaTex && !hasBlend && ui_.programMask != bgfx::kInvalidHandle)
+            programIdx = ui_.programMask;
+        else
+            programIdx = ui_.programDiff;
+    }
+
+    bgfx::ProgramHandle ph; ph.idx = programIdx;
     bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_BLEND_ALPHA);
     bgfx::setVertexBuffer(0, &tvb);
     bgfx::setVertexCount((uint32_t)numVertices);

@@ -1776,7 +1776,7 @@ void Graphics::DebugDrawBgfxHello()
     if (!bgfx_)
         return;
     auto* cache = GetSubsystem<ResourceCache>();
-    if (cache && bgfx_->LoadHelloProgram(cache))
+    if (cache && bgfx_->LoadUIPrograms(cache))
         bgfx_->DebugDrawHello();
 }
 

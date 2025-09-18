@@ -379,7 +379,7 @@ function(bgfx_compile_shaders)
                 ${ARGS_OUTPUT_DIR}/${PROFILE_PATH_EXT}
             )
             list(APPEND COMMANDS 
-                COMMAND bgfx::shaderc
+                COMMAND $<TARGET_FILE:bgfx::shaderc>
                     --type ${ARGS_TYPE}
                     --platform ${SHADER_PLATFORM}
                     --profile ${PROFILE}
