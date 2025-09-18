@@ -34,6 +34,7 @@ class Texture2DArray;
 class TextureCube;
 class Vector3;
 class Vector4;
+class Matrix4;
 class VertexBuffer;
 
 #ifdef URHO3D_BGFX
@@ -365,6 +366,14 @@ public:
 #ifdef URHO3D_BGFX
     /// 返回是否正在使用并已初始化 bgfx 后端。
     bool IsBgfxActive() const;
+    /// 使用 bgfx 绘制最小示例（用于验证渲染/着色器链路）。
+    void DebugDrawBgfxHello();
+    /// 使用 bgfx 提交四边形批次（SpriteBatch 用）。
+    bool BgfxDrawQuads(const void* qvertices, int numVertices, Texture2D* texture, const Matrix4& mvp);
+    /// 使用 bgfx 提交三角形批次（SpriteBatch 用）。
+    bool BgfxDrawTriangles(const void* tvertices, int numVertices, const Matrix4& mvp);
+    /// 使用 bgfx 提交 UI 顶点（按 UI_VERTEX_SIZE 布局的三角形列表）。
+    bool BgfxDrawUITriangles(const float* vertices, int numVertices, Texture2D* texture, const Matrix4& mvp);
 #endif
 
     /// Return window position.

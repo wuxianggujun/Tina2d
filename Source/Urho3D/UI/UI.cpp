@@ -1021,6 +1021,59 @@ void UI::Render(VertexBuffer* buffer, const Vector<UIBatch>& batches, unsigned b
     graphics_->SetDepthWrite(false);
     graphics_->SetFillMode(FILL_SOLID);
     graphics_->SetStencilTest(false);
+    // bgfx 路径：使用 UI 顶点数组直接提交
+#ifdef URHO3D_BGFX
+    if (graphics_->IsBgfxActive())
+    {
+        // 选择对应的顶点数据缓冲区
+        const Vector<float>* vdata = nullptr;
+        if (buffer == vertexBuffer_.Get()) vdata = &vertexData_;
+        else if (buffer == debugVertexBuffer_.Get()) vdata = &debugVertexData_;
+        else
+        {
+            for (auto& item : renderToTexture_)
+            {
+                RenderToTextureData& data = item.second_;
+                if (buffer == data.vertexBuffer_.Get()) { vdata = &data.vertexData_; break; }
+                if (buffer == data.debugVertexBuffer_.Get()) { vdata = &data.debugVertexData_; break; }
+            }
+        }
+
+        if (vdata)
+        {
+            for (unsigned i = batchStart; i < batchEnd; ++i)
+            {
+                const UIBatch& batch = batches[i];
+                if (batch.vertexStart_ == batch.vertexEnd_)
+                    continue;
+
+                IntRect scissor = batch.scissor_;
+                scissor.left_ = (int)(scissor.left_ * uiScale_);
+                scissor.top_ = (int)(scissor.top_ * uiScale_);
+                scissor.right_ = (int)(scissor.right_ * uiScale_);
+                scissor.bottom_ = (int)(scissor.bottom_ * uiScale_);
+
+                if (Graphics::GetGAPI() == GAPI_OPENGL && surface)
+                {
+                    int top = scissor.top_;
+                    int bottom = scissor.bottom_;
+                    scissor.top_ = viewSize.y_ - bottom;
+                    scissor.bottom_ = viewSize.y_ - top;
+                }
+
+                graphics_->SetBlendMode(batch.blendMode_);
+                graphics_->SetScissorTest(true, scissor);
+
+                const int numVerts = (batch.vertexEnd_ - batch.vertexStart_) / UI_VERTEX_SIZE;
+                const float* src = &vdata->At(batch.vertexStart_);
+                Texture2D* tex2d = static_cast<Texture2D*>(batch.texture_);
+                graphics_->BgfxDrawUITriangles(src, numVerts, tex2d, projection);
+            }
+            return;
+        }
+    }
+#endif
+
     graphics_->SetVertexBuffer(buffer);
 
     ShaderVariation* noTextureVS = graphics_->GetShader(VS, "Basic", "VERTEXCOLOR");

@@ -9,9 +9,14 @@
 #include "../GraphicsAPI/GraphicsDefs.h"
 #include "../Math/Rect.h"
 #include "../Math/Color.h"
+#include "../Math/Matrix4.h"
+#include <unordered_map>
 
 namespace Urho3D
 {
+
+class Texture2D;
+class ResourceCache;
 
 /// bgfx 渲染器薄封装（最小骨架）。
 /// 说明：仅提供初始化/帧提交等基础能力，具体渲染管线、资源管理与 Urho3D 类型映射将在后续阶段逐步完善。
@@ -57,6 +62,18 @@ public:
     /// 是否已完成初始化。
     bool IsInitialized() const { return initialized_; }
 
+    /// 载入最小示例着色器程序（vs_hello/fs_hello），从资源系统读取 BGFX 编译产物。
+    /// 需要 ResourceCache 可用（CoreData/Shaders/BGFX）。
+    bool LoadHelloProgram(class ResourceCache* cache);
+    /// 使用最小示例程序绘制一个测试四边形（验证渲染/着色器/管线）。
+    void DebugDrawHello();
+
+    // 批量绘制（供 SpriteBatch 调用）
+    bool DrawQuads(const void* qvertices /*SpriteBatchBase::QVertex[]*/, int numVertices, Texture2D* texture, ResourceCache* cache, const Matrix4& mvp);
+    bool DrawTriangles(const void* tvertices /*SpriteBatchBase::TVertex[]*/, int numVertices, ResourceCache* cache, const Matrix4& mvp);
+    // UI: 直接从 UI 顶点浮点数组绘制三角形（pos, color, uv，按 UI_VERTEX_SIZE=6 排列）
+    bool DrawUITriangles(const float* vertices, int numVertices, Texture2D* texture, ResourceCache* cache, const Matrix4& mvp);
+
 private:
     void ApplyState();
 
@@ -67,6 +84,20 @@ private:
     uint64_t state_{};     // bgfx 渲染状态位
     bool scissorEnabled_{};
     IntRect scissorRect_{};
+
+    // 简单示例程序与资源
+    struct HelloHandles
+    {
+        unsigned short program{0xFFFF};
+        unsigned short u_mvp{0xFFFF};
+        unsigned short s_tex{0xFFFF};
+        unsigned short whiteTex{0xFFFF};
+        bool ready{};
+    } hello_;
+
+    // 纹理缓存：Urho3D Texture2D* -> bgfx::TextureHandle.idx
+    std::unordered_map<const Texture2D*, unsigned short> textureCache_;
+    unsigned short GetOrCreateTexture(Texture2D* tex);
 };
 
 } // namespace Urho3D

@@ -41,10 +41,6 @@ if (URHO3D_DATABASE_SQLITE)
     add_subdirectory (SQLite)
 endif ()
 
-if (URHO3D_IK)
-    add_subdirectory (ik)
-endif ()
-
 if (URHO3D_NAVIGATION)
     add_subdirectory (Detour)
     add_subdirectory (DetourCrowd)
@@ -125,6 +121,12 @@ if (URHO3D_BGFX)
                     COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:${TGT}> ${BGFX_TOOLS_DIR}
                     COMMENT "Copy bgfx tool: ${TGT}")
             endforeach ()
+        endif ()
+
+        # 兼容 ShaderUtils.cmake：该模块期望存在可执行目标 bgfx::shaderc
+        # 标准 bgfx.cmake 定义的工具目标名为 shaderc，这里创建一个别名以便统一调用
+        if (TARGET shaderc AND NOT TARGET bgfx::shaderc)
+            add_executable(bgfx::shaderc ALIAS shaderc)
         endif ()
     else ()
         message (FATAL_ERROR "URHO3D_BGFX=ON 但未找到本地 ThirdParty/bgfx.cmake。请先将 bgfx.cmake 克隆到 Source/ThirdParty/bgfx.cmake 再配置构建。")

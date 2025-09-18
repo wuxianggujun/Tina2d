@@ -40,25 +40,23 @@ set (CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/Modules)
 # Include UrhoCommon.cmake module after setting project name
 include (UrhoCommon)
 
+# 若启用 bgfx，提前声明一个占位自定义目标供示例工程依赖，
+# 稍后在真正创建完 shaders 目标后再把依赖关系补上。
+if (URHO3D_BGFX)
+    add_custom_target(tina2d_bgfx_shaders)
+endif ()
+
 # 2D-only 构建：在加入 Source 子目录前，统一关闭 3D/脚本系统以避免引用 3D 头和符号
 set (URHO3D_TOOLS            OFF CACHE BOOL "Disable tools for 2D-only build" FORCE)
 set (URHO3D_SAMPLES          ON  CACHE BOOL "Enable samples for 2D-only build" FORCE)
 set (URHO3D_ANGELSCRIPT      OFF CACHE BOOL "Disable AngelScript for 2D-only" FORCE)
 set (URHO3D_GENERATEBINDINGS OFF CACHE BOOL "Disable binding generation for 2D-only" FORCE)
-set (URHO3D_IK               OFF CACHE BOOL "Disable IK in 2D-only build" FORCE)
 set (URHO3D_NAVIGATION       OFF CACHE BOOL "Disable Navigation in 2D-only build" FORCE)
 set (URHO3D_PHYSICS          OFF CACHE BOOL "Disable 3D Physics in 2D-only build" FORCE)
 
 # 可选启用：bgfx 渲染后端（实验性）。
 # 仅接入依赖与骨架，不改变现有 OpenGL/D3D 渲染路径，后续可渐进式切换。
 option(URHO3D_BGFX "启用 bgfx 渲染后端（实验性）" ON)
-
-if (URHO3D_BGFX)
-    # 通过 bgfx.cmake，统一构建 bgfx + bx + bimg。
-    # 关闭示例，按需启用工具（shaderc 等）供着色器编译使用。
-    set (BGFX_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-    set (BGFX_BUILD_TOOLS    ON  CACHE BOOL "" FORCE)
-endif ()
 
 # Setup SDK install destinations
 set (PATH_SUFFIX Urho3D)
@@ -211,6 +209,24 @@ file (MAKE_DIRECTORY ${THIRD_PARTY_INCLUDE_DIR})
 
 # Urho3D source
 add_subdirectory (Source)
+
+# 编译 bgfx 着色器（放在 Source 之后确保 bgfx 工具可用）
+if (URHO3D_BGFX)
+    include(${CMAKE_SOURCE_DIR}/cmake/Modules/ShaderUtils.cmake)
+    
+    # 编译CoreData中的BGFX着色器
+    set(BGFX_SHADER_DIR "${CMAKE_SOURCE_DIR}/bin/CoreData/Shaders/BGFX")
+    if (EXISTS "${BGFX_SHADER_DIR}")
+        add_shader_compile_dir(
+            ${BGFX_SHADER_DIR}
+            Basic2D  # 编译 Basic2D_vs.sc + Basic2D_fs.sc
+        )
+        # 让占位目标依赖实际的 shaders 目标，这样示例中的依赖会按需触发编译
+        if (TARGET tina2d_bgfx_shaders AND TARGET shaders)
+            add_dependencies(tina2d_bgfx_shaders shaders)
+        endif ()
+    endif()
+endif ()
 
 # Urho3D documentation
 add_subdirectory (Docs)

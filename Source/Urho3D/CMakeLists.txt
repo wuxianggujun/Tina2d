@@ -362,6 +362,17 @@ if (URHO3D_BGFX)
             list (APPEND INCLUDE_DIRS ${BIMG_INC_DIRS})
         endif ()
     endif ()
+
+    # 链接 bgfx（带上其依赖，避免某些生成器/平台不传递链接接口）
+    if (TARGET bgfx)
+        list (APPEND LIBS bgfx)
+    endif ()
+    if (TARGET bimg)
+        list (APPEND LIBS bimg)
+    endif ()
+    if (TARGET bx)
+        list (APPEND LIBS bx)
+    endif ()
 endif ()
 # Workaround for GCC 5.4 and above when building a SHARED lib type for Linux platform to fix the undefined symbol "__cpu_model" issue (see #1519)
 if (CMAKE_COMPILER_IS_GNUCXX AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 5.3.1 AND CMAKE_SYSTEM_NAME STREQUAL Linux AND URHO3D_LIB_TYPE STREQUAL SHARED)  # 5.3.1 was the last known good version

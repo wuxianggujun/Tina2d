@@ -7,6 +7,9 @@
 #include <Urho3D/UI/Font.h>
 #include <Urho3D/UI/Text.h>
 #include <Urho3D/UI/UI.h>
+#ifdef URHO3D_BGFX
+#include <Urho3D/Graphics/Graphics.h>
+#endif
 
 #include "HelloWorld.h"
 
@@ -67,5 +70,9 @@ void HelloWorld::SubscribeToEvents()
 
 void HelloWorld::HandleUpdate(StringHash eventType, VariantMap& eventData)
 {
-    // Do nothing for now, could be extended to eg. animate the display
+    // 当启用 bgfx 集成时，绘制一个最小测试四边形以验证渲染/着色器/编译链路
+#ifdef URHO3D_BGFX
+    if (auto* graphics = GetSubsystem<Graphics>())
+        graphics->DebugDrawBgfxHello();
+#endif
 }

@@ -135,6 +135,7 @@ private:
 
     void UpdateViewProjMatrix();
     IntRect GetViewportRect();
+    Matrix4 ComputeViewProjMatrix();
 
 protected:
 

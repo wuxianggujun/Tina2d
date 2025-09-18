@@ -23,6 +23,7 @@
 #include "../Graphics/GraphicsBgfx.h"
 #endif
 #include "../IO/FileSystem.h"
+#include "../Resource/ResourceCache.h"
 #include "../IO/Log.h"
 
 #include <SDL3/SDL.h>
@@ -1768,6 +1769,39 @@ bool Graphics::IsInitialized() const
 bool Graphics::IsBgfxActive() const
 {
     return bgfx_ && bgfx_->IsInitialized();
+}
+
+void Graphics::DebugDrawBgfxHello()
+{
+    if (!bgfx_)
+        return;
+    auto* cache = GetSubsystem<ResourceCache>();
+    if (cache && bgfx_->LoadHelloProgram(cache))
+        bgfx_->DebugDrawHello();
+}
+
+bool Graphics::BgfxDrawQuads(const void* qvertices, int numVertices, Texture2D* texture, const Matrix4& mvp)
+{
+    if (!bgfx_)
+        return false;
+    auto* cache = GetSubsystem<ResourceCache>();
+    return bgfx_->DrawQuads(qvertices, numVertices, texture, cache, mvp);
+}
+
+bool Graphics::BgfxDrawTriangles(const void* tvertices, int numVertices, const Matrix4& mvp)
+{
+    if (!bgfx_)
+        return false;
+    auto* cache = GetSubsystem<ResourceCache>();
+    return bgfx_->DrawTriangles(tvertices, numVertices, cache, mvp);
+}
+
+bool Graphics::BgfxDrawUITriangles(const float* vertices, int numVertices, Texture2D* texture, const Matrix4& mvp)
+{
+    if (!bgfx_)
+        return false;
+    auto* cache = GetSubsystem<ResourceCache>();
+    return bgfx_->DrawUITriangles(vertices, numVertices, texture, cache, mvp);
 }
 #endif
 

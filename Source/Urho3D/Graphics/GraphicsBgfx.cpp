@@ -14,6 +14,11 @@
 #endif
 #include <algorithm>
 
+#include "../Resource/ResourceCache.h"
+#include "../IO/File.h"
+#include "../GraphicsAPI/Texture2D.h"
+#include "../Resource/Image.h"
+
 namespace Urho3D
 {
 
@@ -297,4 +302,368 @@ void GraphicsBgfx::SetScissor(bool enable, const IntRect& rect)
 #endif
 }
 
+bool GraphicsBgfx::LoadHelloProgram(ResourceCache* cache)
+{
+#ifdef URHO3D_BGFX
+    if (!initialized_ || !cache)
+        return false;
+    if (hello_.ready)
+        return true;
+
+    // 按当前渲染后端推断 profile 子目录（与 ShaderUtils.cmake 的 _bgfx_get_profile_path_ext 对齐）
+    auto getProfileDir = []() -> const char*
+    {
+        using RT = bgfx::RendererType::Enum;
+        switch (bgfx::getRendererType())
+        {
+        case RT::Direct3D11: return "dx11"; // s_5_0
+        case RT::Direct3D12: return "dx11"; // 复用 s_5_0
+        case RT::OpenGL:     return "glsl"; // 120
+        case RT::OpenGLES:   return "essl"; // 300_es
+        case RT::Metal:      return "metal";
+        case RT::Vulkan:     return "spirv";
+        default:             return "glsl";  // 保守默认
+        }
+    };
+
+    const String profile = getProfileDir();
+
+    auto tryOpen = [&](const String& relPath) -> SharedPtr<File>
+    {
+        if (!cache->Exists(relPath))
+            return SharedPtr<File>();
+        SharedPtr<File> f(cache->GetFile(relPath));
+        if (f && f->IsOpen())
+            return f;
+        return SharedPtr<File>();
+    };
+
+    auto findShader = [&](const char* base) -> SharedPtr<File>
+    {
+        // 尝试平铺输出（旧方案）：Shaders/BGFX/base.bin
+        if (auto f = tryOpen(String("Shaders/BGFX/") + base + ".bin"))
+            return f;
+        // 尝试平铺但带 .sc 后缀（防御式）：base.sc.bin
+        if (auto f = tryOpen(String("Shaders/BGFX/") + base + ".sc.bin"))
+            return f;
+        // 尝试 profile 子目录（ShaderUtils.cmake 默认行为）：profile/base.bin
+        if (auto f = tryOpen(String("Shaders/BGFX/") + profile + "/" + base + ".bin"))
+            return f;
+        // 尝试 profile 子目录 + .sc.bin（bgfx_compile_shaders 输出名）
+        if (auto f = tryOpen(String("Shaders/BGFX/") + profile + "/" + base + ".sc.bin"))
+            return f;
+        return SharedPtr<File>();
+    };
+
+    auto loadShader = [](File* file)->bgfx::ShaderHandle
+    {
+        if (!file)
+            return bgfx::ShaderHandle{bgfx::kInvalidHandle};
+        const uint32_t size = static_cast<uint32_t>(file->GetSize());
+        if (!size)
+            return bgfx::ShaderHandle{bgfx::kInvalidHandle};
+        SharedArrayPtr<unsigned char> buf(new unsigned char[size]);
+        file->Read(buf.Get(), size);
+        const bgfx::Memory* mem = bgfx::copy(buf.Get(), size);
+        return bgfx::createShader(mem);
+    };
+
+    SharedPtr<File> fsv = findShader("vs_hello");
+    SharedPtr<File> fsf = findShader("fs_hello");
+    if (!fsv || !fsf)
+        return false;
+
+    auto vsh = loadShader(fsv);
+    auto fsh = loadShader(fsf);
+    if (!bgfx::isValid(vsh) || !bgfx::isValid(fsh))
+        return false;
+
+    hello_.program = bgfx::createProgram(vsh, fsh, true /* destroy shaders */).idx;
+    bgfx::ProgramHandle ph; ph.idx = hello_.program;
+    if (!bgfx::isValid(ph))
+        return false;
+
+    // uniforms
+    hello_.u_mvp = bgfx::createUniform("u_mvp", bgfx::UniformType::Mat4).idx;
+    hello_.s_tex = bgfx::createUniform("s_texColor", bgfx::UniformType::Sampler).idx;
+
+    // 创建 1x1 白色纹理
+    const uint32_t white = 0xFFFFFFFFu;
+    const bgfx::Memory* tmem = bgfx::copy(&white, sizeof(white));
+    hello_.whiteTex = bgfx::createTexture2D(1, 1, false, 1, bgfx::TextureFormat::BGRA8,
+        (BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP | BGFX_SAMPLER_W_CLAMP | BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT), tmem).idx;
+
+    bgfx::UniformHandle umvp; umvp.idx = hello_.u_mvp;
+    bgfx::UniformHandle stex; stex.idx = hello_.s_tex;
+    bgfx::TextureHandle wtex; wtex.idx = hello_.whiteTex;
+    hello_.ready = bgfx::isValid(ph) && bgfx::isValid(umvp)
+        && bgfx::isValid(stex) && bgfx::isValid(wtex);
+    return hello_.ready;
+#else
+    (void)cache; return false;
+#endif
+}
+
+void GraphicsBgfx::DebugDrawHello()
+{
+#ifdef URHO3D_BGFX
+    if (!initialized_ || !hello_.ready)
+        return;
+
+    // 顶点声明：pos(3f), color0(ub4n), texcoord0(2f)
+    bgfx::VertexLayout layout;
+    layout.begin()
+        .add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float)
+        .add(bgfx::Attrib::Color0,   4, bgfx::AttribType::Uint8, true)
+        .add(bgfx::Attrib::TexCoord0,2, bgfx::AttribType::Float)
+        .end();
+
+    struct Vtx { float x,y,z; uint32_t abgr; float u,v; };
+    const Vtx verts[4] = {
+        {-0.5f,-0.5f,0.0f, 0xFF00FF00u, 0.0f,0.0f},
+        { 0.5f,-0.5f,0.0f, 0xFF00FF00u, 1.0f,0.0f},
+        { 0.5f, 0.5f,0.0f, 0xFF00FF00u, 1.0f,1.0f},
+        {-0.5f, 0.5f,0.0f, 0xFF00FF00u, 0.0f,1.0f},
+    };
+    const uint16_t indices[6] = {0,1,2, 0,2,3};
+
+    bgfx::TransientVertexBuffer tvb;
+    bgfx::TransientIndexBuffer tib;
+    if (!bgfx::allocTransientBuffers(&tvb, layout, 4, &tib, 6))
+        return;
+    memcpy(tvb.data, verts, sizeof(verts));
+    memcpy(tib.data, indices, sizeof(indices));
+
+    // 设定 uniform（单位矩阵），并绑定白色纹理
+    float mvp[16] = {1,0,0,0,  0,1,0,0,  0,0,1,0,  0,0,0,1};
+    bgfx::UniformHandle umvp; umvp.idx = hello_.u_mvp;
+    bgfx::UniformHandle stex; stex.idx = hello_.s_tex;
+    bgfx::TextureHandle wtex; wtex.idx = hello_.whiteTex;
+    bgfx::setUniform(umvp, mvp);
+    bgfx::setTexture(0, stex, wtex);
+
+    // 应用状态并提交 drawcall（最小：颜色可写）
+    bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A);
+    bgfx::setVertexBuffer(0, &tvb);
+    bgfx::setIndexBuffer(&tib);
+    bgfx::ProgramHandle ph2; ph2.idx = hello_.program;
+    bgfx::submit(0, ph2);
+#endif
+}
+
+unsigned short GraphicsBgfx::GetOrCreateTexture(Texture2D* tex)
+{
+#ifdef URHO3D_BGFX
+    if (!tex)
+        return hello_.whiteTex;
+    auto it = textureCache_.find(tex);
+    if (it != textureCache_.end())
+        return it->second;
+
+    SharedPtr<Image> img = tex->GetImage();
+    if (!img)
+        return hello_.whiteTex;
+    SharedPtr<Image> rgba = img->IsCompressed() ? img->GetDecompressedImage() : img;
+    if (!rgba)
+        return hello_.whiteTex;
+    if (rgba->GetComponents() != 4)
+        rgba = rgba->ConvertToRGBA();
+    if (!rgba)
+        return hello_.whiteTex;
+
+    const uint32_t w = (uint32_t)rgba->GetWidth();
+    const uint32_t h = (uint32_t)rgba->GetHeight();
+    const uint32_t size = w * h * 4u;
+    const bgfx::Memory* mem = bgfx::copy(rgba->GetData(), size);
+    bgfx::TextureHandle th = bgfx::createTexture2D(
+        (uint16_t)w, (uint16_t)h, false, 1,
+        bgfx::TextureFormat::BGRA8,
+        (BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP | BGFX_SAMPLER_W_CLAMP | BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT),
+        mem);
+    if (!bgfx::isValid(th))
+        return hello_.whiteTex;
+    textureCache_[tex] = th.idx;
+    return th.idx;
+#else
+    (void)tex; return 0xFFFF;
+#endif
+}
+
+bool GraphicsBgfx::DrawQuads(const void* qvertices, int numVertices, Texture2D* texture, ResourceCache* cache, const Matrix4& mvp)
+{
+#ifdef URHO3D_BGFX
+    if (!initialized_)
+        return false;
+    if (!LoadHelloProgram(cache))
+        return false;
+    if (numVertices <= 0)
+        return true;
+
+    // 顶点布局
+    bgfx::VertexLayout layout;
+    layout.begin()
+        .add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float)
+        .add(bgfx::Attrib::Color0,   4, bgfx::AttribType::Uint8, true)
+        .add(bgfx::Attrib::TexCoord0,2, bgfx::AttribType::Float)
+        .end();
+
+    struct Vtx { float x,y,z; uint32_t abgr; float u,v; };
+    const int vcount = numVertices;
+    const int qcount = vcount / 4;
+    const int icount = qcount * 6;
+
+    bgfx::TransientVertexBuffer tvb;
+    bgfx::TransientIndexBuffer tib;
+    if (!bgfx::allocTransientBuffers(&tvb, layout, (uint32_t)vcount, &tib, (uint32_t)icount))
+        return false;
+
+    // 转拷数据
+    const auto* src = reinterpret_cast<const unsigned char*>(qvertices);
+    // QVertex: Vector3 position_, u32 color_, Vector2 uv_
+    struct QV { float px,py,pz; uint32_t color; float u,v; };
+    auto* vdst = reinterpret_cast<Vtx*>(tvb.data);
+    for (int i=0;i<vcount;i++)
+    {
+        const QV& s = *reinterpret_cast<const QV*>(src + i*sizeof(QV));
+        vdst[i] = {s.px,s.py,s.pz, s.color, s.u,s.v};
+    }
+    // 索引
+    auto* idst = reinterpret_cast<uint16_t*>(tib.data);
+    for (int q=0;q<qcount;q++)
+    {
+        uint16_t base = (uint16_t)(q*4);
+        idst[q*6+0]=base+0; idst[q*6+1]=base+1; idst[q*6+2]=base+2;
+        idst[q*6+3]=base+0; idst[q*6+4]=base+2; idst[q*6+5]=base+3;
+    }
+
+    // 设定 MVP=I 与纹理
+    float mvpArr[16] = {
+        mvp.m00_, mvp.m10_, mvp.m20_, mvp.m30_,
+        mvp.m01_, mvp.m11_, mvp.m21_, mvp.m31_,
+        mvp.m02_, mvp.m12_, mvp.m22_, mvp.m32_,
+        mvp.m03_, mvp.m13_, mvp.m23_, mvp.m33_,
+    };
+    bgfx::UniformHandle umvp; umvp.idx = hello_.u_mvp;
+    bgfx::UniformHandle stex; stex.idx = hello_.s_tex;
+    bgfx::TextureHandle texh; texh.idx = GetOrCreateTexture(texture);
+    bgfx::setUniform(umvp, mvpArr);
+    bgfx::setTexture(0, stex, texh);
+
+    // 提交
+    bgfx::ProgramHandle ph; ph.idx = hello_.program;
+    bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_BLEND_ALPHA);
+    bgfx::setVertexBuffer(0, &tvb);
+    bgfx::setIndexBuffer(&tib);
+    bgfx::submit(0, ph);
+    return true;
+#else
+    (void)qvertices; (void)numVertices; (void)texture; (void)cache; return false;
+#endif
+}
+
+bool GraphicsBgfx::DrawTriangles(const void* tvertices, int numVertices, ResourceCache* cache, const Matrix4& mvp)
+{
+#ifdef URHO3D_BGFX
+    if (!initialized_)
+        return false;
+    if (!LoadHelloProgram(cache))
+        return false;
+    if (numVertices <= 0)
+        return true;
+
+    // 布局同上：补 0 UV
+    bgfx::VertexLayout layout;
+    layout.begin()
+        .add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float)
+        .add(bgfx::Attrib::Color0,   4, bgfx::AttribType::Uint8, true)
+        .add(bgfx::Attrib::TexCoord0,2, bgfx::AttribType::Float)
+        .end();
+
+    struct Vtx { float x,y,z; uint32_t abgr; float u,v; };
+    const int vcount = numVertices;
+    bgfx::TransientVertexBuffer tvb;
+    bgfx::allocTransientVertexBuffer(&tvb, (uint32_t)vcount, layout);
+    auto* vdst = reinterpret_cast<Vtx*>(tvb.data);
+    // TVertex: Vector3 position_, u32 color_
+    struct TV { float px,py,pz; uint32_t color; };
+    const auto* src = reinterpret_cast<const unsigned char*>(tvertices);
+    for (int i=0;i<vcount;i++)
+    {
+        const TV& s = *reinterpret_cast<const TV*>(src + i*sizeof(TV));
+        vdst[i] = {s.px,s.py,s.pz, s.color, 0.0f, 0.0f};
+    }
+
+    float mvpArr[16] = {
+        mvp.m00_, mvp.m10_, mvp.m20_, mvp.m30_,
+        mvp.m01_, mvp.m11_, mvp.m21_, mvp.m31_,
+        mvp.m02_, mvp.m12_, mvp.m22_, mvp.m32_,
+        mvp.m03_, mvp.m13_, mvp.m23_, mvp.m33_,
+    };
+    bgfx::UniformHandle umvp; umvp.idx = hello_.u_mvp;
+    bgfx::UniformHandle stex; stex.idx = hello_.s_tex;
+    bgfx::TextureHandle texh; texh.idx = hello_.whiteTex;
+    bgfx::setUniform(umvp, mvpArr);
+    bgfx::setTexture(0, stex, texh);
+
+    bgfx::ProgramHandle ph; ph.idx = hello_.program;
+    bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_BLEND_ALPHA);
+    bgfx::setVertexBuffer(0, &tvb);
+    bgfx::setVertexCount((uint32_t)numVertices);
+    bgfx::submit(0, ph);
+    return true;
+#else
+    (void)tvertices; (void)numVertices; (void)cache; return false;
+#endif
+}
+
+bool GraphicsBgfx::DrawUITriangles(const float* vertices, int numVertices, Texture2D* texture, ResourceCache* cache, const Matrix4& mvp)
+{
+#ifdef URHO3D_BGFX
+    if (!initialized_)
+        return false;
+    if (!LoadHelloProgram(cache))
+        return false;
+    if (numVertices <= 0 || vertices == nullptr)
+        return true;
+
+    bgfx::VertexLayout layout;
+    layout.begin()
+        .add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float)
+        .add(bgfx::Attrib::Color0,   4, bgfx::AttribType::Uint8, true)
+        .add(bgfx::Attrib::TexCoord0,2, bgfx::AttribType::Float)
+        .end();
+
+    bgfx::TransientVertexBuffer tvb;
+    bgfx::allocTransientVertexBuffer(&tvb, (uint32_t)numVertices, layout);
+    struct Vtx { float x,y,z; uint32_t abgr; float u,v; };
+    auto* vdst = reinterpret_cast<Vtx*>(tvb.data);
+    for (int i = 0; i < numVertices; ++i)
+    {
+        const float* src = vertices + i * 6;
+        uint32_t color; memcpy(&color, &src[3], sizeof(uint32_t));
+        vdst[i] = {src[0], src[1], src[2], color, src[4], src[5]};
+    }
+
+    float mvpArr[16] = {
+        mvp.m00_, mvp.m10_, mvp.m20_, mvp.m30_,
+        mvp.m01_, mvp.m11_, mvp.m21_, mvp.m31_,
+        mvp.m02_, mvp.m12_, mvp.m22_, mvp.m32_,
+        mvp.m03_, mvp.m13_, mvp.m23_, mvp.m33_,
+    };
+    bgfx::UniformHandle umvp; umvp.idx = hello_.u_mvp;
+    bgfx::UniformHandle stex; stex.idx = hello_.s_tex;
+    bgfx::TextureHandle texh; texh.idx = GetOrCreateTexture(texture);
+    bgfx::setUniform(umvp, mvpArr);
+    bgfx::setTexture(0, stex, texh);
+
+    bgfx::ProgramHandle ph; ph.idx = hello_.program;
+    bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_BLEND_ALPHA);
+    bgfx::setVertexBuffer(0, &tvb);
+    bgfx::setVertexCount((uint32_t)numVertices);
+    bgfx::submit(0, ph);
+    return true;
+#else
+    (void)vertices; (void)numVertices; (void)texture; (void)cache; (void)mvp; return false;
+#endif
+}
 } // namespace Urho3D
