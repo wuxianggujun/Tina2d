@@ -22,6 +22,8 @@
 #include "../GraphicsAPI/Texture2D.h"
 #include "../Resource/Image.h"
 #include "../Graphics/Graphics.h"
+#include "../IO/Log.h"
+#include <bgfx/bgfx.h>
 
 namespace Urho3D
 {
@@ -372,6 +374,7 @@ bool GraphicsBgfx::LoadUIPrograms(ResourceCache* cache)
         // 尝试 profile 子目录 + .sc.bin
         if (auto f = tryOpen(String("Shaders/BGFX/") + profile + "/" + base + ".sc.bin"))
             return f;
+        URHO3D_LOGERRORF("BGFX shader not found: %s (%s)", base, profile.CString());
         return SharedPtr<File>();
     };
 
@@ -444,6 +447,10 @@ bool GraphicsBgfx::LoadUIPrograms(ResourceCache* cache)
     bgfx::TextureHandle wtex{ ui_.whiteTex };
     ui_.ready = bgfx::isValid(phDiff) && bgfx::isValid(umvp)
         && bgfx::isValid(stex) && bgfx::isValid(wtex);
+    if (!ui_.ready)
+        URHO3D_LOGERROR("BGFX UI programs not ready (program/uniform creation failed)");
+    else
+        URHO3D_LOGINFOF("BGFX UI programs loaded for profile: %s", profile.CString());
     return ui_.ready;
 #else
     (void)cache; return false;
@@ -502,6 +509,58 @@ void GraphicsBgfx::DebugDrawHello()
 #endif
 }
 
+static uint64_t GetBgfxSamplerFlagsFromTexture(const Texture2D* tex)
+{
+    uint64_t flags = 0;
+    // Addressing modes
+    auto au = tex->GetAddressMode(COORD_U);
+    auto av = tex->GetAddressMode(COORD_V);
+    auto aw = tex->GetAddressMode(COORD_W);
+    auto toFlags = [](TextureAddressMode m, uint64_t mirror, uint64_t clamp) -> uint64_t
+    {
+        switch (m)
+        {
+        case ADDRESS_MIRROR: return mirror;
+        case ADDRESS_CLAMP:  return clamp;
+        case ADDRESS_WRAP:
+        default: return 0; // wrap 为默认（0）
+        }
+    };
+    flags |= toFlags(au, BGFX_SAMPLER_U_MIRROR, BGFX_SAMPLER_U_CLAMP);
+    flags |= toFlags(av, BGFX_SAMPLER_V_MIRROR, BGFX_SAMPLER_V_CLAMP);
+    flags |= toFlags(aw, BGFX_SAMPLER_W_MIRROR, BGFX_SAMPLER_W_CLAMP);
+
+    // Filter mode（兼容较老版本的 bgfx：仅使用 *_POINT 标志，线性为默认）
+    switch (tex->GetFilterMode())
+    {
+    case FILTER_NEAREST:
+        // 最邻近：min/mag/mip 全部 point
+        flags |= (BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIP_POINT);
+        break;
+    case FILTER_BILINEAR:
+        // 双线性：min/mag 使用默认线性，仅将 mip 固定为 point
+        flags |= BGFX_SAMPLER_MIP_POINT;
+        break;
+    case FILTER_TRILINEAR:
+        // 三线性：min/mag/mip 均使用默认线性（不设置 point 标志）
+        break;
+    default:
+        // 默认：保守采用双线性
+        flags |= BGFX_SAMPLER_MIP_POINT;
+        break;
+    }
+
+    // 各向异性（某些 bgfx 版本不提供该标志，条件编译处理）
+    if (tex->GetAnisotropy() > 1)
+    {
+    #ifdef BGFX_SAMPLER_ANISOTROPIC
+        flags |= BGFX_SAMPLER_ANISOTROPIC;
+    #endif
+    }
+
+    return flags;
+}
+
 unsigned short GraphicsBgfx::GetOrCreateTexture(Texture2D* tex, ResourceCache* cache)
 {
 #ifdef URHO3D_BGFX
@@ -519,6 +578,8 @@ unsigned short GraphicsBgfx::GetOrCreateTexture(Texture2D* tex, ResourceCache* c
 
     uint32_t w = 0, h = 0;
     const bgfx::Memory* mem = nullptr;
+
+    const uint64_t samplerFlags = GetBgfxSamplerFlagsFromTexture(tex);
 
     if (fmt == alphaFmt)
     {
@@ -582,9 +643,12 @@ unsigned short GraphicsBgfx::GetOrCreateTexture(Texture2D* tex, ResourceCache* c
                         const bool hasMips = ic->m_numMips > 1;
                         const uint16_t numLayers = (uint16_t)ic->m_numLayers;
                         const bgfx::TextureFormat::Enum bfmt = (bgfx::TextureFormat::Enum)ic->m_format;
-                        const uint64_t flags = (BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP | BGFX_SAMPLER_W_CLAMP | BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT);
+                        uint64_t tflags = 0;
+#ifdef BGFX_TEXTURE_SRGB
+                        if (tex->GetSRGB()) tflags |= BGFX_TEXTURE_SRGB;
+#endif
                         const bgfx::Memory* tmem = bgfx::copy(ic->m_data, (uint32_t)ic->m_size);
-                        bgfx::TextureHandle th = bgfx::createTexture2D((uint16_t)ic->m_width, (uint16_t)ic->m_height, hasMips, numLayers, bfmt, flags, tmem);
+                        bgfx::TextureHandle th = bgfx::createTexture2D((uint16_t)ic->m_width, (uint16_t)ic->m_height, hasMips, numLayers, bfmt, tflags, tmem);
                         bimg::imageFree(ic);
                         if (bgfx::isValid(th))
                         {
@@ -598,10 +662,14 @@ unsigned short GraphicsBgfx::GetOrCreateTexture(Texture2D* tex, ResourceCache* c
         return ui_.whiteTex;
     }
 
+    uint64_t tflags = 0;
+#ifdef BGFX_TEXTURE_SRGB
+    if (tex->GetSRGB()) tflags |= BGFX_TEXTURE_SRGB;
+#endif
     bgfx::TextureHandle th = bgfx::createTexture2D(
         (uint16_t)w, (uint16_t)h, false, 1,
         bgfx::TextureFormat::RGBA8,
-        (BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP | BGFX_SAMPLER_W_CLAMP | BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT),
+        tflags,
         mem);
     if (!bgfx::isValid(th))
         return ui_.whiteTex;
@@ -671,8 +739,9 @@ bool GraphicsBgfx::DrawQuads(const void* qvertices, int numVertices, Texture2D* 
     bgfx::UniformHandle stex2; stex2.idx = ui_.s_texAlt;
     bgfx::TextureHandle texh; texh.idx = GetOrCreateTexture(texture, cache);
     bgfx::setUniform(umvp, mvpArr);
-    bgfx::setTexture(0, stex1, texh);
-    bgfx::setTexture(1, stex2, texh);
+    uint64_t sflags = texture ? GetBgfxSamplerFlagsFromTexture(texture) : 0;
+    bgfx::setTexture(0, stex1, texh, sflags);
+    bgfx::setTexture(1, stex2, texh, sflags);
 
     // 提交
     bgfx::ProgramHandle ph; ph.idx = ui_.programDiff;
@@ -799,8 +868,9 @@ bool GraphicsBgfx::DrawUITriangles(const float* vertices, int numVertices, Textu
     bgfx::UniformHandle stex2; stex2.idx = ui_.s_texAlt;
     bgfx::TextureHandle texh; texh.idx = GetOrCreateTexture(texture, cache);
     bgfx::setUniform(umvp, mvpArr);
-    bgfx::setTexture(0, stex1, texh);
-    bgfx::setTexture(1, stex2, texh);
+    uint64_t sflags2 = texture ? GetBgfxSamplerFlagsFromTexture(texture) : 0;
+    bgfx::setTexture(0, stex1, texh, sflags2);
+    bgfx::setTexture(1, stex2, texh, sflags2);
 
     // 按纹理格式与混合模式选择像素程序
     unsigned short programIdx = ui_.programDiff;
@@ -843,6 +913,145 @@ bool GraphicsBgfx::DrawUITriangles(const float* vertices, int numVertices, Textu
     return true;
 #else
     (void)vertices; (void)numVertices; (void)texture; (void)cache; (void)mvp; return false;
+#endif
+}
+
+bool GraphicsBgfx::CreateTextureFromImage(Texture2D* tex, Image* image, bool useAlpha)
+{
+#ifdef URHO3D_BGFX
+    if (!tex || !image)
+        return false;
+
+    const uint64_t samplerFlags = GetBgfxSamplerFlagsFromTexture(tex);
+
+    // 处理组件数：1(A8)/3(RGB)/4(RGBA)
+    SharedPtr<Image> rgba(image);
+    if (image->IsCompressed())
+        rgba = image->GetDecompressedImage();
+    if (!rgba)
+        return false;
+
+    const unsigned comps = rgba->GetComponents();
+    std::vector<unsigned char> data;
+    const unsigned w = rgba->GetWidth();
+    const unsigned h = rgba->GetHeight();
+    const unsigned pixels = w * h;
+
+    if (comps == 1)
+    {
+        const unsigned char* a8 = rgba->GetData();
+        data.resize(pixels * 4u);
+        for (unsigned i = 0; i < pixels; ++i)
+        {
+            unsigned char a = a8[i];
+            data[i*4+0] = 0xFF; // R
+            data[i*4+1] = 0xFF; // G
+            data[i*4+2] = 0xFF; // B
+            data[i*4+3] = a;    // A
+        }
+    }
+    else if (comps == 3)
+    {
+        const unsigned char* src = rgba->GetData();
+        data.resize(pixels * 4u);
+        for (unsigned i = 0; i < pixels; ++i)
+        {
+            data[i*4+0] = src[i*3+0];
+            data[i*4+1] = src[i*3+1];
+            data[i*4+2] = src[i*3+2];
+            data[i*4+3] = 0xFF;
+        }
+    }
+    else if (comps == 4)
+    {
+        // 直接复制 RGBA8
+        const unsigned char* src = rgba->GetData();
+        data.assign(src, src + pixels*4u);
+    }
+    else
+    {
+        // 转成 RGBA 再试
+        rgba = rgba->ConvertToRGBA();
+        if (!rgba)
+            return false;
+        const unsigned char* src = rgba->GetData();
+        data.assign(src, src + rgba->GetWidth()*rgba->GetHeight()*4u);
+    }
+
+    const bgfx::Memory* mem = bgfx::copy(data.data(), (uint32_t)data.size());
+    bgfx::TextureHandle th = bgfx::createTexture2D((uint16_t)w, (uint16_t)h, false, 1,
+        bgfx::TextureFormat::RGBA8, samplerFlags, mem);
+    if (!bgfx::isValid(th))
+        return false;
+
+    textureCache_[tex] = th.idx;
+    return true;
+#else
+    (void)tex; (void)image; (void)useAlpha; return false;
+#endif
+}
+
+bool GraphicsBgfx::SetFrameBuffer(Texture2D* color, Texture2D* depth)
+{
+#ifdef URHO3D_BGFX
+    // 构造 key 并查询缓存
+    FBKey key{color, depth};
+    auto it = fbCache_.find(key);
+    if (it != fbCache_.end())
+    {
+        bgfx::FrameBufferHandle fh; fh.idx = it->second;
+        if (bgfx::isValid(fh))
+        {
+            bgfx::setViewFrameBuffer(0, fh);
+            return true;
+        }
+    }
+
+    // 构建附件
+    bgfx::Attachment atts[2];
+    uint8_t num=0;
+    if (color)
+    {
+        unsigned short ti = GetOrCreateTexture(color, nullptr);
+        if (ti != bgfx::kInvalidHandle)
+        {
+            atts[num].init(bgfx::TextureHandle{ti});
+            ++num;
+        }
+    }
+    if (depth)
+    {
+        unsigned short ti = GetOrCreateTexture(depth, nullptr);
+        if (ti != bgfx::kInvalidHandle)
+        {
+            atts[num].init(bgfx::TextureHandle{ti});
+            ++num;
+        }
+    }
+    if (num==0)
+    {
+        URHO3D_LOGERROR("SetFrameBuffer called with no valid attachments");
+        return false;
+    }
+
+    bgfx::FrameBufferHandle fh = bgfx::createFrameBuffer(num, atts, false);
+    if (!bgfx::isValid(fh))
+        return false;
+    fbCache_[key] = fh.idx;
+    bgfx::setViewFrameBuffer(0, fh);
+    return true;
+#else
+    (void)color; (void)depth; return false;
+#endif
+}
+
+bool GraphicsBgfx::ResetFrameBuffer()
+{
+#ifdef URHO3D_BGFX
+    bgfx::setViewFrameBuffer(0, BGFX_INVALID_HANDLE);
+    return true;
+#else
+    return false;
 #endif
 }
 } // namespace Urho3D

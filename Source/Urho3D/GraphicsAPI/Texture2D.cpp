@@ -7,6 +7,9 @@
 #include "../Core/Profiler.h"
 #include "../Graphics/Graphics.h"
 #include "../Graphics/GraphicsEvents.h"
+#ifdef URHO3D_BGFX
+#include "../Graphics/Graphics.h"
+#endif
 #include "../Graphics/Renderer.h"
 #include "../GraphicsAPI/GraphicsImpl.h"
 #include "../GraphicsAPI/Texture2D.h"
@@ -239,6 +242,31 @@ bool Texture2D::SetData(unsigned level, int x, int y, int width, int height, con
 bool Texture2D::SetData(Image* image, bool useAlpha)
 {
     GAPI gapi = Graphics::GetGAPI();
+
+#ifdef URHO3D_BGFX
+    // BGFX-only 路径：当旧后端被禁用时，从 Image 直接创建 BGFX 纹理
+    if (gapi == GAPI_BGFX)
+    {
+        auto* graphics = GetSubsystem<Graphics>();
+        if (graphics && graphics->IsBgfxActive())
+        {
+            // 记录逻辑尺寸与格式，供布局/判断使用
+            unsigned fmt = 0;
+            if (image)
+            {
+                const unsigned comps = image->GetComponents();
+                if (comps == 1 || useAlpha)
+                    fmt = Graphics::GetAlphaFormat();
+                else
+                    fmt = Graphics::GetRGBAFormat();
+                SetSizeForBgfx_NoCreate(image->GetWidth(), image->GetHeight(), fmt);
+            }
+            return graphics->BgfxCreateTextureFromImage(this, image, useAlpha);
+        }
+        // 若 BGFX 尚未初始化，先返回 false 交由调用方稍后重试
+        return false;
+    }
+#endif
 
 #ifdef URHO3D_OPENGL
     if (gapi == GAPI_OPENGL)

@@ -19,6 +19,7 @@
 #include "../GraphicsAPI/Texture2DArray.h"
 #include "../GraphicsAPI/Texture3D.h"
 #include "../GraphicsAPI/TextureCube.h"
+#include "../GraphicsAPI/RenderSurface.h"
 #ifdef URHO3D_BGFX
 #include "../Graphics/GraphicsBgfx.h"
 #endif
@@ -702,6 +703,70 @@ Graphics::~Graphics()
 bool Graphics::SetScreenMode(int width, int height, const ScreenModeParams& params, bool maximize)
 {
     GAPI gapi = Graphics::GetGAPI();
+
+#ifdef URHO3D_BGFX
+    if (gapi == GAPI_BGFX)
+    {
+        // 简化版的窗口创建/调整，仅为 bgfx 后端提供 SDL 窗口
+        int newWidth = width > 0 ? width : 1280;
+        int newHeight = height > 0 ? height : 720;
+
+        const bool wantBorderless = params.borderless_;
+        const bool wantResizable = params.resizable_;
+        const bool wantHighDPI = params.highDPI_;
+
+        Uint32 flags = 0;
+        if (wantResizable)
+            flags |= SDL_WINDOW_RESIZABLE;
+#ifdef SDL_WINDOW_HIGH_PIXEL_DENSITY
+        if (wantHighDPI)
+            flags |= SDL_WINDOW_HIGH_PIXEL_DENSITY;
+#endif
+        if (wantBorderless)
+            flags |= SDL_WINDOW_BORDERLESS;
+
+        if (!window_)
+        {
+            // 如果设置了初始位置，则使用之
+            const int posX = position_.x_ ? position_.x_ : SDL_WINDOWPOS_CENTERED;
+            const int posY = position_.y_ ? position_.y_ : SDL_WINDOWPOS_CENTERED;
+            window_ = SDL_CreateWindow(windowTitle_.Empty() ? "Urho3D" : windowTitle_.CString(), newWidth, newHeight, flags);
+            if (!window_)
+            {
+                URHO3D_LOGERRORF("Failed to create window for BGFX: %s", SDL_GetError());
+                return false;
+            }
+            if (params.fullscreen_)
+                SDL_SetWindowFullscreen(window_, true);
+            SDL_SetWindowPosition(window_, posX, posY);
+            if (windowIcon_)
+                CreateWindowIcon();
+        }
+        else
+        {
+            SDL_SetWindowSize(window_, newWidth, newHeight);
+            if (params.fullscreen_)
+                SDL_SetWindowFullscreen(window_, true);
+            else
+                SDL_SetWindowFullscreen(window_, false);
+            SDL_SetWindowBordered(window_, !wantBorderless);
+            SDL_SetWindowResizable(window_, wantResizable);
+        }
+
+        width_ = newWidth;
+        height_ = newHeight;
+        screenParams_ = params;
+
+#ifdef URHO3D_BGFX
+        // 确保在广播屏幕模式事件前完成 bgfx 初始化，使 Input::Initialize() 能顺利通过 IsInitialized 判定
+        if (bgfx_ && !bgfx_->IsInitialized())
+            bgfx_->InitializeFromSDL(window_, (unsigned)width_, (unsigned)height_);
+#endif
+
+        OnScreenModeChanged();
+        return true;
+    }
+#endif
 
 #ifdef URHO3D_OPENGL
     if (gapi == GAPI_OPENGL)
@@ -1401,6 +1466,15 @@ void Graphics::ResetRenderTargets()
 {
     GAPI gapi = Graphics::GetGAPI();
 
+#ifdef URHO3D_BGFX
+    if (bgfx_ && bgfx_->IsInitialized())
+    {
+        bgfxColorRT_ = nullptr;
+        bgfxDepthRT_ = nullptr;
+        bgfx_->ResetFrameBuffer();
+        return;
+    }
+#endif
 #ifdef URHO3D_OPENGL
     if (gapi == GAPI_OPENGL)
         return ResetRenderTargets_OGL();
@@ -1416,6 +1490,15 @@ void Graphics::ResetRenderTarget(unsigned index)
 {
     GAPI gapi = Graphics::GetGAPI();
 
+#ifdef URHO3D_BGFX
+    if (bgfx_ && bgfx_->IsInitialized())
+    {
+        if (index == 0)
+            bgfxColorRT_ = nullptr;
+        bgfx_->SetFrameBuffer(bgfxColorRT_, bgfxDepthRT_);
+        return;
+    }
+#endif
 #ifdef URHO3D_OPENGL
     if (gapi == GAPI_OPENGL)
         return ResetRenderTarget_OGL(index);
@@ -1431,6 +1514,14 @@ void Graphics::ResetDepthStencil()
 {
     GAPI gapi = Graphics::GetGAPI();
 
+#ifdef URHO3D_BGFX
+    if (bgfx_ && bgfx_->IsInitialized())
+    {
+        bgfxDepthRT_ = nullptr;
+        bgfx_->SetFrameBuffer(bgfxColorRT_, bgfxDepthRT_);
+        return;
+    }
+#endif
 #ifdef URHO3D_OPENGL
     if (gapi == GAPI_OPENGL)
         return ResetDepthStencil_OGL();
@@ -1446,6 +1537,17 @@ void Graphics::SetRenderTarget(unsigned index, RenderSurface* renderTarget)
 {
     GAPI gapi = Graphics::GetGAPI();
 
+#ifdef URHO3D_BGFX
+    if (bgfx_ && bgfx_->IsInitialized())
+    {
+        // 简化：Urho3D 的 RenderSurface 基于 Texture2D，转换指向的父纹理
+        Texture2D* tex = renderTarget ? static_cast<Texture2D*>(renderTarget->GetParentTexture()) : nullptr;
+        if (index == 0)
+            bgfxColorRT_ = tex;
+        bgfx_->SetFrameBuffer(bgfxColorRT_, bgfxDepthRT_);
+        return;
+    }
+#endif
 #ifdef URHO3D_OPENGL
     if (gapi == GAPI_OPENGL)
         return SetRenderTarget_OGL(index, renderTarget);
@@ -1461,6 +1563,15 @@ void Graphics::SetRenderTarget(unsigned index, Texture2D* texture)
 {
     GAPI gapi = Graphics::GetGAPI();
 
+#ifdef URHO3D_BGFX
+    if (bgfx_ && bgfx_->IsInitialized())
+    {
+        if (index == 0)
+            bgfxColorRT_ = texture;
+        bgfx_->SetFrameBuffer(bgfxColorRT_, bgfxDepthRT_);
+        return;
+    }
+#endif
 #ifdef URHO3D_OPENGL
     if (gapi == GAPI_OPENGL)
         return SetRenderTarget_OGL(index, texture);
@@ -1476,6 +1587,15 @@ void Graphics::SetDepthStencil(RenderSurface* depthStencil)
 {
     GAPI gapi = Graphics::GetGAPI();
 
+#ifdef URHO3D_BGFX
+    if (bgfx_ && bgfx_->IsInitialized())
+    {
+        Texture2D* tex = depthStencil ? static_cast<Texture2D*>(depthStencil->GetParentTexture()) : nullptr;
+        bgfxDepthRT_ = tex;
+        bgfx_->SetFrameBuffer(bgfxColorRT_, bgfxDepthRT_);
+        return;
+    }
+#endif
 #ifdef URHO3D_OPENGL
     if (gapi == GAPI_OPENGL)
         return SetDepthStencil_OGL(depthStencil);
@@ -1491,6 +1611,14 @@ void Graphics::SetDepthStencil(Texture2D* texture)
 {
     GAPI gapi = Graphics::GetGAPI();
 
+#ifdef URHO3D_BGFX
+    if (bgfx_ && bgfx_->IsInitialized())
+    {
+        bgfxDepthRT_ = texture;
+        bgfx_->SetFrameBuffer(bgfxColorRT_, bgfxDepthRT_);
+        return;
+    }
+#endif
 #ifdef URHO3D_OPENGL
     if (gapi == GAPI_OPENGL)
         return SetDepthStencil_OGL(texture);
@@ -1802,6 +1930,15 @@ bool Graphics::BgfxDrawUITriangles(const float* vertices, int numVertices, Textu
         return false;
     auto* cache = GetSubsystem<ResourceCache>();
     return bgfx_->DrawUITriangles(vertices, numVertices, texture, cache, mvp);
+}
+
+bool Graphics::BgfxCreateTextureFromImage(Texture2D* texture, Image* image, bool useAlpha)
+{
+    if (!bgfx_)
+        return false;
+    // 复用 GraphicsBgfx 实现：直接从 Image 创建并缓存 BGFX 纹理句柄
+    // 注意：Texture2D 的采样参数将被用于 BGFX sampler flags（寻址/过滤/各向异性/sRGB）
+    return bgfx_->CreateTextureFromImage(texture, image, useAlpha);
 }
 #endif
 

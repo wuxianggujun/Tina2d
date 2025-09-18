@@ -374,6 +374,8 @@ public:
     bool BgfxDrawTriangles(const void* tvertices, int numVertices, const Matrix4& mvp);
     /// 使用 bgfx 提交 UI 顶点（按 UI_VERTEX_SIZE 布局的三角形列表）。
     bool BgfxDrawUITriangles(const float* vertices, int numVertices, Texture2D* texture, const Matrix4& mvp);
+    /// 从 Image 直接创建 BGFX 纹理（用于字体/临时纹理），并缓存句柄到内部映射。
+    bool BgfxCreateTextureFromImage(Texture2D* texture, Image* image, bool useAlpha);
 #endif
 
     /// Return window position.
@@ -1208,6 +1210,9 @@ private:
 #ifdef URHO3D_BGFX
     /// bgfx 渲染后端句柄（实验性，用于宏切换对比）。
     GraphicsBgfx* bgfx_{};
+    /// 当前 BGFX 渲染目标（简单 2D：仅一个颜色+深度）
+    Texture2D* bgfxColorRT_{};
+    Texture2D* bgfxDepthRT_{};
 #endif
 #ifdef URHO3D_OPENGL
     /// Renderer name (usually GPU name)

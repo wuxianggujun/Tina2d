@@ -6,6 +6,7 @@
 #include "../Core/Context.h"
 #include "../IO/Log.h"
 #include "../GraphicsAPI/Texture2D.h"
+#include "../Graphics/Graphics.h"
 #include "../Resource/Image.h"
 #include "../UI/Font.h"
 #include "../UI/FontFace.h"
@@ -92,6 +93,12 @@ SharedPtr<Texture2D> FontFace::LoadFaceTexture(const SharedPtr<Image>& image)
     SharedPtr<Texture2D> texture = CreateFaceTexture();
     if (!texture->SetData(image, true))
     {
+        // BGFX-only 路径：缺少 OGL/D3D 实现时，直接用 BGFX 创建纹理
+        if (auto* graphics = font_->GetContext()->GetSubsystem<Graphics>())
+        {
+            if (graphics->IsBgfxActive() && graphics->BgfxCreateTextureFromImage(texture, image, true))
+                return texture;
+        }
         URHO3D_LOGERROR("Could not load texture from image resource");
         return SharedPtr<Texture2D>();
     }

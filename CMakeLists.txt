@@ -54,6 +54,10 @@ set (URHO3D_GENERATEBINDINGS OFF CACHE BOOL "Disable binding generation for 2D-o
 set (URHO3D_NAVIGATION       OFF CACHE BOOL "Disable Navigation in 2D-only build" FORCE)
 set (URHO3D_PHYSICS          OFF CACHE BOOL "Disable 3D Physics in 2D-only build" FORCE)
 
+# 彻底禁用传统 3D 后端（OpenGL/Direct3D11），仅保留 bgfx 后端
+set (URHO3D_OPENGL           OFF CACHE BOOL "Disable OpenGL backend for 2D-only build" FORCE)
+set (URHO3D_D3D11            OFF CACHE BOOL "Disable Direct3D11 backend for 2D-only build" FORCE)
+
 # 可选启用：bgfx 渲染后端（实验性）。
 # 仅接入依赖与骨架，不改变现有 OpenGL/D3D 渲染路径，后续可渐进式切换。
 option(URHO3D_BGFX "启用 bgfx 渲染后端（实验性）" ON)

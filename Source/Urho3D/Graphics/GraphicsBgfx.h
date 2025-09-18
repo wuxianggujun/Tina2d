@@ -74,6 +74,13 @@ public:
     // UI: 直接从 UI 顶点浮点数组绘制三角形（pos, color, uv，按 UI_VERTEX_SIZE=6 排列）
     bool DrawUITriangles(const float* vertices, int numVertices, Texture2D* texture, ResourceCache* cache, const Matrix4& mvp);
 
+    // 从 Image 创建 BGFX 纹理并保存到映射（供 UI 字体等路径使用）
+    bool CreateTextureFromImage(Texture2D* tex, class Image* image, bool useAlpha);
+
+    // 渲染目标与帧缓冲
+    bool SetFrameBuffer(Texture2D* color, Texture2D* depth);
+    bool ResetFrameBuffer();
+
 private:
     void ApplyState();
 
@@ -103,6 +110,15 @@ private:
     // 纹理缓存：Urho3D Texture2D* -> bgfx::TextureHandle.idx
     std::unordered_map<const Texture2D*, unsigned short> textureCache_;
     unsigned short GetOrCreateTexture(Texture2D* tex, class ResourceCache* cache);
+
+    struct FBKey
+    {
+        const Texture2D* color{};
+        const Texture2D* depth{};
+        bool operator==(const FBKey& rhs) const { return color==rhs.color && depth==rhs.depth; }
+    };
+    struct FBKeyHash { size_t operator()(const FBKey& k) const { return (reinterpret_cast<size_t>(k.color)>>4) ^ (reinterpret_cast<size_t>(k.depth)<<1); } };
+    std::unordered_map<FBKey, unsigned short, FBKeyHash> fbCache_;
 };
 
 } // namespace Urho3D

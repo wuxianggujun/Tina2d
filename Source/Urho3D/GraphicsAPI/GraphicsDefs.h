@@ -26,7 +26,11 @@ enum GAPI
 {
     GAPI_NONE = 0,
     GAPI_OPENGL,
-    GAPI_D3D11
+    GAPI_D3D11,
+#ifdef URHO3D_BGFX
+    // 仅用于标识：启用 bgfx 后端时，作为引擎 GAPI 的占位值
+    GAPI_BGFX
+#endif
 };
 
 #if defined(DESKTOP_GRAPHICS) || defined(URHO3D_GLES3)

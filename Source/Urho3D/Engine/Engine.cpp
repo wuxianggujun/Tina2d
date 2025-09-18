@@ -141,27 +141,26 @@ bool Engine::Initialize(const VariantMap& parameters)
     // https://github.com/urho3d/Urho3D/issues/3040
     GAPI gapi = GAPI_NONE;
 
-    // Try to set any possible graphics API as default
-
-#ifdef URHO3D_OPENGL
-    gapi = GAPI_OPENGL;
+    // Try to set any possible graphics API as default（优先 bgfx）
+#ifdef URHO3D_BGFX
+    gapi = GAPI_BGFX;
 #endif
-
-#ifdef URHO3D_D3D11
-    gapi = GAPI_D3D11;
-#endif
-
-    // Use command line parameters
-
 #ifdef URHO3D_OPENGL
-    bool gapi_gl = GetParameter(parameters, EP_OPENGL, false).GetBool();
-    if (gapi_gl)
+    if (gapi == GAPI_NONE)
         gapi = GAPI_OPENGL;
 #endif
-
 #ifdef URHO3D_D3D11
-    bool gapi_d3d11 = GetParameter(parameters, EP_DIRECT3D11, false).GetBool();
-    if (gapi_d3d11)
+    if (gapi == GAPI_NONE)
+        gapi = GAPI_D3D11;
+#endif
+
+    // Use command line parameters（兼容旧参数；若显式要求 GL/D3D，则覆盖；否则使用 BGFX）
+#ifdef URHO3D_OPENGL
+    if (GetParameter(parameters, EP_OPENGL, false).GetBool())
+        gapi = GAPI_OPENGL;
+#endif
+#ifdef URHO3D_D3D11
+    if (GetParameter(parameters, EP_DIRECT3D11, false).GetBool())
         gapi = GAPI_D3D11;
 #endif
 
@@ -175,6 +174,8 @@ bool Engine::Initialize(const VariantMap& parameters)
     if (!headless_)
     {
         context_->RegisterSubsystem(new Graphics(context_, gapi));
+        // 在 BGFX-only 配置下，OpenGL/D3D11 的构造函数不会触发图形库注册，需显式注册一次
+        RegisterGraphicsLibrary(context_);
         context_->RegisterSubsystem(new Renderer(context_));
     }
     else
