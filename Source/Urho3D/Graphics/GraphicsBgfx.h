@@ -84,6 +84,7 @@ private:
     uint64_t state_{};     // bgfx 渲染状态位
     bool scissorEnabled_{};
     IntRect scissorRect_{};
+    BlendMode lastBlendMode_{BLEND_REPLACE};
 
     // 简单示例程序与资源
     struct UIHandles
@@ -101,7 +102,7 @@ private:
 
     // 纹理缓存：Urho3D Texture2D* -> bgfx::TextureHandle.idx
     std::unordered_map<const Texture2D*, unsigned short> textureCache_;
-    unsigned short GetOrCreateTexture(Texture2D* tex);
+    unsigned short GetOrCreateTexture(Texture2D* tex, class ResourceCache* cache);
 };
 
 } // namespace Urho3D

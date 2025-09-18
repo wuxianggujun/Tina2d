@@ -14,6 +14,8 @@
 #endif
 #include <algorithm>
 #include <vector>
+#include <bimg/decode.h>
+#include <bx/allocator.h>
 
 #include "../Resource/ResourceCache.h"
 #include "../IO/File.h"
@@ -199,6 +201,7 @@ void GraphicsBgfx::ApplyState()
 void GraphicsBgfx::SetBlendMode(BlendMode mode, bool alphaToCoverage)
 {
 #ifdef URHO3D_BGFX
+    lastBlendMode_ = mode;
     // 清除所有混合位
     state_ &= ~BGFX_STATE_BLEND_MASK;
     state_ &= ~BGFX_STATE_BLEND_EQUATION_MASK;
@@ -432,7 +435,7 @@ bool GraphicsBgfx::LoadUIPrograms(ResourceCache* cache)
     // 创建 1x1 白色纹理
     const uint32_t white = 0xFFFFFFFFu;
     const bgfx::Memory* tmem = bgfx::copy(&white, sizeof(white));
-    ui_.whiteTex = bgfx::createTexture2D(1, 1, false, 1, bgfx::TextureFormat::BGRA8,
+    ui_.whiteTex = bgfx::createTexture2D(1, 1, false, 1, bgfx::TextureFormat::RGBA8,
         (BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP | BGFX_SAMPLER_W_CLAMP | BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT), tmem).idx;
 
     bgfx::ProgramHandle phDiff{ ui_.programDiff };
@@ -499,7 +502,7 @@ void GraphicsBgfx::DebugDrawHello()
 #endif
 }
 
-unsigned short GraphicsBgfx::GetOrCreateTexture(Texture2D* tex)
+unsigned short GraphicsBgfx::GetOrCreateTexture(Texture2D* tex, ResourceCache* cache)
 {
 #ifdef URHO3D_BGFX
     if (!tex)
@@ -519,7 +522,7 @@ unsigned short GraphicsBgfx::GetOrCreateTexture(Texture2D* tex)
 
     if (fmt == alphaFmt)
     {
-        // 单通道 Alpha 纹理：读取 A8 数据并扩展为 BGRA8(FFFFFF,A)
+        // 单通道 Alpha 纹理：读取 A8 数据并扩展为 RGBA8(FFFFFF,A)
         w = (uint32_t)tex->GetWidth();
         h = (uint32_t)tex->GetHeight();
         const uint32_t aSize = w * h; // A8
@@ -559,13 +562,45 @@ unsigned short GraphicsBgfx::GetOrCreateTexture(Texture2D* tex)
     }
     else
     {
-        // 其它格式（压缩/深度等）暂不支持读取为 CPU 图像，回退为白纹理
+        // 其它格式（压缩/容器等）：尝试用 bimg 解码（支持 DDS/KTX/PVR），失败则回退白纹理
+        if (cache)
+        {
+            const String& resName = tex->GetName();
+            SharedPtr<File> f(cache->GetFile(resName));
+            if (f && f->IsOpen())
+            {
+                const unsigned fsize = (unsigned)f->GetSize();
+                if (fsize > 0)
+                {
+                    SharedArrayPtr<unsigned char> fbuf(new unsigned char[fsize]);
+                    f->Read(fbuf.Get(), fsize);
+
+                    bx::DefaultAllocator alloc;
+                    bimg::ImageContainer* ic = bimg::imageParse(&alloc, fbuf.Get(), fsize);
+                    if (ic)
+                    {
+                        const bool hasMips = ic->m_numMips > 1;
+                        const uint16_t numLayers = (uint16_t)ic->m_numLayers;
+                        const bgfx::TextureFormat::Enum bfmt = (bgfx::TextureFormat::Enum)ic->m_format;
+                        const uint64_t flags = (BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP | BGFX_SAMPLER_W_CLAMP | BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT);
+                        const bgfx::Memory* tmem = bgfx::copy(ic->m_data, (uint32_t)ic->m_size);
+                        bgfx::TextureHandle th = bgfx::createTexture2D((uint16_t)ic->m_width, (uint16_t)ic->m_height, hasMips, numLayers, bfmt, flags, tmem);
+                        bimg::imageFree(ic);
+                        if (bgfx::isValid(th))
+                        {
+                            textureCache_[tex] = th.idx;
+                            return th.idx;
+                        }
+                    }
+                }
+            }
+        }
         return ui_.whiteTex;
     }
 
     bgfx::TextureHandle th = bgfx::createTexture2D(
         (uint16_t)w, (uint16_t)h, false, 1,
-        bgfx::TextureFormat::BGRA8,
+        bgfx::TextureFormat::RGBA8,
         (BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP | BGFX_SAMPLER_W_CLAMP | BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT),
         mem);
     if (!bgfx::isValid(th))
@@ -634,14 +669,14 @@ bool GraphicsBgfx::DrawQuads(const void* qvertices, int numVertices, Texture2D* 
     bgfx::UniformHandle umvp; umvp.idx = ui_.u_mvp;
     bgfx::UniformHandle stex1; stex1.idx = ui_.s_tex;
     bgfx::UniformHandle stex2; stex2.idx = ui_.s_texAlt;
-    bgfx::TextureHandle texh; texh.idx = GetOrCreateTexture(texture);
+    bgfx::TextureHandle texh; texh.idx = GetOrCreateTexture(texture, cache);
     bgfx::setUniform(umvp, mvpArr);
     bgfx::setTexture(0, stex1, texh);
     bgfx::setTexture(1, stex2, texh);
 
     // 提交
     bgfx::ProgramHandle ph; ph.idx = ui_.programDiff;
-    bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_BLEND_ALPHA);
+    bgfx::setState((state_ | BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A));
     bgfx::setVertexBuffer(0, &tvb);
     bgfx::setIndexBuffer(&tib);
     bgfx::submit(0, ph);
@@ -713,7 +748,7 @@ bool GraphicsBgfx::DrawTriangles(const void* tvertices, int numVertices, Resourc
     }
 
     bgfx::ProgramHandle ph; ph.idx = ui_.programDiff;
-    bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_BLEND_ALPHA);
+    bgfx::setState((state_ | BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A));
     bgfx::setVertexBuffer(0, &tvb);
     bgfx::setIndexBuffer(&tib);
     bgfx::submit(0, ph);
@@ -762,7 +797,7 @@ bool GraphicsBgfx::DrawUITriangles(const float* vertices, int numVertices, Textu
     bgfx::UniformHandle umvp; umvp.idx = ui_.u_mvp;
     bgfx::UniformHandle stex1; stex1.idx = ui_.s_tex;
     bgfx::UniformHandle stex2; stex2.idx = ui_.s_texAlt;
-    bgfx::TextureHandle texh; texh.idx = GetOrCreateTexture(texture);
+    bgfx::TextureHandle texh; texh.idx = GetOrCreateTexture(texture, cache);
     bgfx::setUniform(umvp, mvpArr);
     bgfx::setTexture(0, stex1, texh);
     bgfx::setTexture(1, stex2, texh);
@@ -773,14 +808,18 @@ bool GraphicsBgfx::DrawUITriangles(const float* vertices, int numVertices, Textu
     {
         unsigned alphaFormat = Graphics::GetAlphaFormat();
         const bool isAlphaTex = texture->GetFormat() == alphaFormat;
-        const uint64_t blendMask = (state_ & BGFX_STATE_BLEND_MASK);
-        const bool hasBlend = (blendMask != 0);
         if (isAlphaTex && ui_.programAlpha != bgfx::kInvalidHandle)
+        {
             programIdx = ui_.programAlpha;
-        else if (!isAlphaTex && !hasBlend && ui_.programMask != bgfx::kInvalidHandle)
-            programIdx = ui_.programMask;
+        }
         else
-            programIdx = ui_.programDiff;
+        {
+            const bool useMask = (lastBlendMode_ != BLEND_ALPHA && lastBlendMode_ != BLEND_ADDALPHA && lastBlendMode_ != BLEND_PREMULALPHA);
+            if (!isAlphaTex && useMask && ui_.programMask != bgfx::kInvalidHandle)
+                programIdx = ui_.programMask;
+            else
+                programIdx = ui_.programDiff;
+        }
     }
 
     // 使用顺序索引而非 setVertexCount
@@ -797,7 +836,7 @@ bool GraphicsBgfx::DrawUITriangles(const float* vertices, int numVertices, Textu
     }
 
     bgfx::ProgramHandle ph; ph.idx = programIdx;
-    bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_BLEND_ALPHA);
+    bgfx::setState((state_ | BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A));
     bgfx::setVertexBuffer(0, &tvb);
     bgfx::setIndexBuffer(&tib);
     bgfx::submit(0, ph);
