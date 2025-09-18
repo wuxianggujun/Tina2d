@@ -724,6 +724,28 @@ unsigned short GraphicsBgfx::GetOrCreateTexture(Texture2D* tex, ResourceCache* c
 #endif
 }
 
+void GraphicsBgfx::ReleaseTexture(Texture2D* tex)
+{
+#ifdef URHO3D_BGFX
+    if (!tex)
+        return;
+    auto it = textureCache_.find(tex);
+    if (it != textureCache_.end())
+    {
+        const unsigned short idx = it->second;
+        if (idx != bgfx::kInvalidHandle)
+        {
+            bgfx::TextureHandle h; h.idx = idx;
+            if (bgfx::isValid(h))
+                bgfx::destroy(h);
+        }
+        textureCache_.erase(it);
+    }
+#else
+    (void)tex;
+#endif
+}
+
 bool GraphicsBgfx::DrawQuads(const void* qvertices, int numVertices, Texture2D* texture, ResourceCache* cache, const Matrix4& mvp)
 {
 #ifdef URHO3D_BGFX

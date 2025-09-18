@@ -376,6 +376,8 @@ public:
     bool BgfxDrawUITriangles(const float* vertices, int numVertices, Texture2D* texture, const Matrix4& mvp);
     /// 从 Image 直接创建 BGFX 纹理（用于字体/临时纹理），并缓存句柄到内部映射。
     bool BgfxCreateTextureFromImage(Texture2D* texture, Image* image, bool useAlpha);
+    /// 释放由 BGFX 创建的纹理（若存在）。
+    void BgfxReleaseTexture(Texture2D* texture);
 #endif
 
     /// 开始一次 UI 提交（统一设置渲染目标与视口）。返回 true 表示由后端处理，UI 层可跳过旧管线路径。

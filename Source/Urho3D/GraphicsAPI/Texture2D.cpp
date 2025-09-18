@@ -249,6 +249,18 @@ void Texture2D::Release()
     if (gapi == GAPI_D3D11)
         return Release_D3D11();
 #endif
+
+#ifdef URHO3D_BGFX
+    if (gapi == GAPI_BGFX)
+    {
+        if (auto* graphics = GetSubsystem<Graphics>())
+            graphics->BgfxReleaseTexture(this);
+        // 清空逻辑尺寸与格式（仅作标记，不影响 BGFX 端释放）
+        width_ = height_ = depth_ = 0;
+        format_ = 0;
+        return;
+    }
+#endif
 }
 
 bool Texture2D::SetData(unsigned level, int x, int y, int width, int height, const void* data)

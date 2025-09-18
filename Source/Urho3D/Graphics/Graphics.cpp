@@ -256,7 +256,6 @@ Vector<IntVector3> Graphics::GetResolutions(int monitor) const
         SDL_free(modes);
     }
 #endif
-
     return ret;
 }
 
@@ -2020,6 +2019,16 @@ bool Graphics::BeginUIDraw(RenderSurface* surface, int targetWidth, int targetHe
     return false;
 }
 
+void Graphics::BgfxReleaseTexture(Texture2D* texture)
+{
+#ifdef URHO3D_BGFX
+    if (!bgfx_)
+        return;
+    bgfx_->ReleaseTexture(texture);
+#else
+    (void)texture;
+#endif
+}
 void Graphics::EndUIDraw(RenderSurface* surface)
 {
 #ifdef URHO3D_BGFX
@@ -2660,3 +2669,4 @@ void RegisterGraphicsLibrary(Context* context)
 }
 
 }
+

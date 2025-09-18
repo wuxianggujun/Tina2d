@@ -76,6 +76,8 @@ public:
 
     // 从 Image 创建 BGFX 纹理并保存到映射（供 UI 字体等路径使用）
     bool CreateTextureFromImage(Texture2D* tex, class Image* image, bool useAlpha);
+    /// 释放并移除由 GetOrCreateTexture/CreateTextureFromImage 创建的 BGFX 纹理。
+    void ReleaseTexture(Texture2D* tex);
 
     // 渲染目标与帧缓冲
     bool SetFrameBuffer(Texture2D* color, Texture2D* depth);
