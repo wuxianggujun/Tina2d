@@ -86,7 +86,36 @@ bool Texture2D::EndLoad()
     CheckTextureBudget(GetTypeStatic());
 
     SetParameters(loadParameters_);
-    bool success = SetData(loadImage_);
+    bool success = true;
+
+#ifdef URHO3D_BGFX
+    // BGFX 后端：不在 Urho 的 GL/D3D 设备上创建纹理，记录元数据供 BGFX 路径使用。
+    if (Graphics::GetGAPI() == GAPI_BGFX)
+    {
+        if (loadImage_)
+        {
+            const int w = (int)loadImage_->GetWidth();
+            const int h = (int)loadImage_->GetHeight();
+            unsigned fmt = 0;
+            const unsigned comps = loadImage_->GetComponents();
+            if (comps == 1)
+                fmt = Graphics::GetAlphaFormat();
+            else if (comps == 3)
+                fmt = Graphics::GetRGBFormat();
+            else
+                fmt = Graphics::GetRGBAFormat();
+
+            SetSizeForBgfx_NoCreate(w, h, fmt);
+            success = true;
+        }
+        else
+            success = false;
+    }
+    else
+#endif
+    {
+        success = SetData(loadImage_);
+    }
 
     loadImage_.Reset();
     loadParameters_.Reset();
@@ -225,6 +254,31 @@ void Texture2D::Release()
 bool Texture2D::SetData(unsigned level, int x, int y, int width, int height, const void* data)
 {
     GAPI gapi = Graphics::GetGAPI();
+
+#ifdef URHO3D_BGFX
+    if (gapi == GAPI_BGFX)
+    {
+        // 仅支持整幅（level=0, x=y=0, 尺寸等于纹理尺寸）的上传/更新，满足 Urho2D 合图构建路径。
+        if (level == 0 && x == 0 && y == 0 && width == width_ && height == height_ && data)
+        {
+            // 将 RGBA8 数据包装成临时 Image，再复用 BGFX 创建逻辑，确保缓存映射建立。
+            auto* cache = GetSubsystem<ResourceCache>();
+            auto* graphics = GetSubsystem<Graphics>();
+            if (!graphics || !graphics->IsBgfxActive())
+                return false;
+
+            SharedPtr<Image> img(new Image(context_));
+            if (!img->SetSize(width, height, 4))
+                return false;
+            img->SetData(reinterpret_cast<const unsigned char*>(data));
+
+            // useAlpha=false：数据已为 RGBA8
+            return graphics->BgfxCreateTextureFromImage(this, img, false);
+        }
+        // 非整幅更新：当前不支持，返回 false，避免误用。
+        return false;
+    }
+#endif
 
 #ifdef URHO3D_OPENGL
     if (gapi == GAPI_OPENGL)

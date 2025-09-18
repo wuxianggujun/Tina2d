@@ -573,8 +573,10 @@ unsigned short GraphicsBgfx::GetOrCreateTexture(Texture2D* tex, ResourceCache* c
     if (it != textureCache_.end())
         return it->second;
     
+    const String& resName = tex->GetName();
+    
     URHO3D_LOGDEBUGF("GetOrCreateTexture: Creating bgfx texture for %s (format=%u, size=%dx%d)", 
-        tex->GetName().CString(), tex->GetFormat(), tex->GetWidth(), tex->GetHeight());
+        resName.CString(), tex->GetFormat(), tex->GetWidth(), tex->GetHeight());
 
     // 优先根据纹理格式决定获取像素的方式，避免对非 RGBA/RGB 纹理调用 GetImage() 触发错误日志
     const unsigned fmt = tex->GetFormat();
@@ -614,20 +616,45 @@ unsigned short GraphicsBgfx::GetOrCreateTexture(Texture2D* tex, ResourceCache* c
     }
     else if (fmt == rgbaFmt || fmt == rgbFmt)
     {
-        URHO3D_LOGDEBUGF("GetOrCreateTexture: Processing RGBA/RGB texture %s", tex->GetName().CString());
-        SharedPtr<Image> img = tex->GetImage();
-        if (!img)
+        URHO3D_LOGDEBUGF("GetOrCreateTexture: Processing RGBA/RGB texture %s", resName.CString());
+        SharedPtr<Image> rgba;
+        // 优先从资源系统重新解码原始图片（避免依赖 GPU 回读）。仅当资源名非空才尝试。
+        if (cache && !resName.Empty())
         {
-            URHO3D_LOGERRORF("GetOrCreateTexture: Failed to get Image from texture %s", tex->GetName().CString());
+            SharedPtr<Image> src(cache->GetResource<Image>(resName));
+            if (src)
+            {
+                rgba = src->IsCompressed() ? src->GetDecompressedImage() : src;
+                if (rgba && rgba->GetComponents() != 4)
+                    rgba = rgba->ConvertToRGBA();
+            }
+        }
+        // 回退：尝试通过 Texture2D::GetImage（BGFX 下通常不可用），失败则用白纹理替代。
+        if (!rgba)
+        {
+            if (resName.Empty())
+            {
+                // 未命名的运行时纹理（例如默认材质用的占位纹理），无可靠的源图像；返回白纹理，避免错误日志刷屏。
+                URHO3D_LOGDEBUG("GetOrCreateTexture: Unnamed runtime texture, fallback to whiteTex");
+                return ui_.whiteTex;
+            }
+            else
+            {
+                SharedPtr<Image> img = tex->GetImage();
+                if (img)
+                {
+                    rgba = img->IsCompressed() ? img->GetDecompressedImage() : img;
+                    if (rgba && rgba->GetComponents() != 4)
+                        rgba = rgba->ConvertToRGBA();
+                }
+            }
+        }
+
+        if (!rgba)
+        {
+            URHO3D_LOGERRORF("GetOrCreateTexture: Failed to acquire RGBA image for %s", resName.CString());
             return ui_.whiteTex;
         }
-        SharedPtr<Image> rgba = img->IsCompressed() ? img->GetDecompressedImage() : img;
-        if (!rgba)
-            return ui_.whiteTex;
-        if (rgba->GetComponents() != 4)
-            rgba = rgba->ConvertToRGBA();
-        if (!rgba)
-            return ui_.whiteTex;
 
         w = (uint32_t)rgba->GetWidth();
         h = (uint32_t)rgba->GetHeight();
@@ -757,8 +784,8 @@ bool GraphicsBgfx::DrawQuads(const void* qvertices, int numVertices, Texture2D* 
     bgfx::TextureHandle texh; texh.idx = GetOrCreateTexture(texture, cache);
     bgfx::setUniform(umvp, mvpArr);
     uint64_t sflags = texture ? GetBgfxSamplerFlagsFromTexture(texture) : 0;
-    bgfx::setTexture(0, stex1, texh, sflags);
-    bgfx::setTexture(1, stex2, texh, sflags);
+    bgfx::setTexture(0, stex1, texh, (uint32_t)sflags);
+    bgfx::setTexture(1, stex2, texh, (uint32_t)sflags);
 
     // 提交
     bgfx::ProgramHandle ph; ph.idx = ui_.programDiff;
@@ -886,8 +913,8 @@ bool GraphicsBgfx::DrawUITriangles(const float* vertices, int numVertices, Textu
     bgfx::TextureHandle texh; texh.idx = GetOrCreateTexture(texture, cache);
     bgfx::setUniform(umvp, mvpArr);
     uint64_t sflags2 = texture ? GetBgfxSamplerFlagsFromTexture(texture) : 0;
-    bgfx::setTexture(0, stex1, texh, sflags2);
-    bgfx::setTexture(1, stex2, texh, sflags2);
+    bgfx::setTexture(0, stex1, texh, (uint32_t)sflags2);
+    bgfx::setTexture(1, stex2, texh, (uint32_t)sflags2);
 
     // 按纹理格式与混合模式选择像素程序
     unsigned short programIdx = ui_.programDiff;
@@ -996,8 +1023,12 @@ bool GraphicsBgfx::CreateTextureFromImage(Texture2D* tex, Image* image, bool use
     }
 
     const bgfx::Memory* mem = bgfx::copy(data.data(), (uint32_t)data.size());
+    uint64_t tflags = 0;
+#ifdef BGFX_TEXTURE_SRGB
+    if (tex->GetSRGB()) tflags |= BGFX_TEXTURE_SRGB;
+#endif
     bgfx::TextureHandle th = bgfx::createTexture2D((uint16_t)w, (uint16_t)h, false, 1,
-        bgfx::TextureFormat::RGBA8, samplerFlags, mem);
+        bgfx::TextureFormat::RGBA8, tflags, mem);
     if (!bgfx::isValid(th))
         return false;
 

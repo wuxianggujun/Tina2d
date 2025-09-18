@@ -639,16 +639,17 @@ void LineEdit::HandleFocused(StringHash /*eventType*/, VariantMap& eventData)
     }
     UpdateCursor();
 
-    if (GetSubsystem<UI>()->GetUseScreenKeyboard())
-        GetSubsystem<Input>()->SetScreenKeyboardVisible(true);
+    // SDL3 下文本输入事件默认关闭，这里在获取焦点时启用，
+    // 同时在支持的平台会显示软键盘。
+    GetSubsystem<Input>()->SetScreenKeyboardVisible(true);
 }
 
 void LineEdit::HandleDefocused(StringHash /*eventType*/, VariantMap& /*eventData*/)
 {
     text_->ClearSelection();
 
-    if (GetSubsystem<UI>()->GetUseScreenKeyboard())
-        GetSubsystem<Input>()->SetScreenKeyboardVisible(false);
+    // 失去焦点时总是关闭文本输入，隐藏软键盘（如适用）。
+    GetSubsystem<Input>()->SetScreenKeyboardVisible(false);
 }
 
 void LineEdit::HandleLayoutUpdated(StringHash /*eventType*/, VariantMap& /*eventData*/)

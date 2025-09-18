@@ -1012,7 +1012,19 @@ void Graphics::Draw(PrimitiveType type, unsigned vertexStart, unsigned vertexCou
 
 #ifdef URHO3D_D3D11
     if (gapi == GAPI_D3D11)
-        return Draw_D3D11(type, vertexStart, vertexCount);;
+        return Draw_D3D11(type, vertexStart, vertexCount);
+#endif
+#ifdef URHO3D_BGFX
+    if (gapi == GAPI_BGFX)
+    {
+        static bool warned1 = false;
+        if (!warned1)
+        {
+            URHO3D_LOGWARNING("BGFX: Graphics::Draw (non-indexed) 尚未实现，调用被忽略。请使用 SpriteBatch/UI 的 bgfx 路径或实现通用网格提交。");
+            warned1 = true;
+        }
+        return;
+    }
 #endif
 }
 
@@ -1029,6 +1041,18 @@ void Graphics::Draw(PrimitiveType type, unsigned indexStart, unsigned indexCount
     if (gapi == GAPI_D3D11)
         return Draw_D3D11(type, indexStart, indexCount, minVertex, vertexCount);
 #endif
+#ifdef URHO3D_BGFX
+    if (gapi == GAPI_BGFX)
+    {
+        static bool warned2 = false;
+        if (!warned2)
+        {
+            URHO3D_LOGWARNING("BGFX: Graphics::Draw (indexed) 尚未实现，调用被忽略。请使用 SpriteBatch/UI 的 bgfx 路径或实现通用网格提交。");
+            warned2 = true;
+        }
+        return;
+    }
+#endif
 }
 
 void Graphics::Draw(PrimitiveType type, unsigned indexStart, unsigned indexCount, unsigned baseVertexIndex, unsigned minVertex, unsigned vertexCount)
@@ -1043,6 +1067,18 @@ void Graphics::Draw(PrimitiveType type, unsigned indexStart, unsigned indexCount
 #ifdef URHO3D_D3D11
     if (gapi == GAPI_D3D11)
         return Draw_D3D11(type, indexStart, indexCount, baseVertexIndex, minVertex, vertexCount);
+#endif
+#ifdef URHO3D_BGFX
+    if (gapi == GAPI_BGFX)
+    {
+        static bool warned3 = false;
+        if (!warned3)
+        {
+            URHO3D_LOGWARNING("BGFX: Graphics::Draw (indexed+baseVertex) 尚未实现，调用被忽略。");
+            warned3 = true;
+        }
+        return;
+    }
 #endif
 }
 
@@ -1059,6 +1095,18 @@ void Graphics::DrawInstanced(PrimitiveType type, unsigned indexStart, unsigned i
     if (gapi == GAPI_D3D11)
         return DrawInstanced_D3D11(type, indexStart, indexCount, minVertex, vertexCount, instanceCount);
 #endif
+#ifdef URHO3D_BGFX
+    if (gapi == GAPI_BGFX)
+    {
+        static bool warned4 = false;
+        if (!warned4)
+        {
+            URHO3D_LOGWARNING("BGFX: Graphics::DrawInstanced 尚未实现，调用被忽略。");
+            warned4 = true;
+        }
+        return;
+    }
+#endif
 }
 
 void Graphics::DrawInstanced(PrimitiveType type, unsigned indexStart, unsigned indexCount, unsigned baseVertexIndex, unsigned minVertex,
@@ -1074,6 +1122,18 @@ void Graphics::DrawInstanced(PrimitiveType type, unsigned indexStart, unsigned i
 #ifdef URHO3D_D3D11
     if (gapi == GAPI_D3D11)
         return DrawInstanced_D3D11(type, indexStart, indexCount, baseVertexIndex, minVertex, vertexCount, instanceCount);
+#endif
+#ifdef URHO3D_BGFX
+    if (gapi == GAPI_BGFX)
+    {
+        static bool warned5 = false;
+        if (!warned5)
+        {
+            URHO3D_LOGWARNING("BGFX: Graphics::DrawInstanced(+baseVertex) 尚未实现，调用被忽略。");
+            warned5 = true;
+        }
+        return;
+    }
 #endif
 }
 
