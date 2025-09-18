@@ -1025,7 +1025,7 @@ void UI::Render(VertexBuffer* buffer, const Vector<UIBatch>& batches, unsigned b
 #ifdef URHO3D_BGFX
     if (graphics_->IsBgfxActive())
     {
-        // 依据目标尺寸设置视口（由后端统一设置），并在结束后恢复
+        // 计算目标尺寸（支持离屏 RT）并交由后端绑定 RT + 设置视口
         int tgtW = graphics_->GetWidth();
         int tgtH = graphics_->GetHeight();
         if (surface && surface->GetParentTexture())
@@ -1033,9 +1033,10 @@ void UI::Render(VertexBuffer* buffer, const Vector<UIBatch>& batches, unsigned b
             tgtW = surface->GetParentTexture()->GetWidth();
             tgtH = surface->GetParentTexture()->GetHeight();
         }
-        if (graphics_->BeginUIDraw(surface, tgtW, tgtH))
-        {
-        // 按当前屏幕尺寸重建一个正交投影
+        if (!graphics_->BeginUIDraw(surface, tgtW, tgtH))
+            return;
+
+        // 构建 UI 正交投影（像素到 NDC），其它状态由后端在 SubmitUIBatch 内部设置
         Matrix4 proj2(Matrix4::IDENTITY);
         const float sx = 2.0f / (float)tgtW;
         const float sy = -2.0f / (float)tgtH;
@@ -1074,14 +1075,6 @@ void UI::Render(VertexBuffer* buffer, const Vector<UIBatch>& batches, unsigned b
                 scissor.right_ = (int)(scissor.right_ * uiScale_);
                 scissor.bottom_ = (int)(scissor.bottom_ * uiScale_);
 
-                if (Graphics::GetGAPI() == GAPI_OPENGL && surface)
-                {
-                    int top = scissor.top_;
-                    int bottom = scissor.bottom_;
-                    scissor.top_ = viewSize.y_ - bottom;
-                    scissor.bottom_ = viewSize.y_ - top;
-                }
-
                 const int numVerts = (batch.vertexEnd_ - batch.vertexStart_) / UI_VERTEX_SIZE;
                 const float* src = &vdata->At(batch.vertexStart_);
                 Texture2D* tex2d = static_cast<Texture2D*>(batch.texture_);
@@ -1089,7 +1082,6 @@ void UI::Render(VertexBuffer* buffer, const Vector<UIBatch>& batches, unsigned b
             }
             graphics_->EndUIDraw(surface);
             return;
-        }
         }
     }
 #endif

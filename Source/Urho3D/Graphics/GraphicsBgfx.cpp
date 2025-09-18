@@ -101,8 +101,12 @@ void GraphicsBgfx::BeginFrame()
 #ifdef URHO3D_BGFX
     if (!initialized_)
         return;
-    // touch 可确保视图 0 在本帧有一次提交，即便没有绘制命令也会清屏并提交。
+    // 确保默认视图与 UI 视图（31）在本帧有效，并设置 UI 视图到 backbuffer
     bgfx::touch(0);
+    const uint16_t uiView = 31;
+    bgfx::setViewRect(uiView, 0, 0, static_cast<uint16_t>(width_), static_cast<uint16_t>(height_));
+    bgfx::setViewFrameBuffer(uiView, BGFX_INVALID_HANDLE);
+    bgfx::touch(uiView);
     // 应用当前状态、裁剪等（供后续提交使用）。
     ApplyState();
     if (scissorEnabled_)
