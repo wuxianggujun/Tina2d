@@ -214,12 +214,20 @@ add_subdirectory (Source)
 if (URHO3D_BGFX)
     include(${CMAKE_SOURCE_DIR}/cmake/Modules/ShaderUtils.cmake)
     
-    # 编译CoreData中的BGFX着色器
+    # 编译 CoreData 中的 BGFX 着色器
+    # 说明：按目录中现有 *.sc（vs/fs 成对）列出基名，ShaderUtils.cmake 会为各 profile 生成 .bin
     set(BGFX_SHADER_DIR "${CMAKE_SOURCE_DIR}/bin/CoreData/Shaders/BGFX")
-        add_shader_compile_dir(
-            ${BGFX_SHADER_DIR}
-            Basic2D  # 编译 Basic2D_vs.sc + Basic2D_fs.sc
-        )
+    add_shader_compile_dir(
+        ${BGFX_SHADER_DIR}
+        Basic2D
+        Basic_VC
+        Basic_Diff_VC
+        Basic_Alpha_VC
+        Basic_DiffAlphaMask_VC
+        TriangleBatch_VC
+        Urho2D_VC
+        Urho2D_Diff_VC
+    )
         # 让占位目标依赖实际的 shaders 目标，这样示例中的依赖会按需触发编译
         if (TARGET tina2d_bgfx_shaders AND TARGET shaders)
             add_dependencies(tina2d_bgfx_shaders shaders)

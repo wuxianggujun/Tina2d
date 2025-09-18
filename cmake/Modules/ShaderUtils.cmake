@@ -76,8 +76,9 @@ function(add_shader_compile_dir SHADER_DIR)
         return()
     endif()
 
-    # 设置输出目录
-    set(SHADER_OUTPUT_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/resources/shaders")
+    # 设置输出目录（与运行期 ResourceCache 约定保持一致）
+    # 最终运行时从 CoreData/Shaders/BGFX 下按 profile 读取：glsl/essl/dx10/dx11/spirv/metal
+    set(SHADER_OUTPUT_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/CoreData/Shaders/BGFX")
     file(MAKE_DIRECTORY "${SHADER_OUTPUT_DIR}")
     message(STATUS "Shader output directory: ${SHADER_OUTPUT_DIR}")
 
@@ -156,7 +157,7 @@ function(add_shader_compile_dir SHADER_DIR)
             # 基本的编译命令（始终生成二进制文件）
             add_custom_command(
                 OUTPUT ${VERTEX_OUTPUT}
-                COMMAND bgfx::shaderc
+                COMMAND $<TARGET_FILE:bgfx::shaderc>
                     --type vertex
                     --platform ${SHADER_PLATFORM}
                     --profile ${PROFILE}
@@ -180,7 +181,7 @@ function(add_shader_compile_dir SHADER_DIR)
                 _bgfx_get_profile_ext(${PROFILE} PROFILE_EXT)
                 add_custom_command(
                     OUTPUT ${VERTEX_HEADER}
-                    COMMAND bgfx::shaderc
+                    COMMAND $<TARGET_FILE:bgfx::shaderc>
                         --type vertex
                         --platform ${SHADER_PLATFORM}
                         --profile ${PROFILE}
@@ -207,7 +208,7 @@ function(add_shader_compile_dir SHADER_DIR)
             # 基本的编译命令（始终生成二进制文件）
             add_custom_command(
                 OUTPUT ${FRAGMENT_OUTPUT}
-                COMMAND bgfx::shaderc
+                COMMAND $<TARGET_FILE:bgfx::shaderc>
                     --type fragment
                     --platform ${SHADER_PLATFORM}
                     --profile ${PROFILE}
@@ -230,7 +231,7 @@ function(add_shader_compile_dir SHADER_DIR)
             if(ARGS_GENERATE_HEADERS)
                 add_custom_command(
                     OUTPUT ${FRAGMENT_HEADER}
-                    COMMAND bgfx::shaderc
+                    COMMAND $<TARGET_FILE:bgfx::shaderc>
                         --type fragment
                         --platform ${SHADER_PLATFORM}
                         --profile ${PROFILE}
