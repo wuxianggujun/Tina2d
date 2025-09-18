@@ -1025,14 +1025,20 @@ void UI::Render(VertexBuffer* buffer, const Vector<UIBatch>& batches, unsigned b
 #ifdef URHO3D_BGFX
     if (graphics_->IsBgfxActive())
     {
-        // 确保 UI 绘制回到屏幕 backbuffer（避免仍绑定在 RenderPath 的离屏帧缓冲导致黑屏）
-        graphics_->ResetRenderTargets();
-        // 设置全屏视口，保证 UI 提交在屏幕范围内
-        graphics_->SetViewport(IntRect(0, 0, graphics_->GetWidth(), graphics_->GetHeight()));
-        // 按当前屏幕尺寸重建一个正交投影，避免依赖旧管线的 viewport/state
+        // 依据目标尺寸设置视口（由后端统一设置），并在结束后恢复
+        int tgtW = graphics_->GetWidth();
+        int tgtH = graphics_->GetHeight();
+        if (surface && surface->GetParentTexture())
+        {
+            tgtW = surface->GetParentTexture()->GetWidth();
+            tgtH = surface->GetParentTexture()->GetHeight();
+        }
+        if (graphics_->BeginUIDraw(surface, tgtW, tgtH))
+        {
+        // 按当前屏幕尺寸重建一个正交投影
         Matrix4 proj2(Matrix4::IDENTITY);
-        const float sx = 2.0f / (float)graphics_->GetWidth();
-        const float sy = -2.0f / (float)graphics_->GetHeight();
+        const float sx = 2.0f / (float)tgtW;
+        const float sy = -2.0f / (float)tgtH;
         proj2.m00_ = sx * uiScale_;
         proj2.m03_ = -1.0f;
         proj2.m11_ = sy * uiScale_;
@@ -1076,15 +1082,14 @@ void UI::Render(VertexBuffer* buffer, const Vector<UIBatch>& batches, unsigned b
                     scissor.bottom_ = viewSize.y_ - top;
                 }
 
-                graphics_->SetBlendMode(batch.blendMode_);
-                graphics_->SetScissorTest(true, scissor);
-
                 const int numVerts = (batch.vertexEnd_ - batch.vertexStart_) / UI_VERTEX_SIZE;
                 const float* src = &vdata->At(batch.vertexStart_);
                 Texture2D* tex2d = static_cast<Texture2D*>(batch.texture_);
-                graphics_->BgfxDrawUITriangles(src, numVerts, tex2d, proj2);
+                graphics_->SubmitUIBatch(src, numVerts, tex2d, scissor, batch.blendMode_, proj2);
             }
+            graphics_->EndUIDraw(surface);
             return;
+        }
         }
     }
 #endif

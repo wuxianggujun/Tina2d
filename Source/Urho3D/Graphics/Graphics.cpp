@@ -2002,6 +2002,53 @@ bool Graphics::BgfxCreateTextureFromImage(Texture2D* texture, Image* image, bool
 }
 #endif
 
+bool Graphics::BeginUIDraw(RenderSurface* surface, int targetWidth, int targetHeight)
+{
+#ifdef URHO3D_BGFX
+    if (IsBgfxActive())
+    {
+        if (surface)
+            SetRenderTarget(0, surface);
+        else
+            ResetRenderTargets();
+        SetViewport(IntRect(0, 0, targetWidth, targetHeight));
+        return true;
+    }
+#else
+    (void)surface; (void)targetWidth; (void)targetHeight;
+#endif
+    return false;
+}
+
+void Graphics::EndUIDraw(RenderSurface* surface)
+{
+#ifdef URHO3D_BGFX
+    if (IsBgfxActive())
+    {
+        if (surface)
+            ResetRenderTargets();
+    }
+#else
+    (void)surface;
+#endif
+}
+
+bool Graphics::SubmitUIBatch(const float* vertices, int numVertices, Texture2D* texture,
+                             const IntRect& scissor, BlendMode blend, const Matrix4& projection)
+{
+#ifdef URHO3D_BGFX
+    if (IsBgfxActive())
+    {
+        SetBlendMode(blend);
+        SetScissorTest(true, scissor);
+        return BgfxDrawUITriangles(vertices, numVertices, texture, projection);
+    }
+#else
+    (void)vertices; (void)numVertices; (void)texture; (void)scissor; (void)blend; (void)projection;
+#endif
+    return false;
+}
+
 bool Graphics::GetDither() const
 {
     GAPI gapi = Graphics::GetGAPI();

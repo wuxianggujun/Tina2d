@@ -378,6 +378,14 @@ public:
     bool BgfxCreateTextureFromImage(Texture2D* texture, Image* image, bool useAlpha);
 #endif
 
+    /// 开始一次 UI 提交（统一设置渲染目标与视口）。返回 true 表示由后端处理，UI 层可跳过旧管线路径。
+    bool BeginUIDraw(RenderSurface* surface, int targetWidth, int targetHeight);
+    /// 结束一次 UI 提交（恢复渲染目标）。
+    void EndUIDraw(RenderSurface* surface);
+    /// 提交一批 UI 三角形。UI 层只需提供顶点、纹理、裁剪、混合与投影矩阵。
+    bool SubmitUIBatch(const float* vertices, int numVertices, Texture2D* texture,
+                       const IntRect& scissor, BlendMode blend, const Matrix4& projection);
+
     /// Return window position.
     /// @property
     IntVector2 GetWindowPosition() const;
