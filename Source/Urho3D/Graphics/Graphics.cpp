@@ -2121,6 +2121,20 @@ bool Graphics::BgfxDrawUITriangles(const float* vertices, int numVertices, Textu
     return bgfx_->DrawUITriangles(vertices, numVertices, texture, cache, mvp);
 }
 
+bool Graphics::BgfxDrawColored(PrimitiveType prim, const float* vertices, int numVertices, const Matrix4& mvp)
+{
+#ifdef URHO3D_BGFX
+    if (!bgfx_)
+        return false;
+    // 确保 UI 程序已加载（使用 ResourceCache）
+    if (auto* cache = GetSubsystem<ResourceCache>())
+        bgfx_->LoadUIPrograms(cache);
+    return bgfx_->DrawColored(prim, vertices, numVertices, mvp);
+#else
+    (void)prim; (void)vertices; (void)numVertices; (void)mvp; return false;
+#endif
+}
+
 bool Graphics::BgfxDrawUIWithMaterial(const float* vertices, int numVertices, Material* material, const Matrix4& mvp)
 {
 #ifdef URHO3D_BGFX

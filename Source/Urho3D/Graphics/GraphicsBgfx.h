@@ -83,6 +83,8 @@ public:
     bool DrawTriangles(const void* tvertices /*SpriteBatchBase::TVertex[]*/, int numVertices, ResourceCache* cache, const Matrix4& mvp);
     // UI: 直接从 UI 顶点浮点数组绘制三角形（pos, color, uv，按 UI_VERTEX_SIZE=6 排列）
     bool DrawUITriangles(const float* vertices, int numVertices, Texture2D* texture, ResourceCache* cache, const Matrix4& mvp);
+    // 通用彩色顶点绘制：pos(3f) + color(abgr u32打包在第4个float中)，不采样纹理
+    bool DrawColored(PrimitiveType prim, const float* vertices, int numVertices, const Matrix4& mvp);
     // UI: 使用自定义材质（贴图+uniform），仍然复用 UI 顶点布局与通用 UI 程序集
     bool DrawUIWithMaterial(const float* vertices, int numVertices, Material* material, ResourceCache* cache, const Matrix4& mvp);
 

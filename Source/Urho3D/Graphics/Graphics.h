@@ -374,6 +374,7 @@ public:
     bool BgfxDrawTriangles(const void* tvertices, int numVertices, const Matrix4& mvp);
     /// 使用 bgfx 提交 UI 顶点（按 UI_VERTEX_SIZE 布局的三角形列表）。
     bool BgfxDrawUITriangles(const float* vertices, int numVertices, Texture2D* texture, const Matrix4& mvp);
+    bool BgfxDrawColored(PrimitiveType prim, const float* vertices, int numVertices, const Matrix4& mvp);
     /// 使用 bgfx 提交 UI 顶点并应用自定义材质（绑定贴图与 uniform）。
     bool BgfxDrawUIWithMaterial(const float* vertices, int numVertices, class Material* material, const Matrix4& mvp);
     /// 从 Image 直接创建 BGFX 纹理（用于字体/临时纹理），并缓存句柄到内部映射。
@@ -1252,4 +1253,3 @@ private:
 void URHO3D_API RegisterGraphicsLibrary(Context* context);
 
 } // namespace Urho3D
-

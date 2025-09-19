@@ -1462,6 +1462,86 @@ bool GraphicsBgfx::CreateTextureFromImage(Texture2D* tex, Image* image, bool use
 #endif
 }
 
+bool GraphicsBgfx::DrawColored(PrimitiveType prim, const float* vertices, int numVertices, const Matrix4& mvp)
+{
+#ifdef URHO3D_BGFX
+    if (!initialized_ || !vertices || numVertices <= 0)
+        return false;
+    // 使用 UI 程序集中的 Diff 程序 + 白纹理实现无纹理彩色绘制。
+    // 注意：Graphics 层会在调用前确保 LoadUIPrograms 已成功（传入 ResourceCache）。
+    if (!ui_.ready)
+        return false;
+
+    // 顶点声明：pos(3f) + color0(ub4n)
+    bgfx::VertexLayout layout;
+    layout.begin()
+        .add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float)
+        .add(bgfx::Attrib::Color0,   4, bgfx::AttribType::Uint8, true)
+        .end();
+
+    // 复制并重打包颜色
+    struct Vtx { float x,y,z; uint32_t abgr; };
+    if (bgfx::getAvailTransientVertexBuffer((uint32_t)numVertices, layout) < (uint32_t)numVertices)
+        return false;
+    bgfx::TransientVertexBuffer tvb;
+    bgfx::allocTransientVertexBuffer(&tvb, (uint32_t)numVertices, layout);
+    auto* vdst = reinterpret_cast<Vtx*>(tvb.data);
+    for (int i = 0; i < numVertices; ++i)
+    {
+        const float* src = vertices + i * 4; // x,y,z,colorPackedInFloat
+        uint32_t colorPacked;
+        memcpy(&colorPacked, &src[3], sizeof(uint32_t));
+        vdst[i] = { src[0], src[1], src[2], colorPacked };
+    }
+
+    // 统一 MVP 与纹理（白纹理）
+    float mvpArr[16] = {
+        mvp.m00_, mvp.m10_, mvp.m20_, mvp.m30_,
+        mvp.m01_, mvp.m11_, mvp.m21_, mvp.m31_,
+        mvp.m02_, mvp.m12_, mvp.m22_, mvp.m32_,
+        mvp.m03_, mvp.m13_, mvp.m23_, mvp.m33_,
+    };
+    bgfx::UniformHandle umvp; umvp.idx = ui_.u_mvp;
+    if (bgfx::isValid(umvp))
+        bgfx::setUniform(umvp, mvpArr);
+
+    bgfx::UniformHandle stex1; stex1.idx = ui_.s_tex;
+    bgfx::UniformHandle stex2; stex2.idx = ui_.s_texAlt;
+    bgfx::TextureHandle texw; texw.idx = ui_.whiteTex;
+    // 绑定到两个采样器（兼容不同片元程序）
+    bgfx::setTexture(0, stex1, texw);
+    bgfx::setTexture(1, stex2, texw);
+
+    // 选择拓扑
+    uint64_t primState = 0;
+    switch (prim)
+    {
+    case LINE_LIST: primState = BGFX_STATE_PT_LINES; break;
+    case LINE_STRIP: primState = BGFX_STATE_PT_LINESTRIP; break;
+    case POINT_LIST: primState = BGFX_STATE_PT_POINTS; break;
+    case TRIANGLE_STRIP: primState = BGFX_STATE_PT_TRISTRIP; break;
+    default: primState = 0; break; // TRIANGLE_LIST
+    }
+
+    bgfx::ProgramHandle ph; ph.idx = ui_.programDiff;
+    bgfx::setState((state_ | BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | primState));
+    bgfx::setVertexBuffer(0, &tvb);
+    // 为非索引绘制构造顺序索引
+    if (numVertices > 0xFFFF)
+        return false;
+    bgfx::TransientIndexBuffer tib;
+    bgfx::allocTransientIndexBuffer(&tib, (uint32_t)numVertices, false);
+    auto* idst = reinterpret_cast<uint16_t*>(tib.data);
+    for (int i = 0; i < numVertices; ++i)
+        idst[i] = (uint16_t)i;
+    bgfx::setIndexBuffer(&tib);
+    bgfx::submit(0, ph);
+    return true;
+#else
+    (void)prim; (void)vertices; (void)numVertices; (void)mvp; return false;
+#endif
+}
+
 bool GraphicsBgfx::DrawUIWithMaterial(const float* vertices, int numVertices, Material* material, ResourceCache* cache, const Matrix4& mvp)
 {
 #ifdef URHO3D_BGFX
