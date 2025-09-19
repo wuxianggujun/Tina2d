@@ -98,6 +98,15 @@ public:
     // 纹理局部更新（level=0 默认），数据应为 RGBA8；若纹理为 A8 则自动扩展为 RGBA8。
     bool UpdateTextureRegion(Texture2D* tex, int x, int y, int width, int height, const void* data, unsigned level = 0);
 
+    // SRGB 与默认采样参数（全局）
+    void SetSRGBBackbuffer(bool enable) { srgbBackbuffer_ = enable; }
+    bool GetSRGBBackbuffer() const { return srgbBackbuffer_; }
+    void SetDefaultSampler(TextureFilterMode mode, unsigned aniso) { defaultFilter_ = mode; defaultAniso_ = aniso; }
+
+    // 从渲染目标读取到 Image（同步等待，谨慎使用）
+    bool ReadRenderTargetToImage(Texture2D* color, class Image& dest);
+    bool Blit(Texture2D* dst, Texture2D* src, const IntRect* rect);
+
 private:
     void ApplyState();
 
@@ -161,6 +170,11 @@ private:
     std::unordered_map<std::string, unsigned short> samplerCache_;
     std::unordered_map<std::string, unsigned short> vec4Cache_;
     std::unordered_map<std::string, unsigned short> mat4Cache_;
+
+    // 全局选项
+    bool srgbBackbuffer_{};
+    TextureFilterMode defaultFilter_{FILTER_TRILINEAR};
+    unsigned defaultAniso_{4};
 };
 
 } // namespace Urho3D

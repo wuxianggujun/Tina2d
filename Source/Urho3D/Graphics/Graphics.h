@@ -1227,6 +1227,10 @@ private:
     /// 当前 BGFX 渲染目标（简单 2D：仅一个颜色+深度）
     Texture2D* bgfxColorRT_{};
     Texture2D* bgfxDepthRT_{};
+    /// 内置离屏渲染目标（可选，用于特殊需求；默认关闭）
+    SharedPtr<Texture2D> offscreenColor_;
+    bool useOffscreen_{false};
+    void EnsureOffscreenRT();
 #endif
 #ifdef URHO3D_OPENGL
     /// Renderer name (usually GPU name)

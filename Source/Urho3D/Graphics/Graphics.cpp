@@ -784,6 +784,17 @@ void Graphics::SetSRGB(bool enable)
 {
     GAPI gapi = Graphics::GetGAPI();
 
+#ifdef URHO3D_BGFX
+    if (bgfx_ && gapi == GAPI_BGFX)
+    {
+        bgfx_->SetSRGBBackbuffer(enable);
+        // 需要 reset 才能生效
+        if (IsInitialized())
+            bgfx_->Reset((unsigned)width_, (unsigned)height_);
+        sRGB_ = enable;
+        return;
+    }
+#endif
 #ifdef URHO3D_OPENGL
     if (gapi == GAPI_OPENGL)
         return SetSRGB_OGL(enable);
@@ -859,6 +870,20 @@ bool Graphics::TakeScreenShot(Image& destImage)
 {
     GAPI gapi = Graphics::GetGAPI();
 
+#ifdef URHO3D_BGFX
+    if (bgfx_ && gapi == GAPI_BGFX)
+    {
+        // 默认 2D 路径：使用内置离屏 RT 作为截图源
+        if (useOffscreen_ && offscreenColor_.NotNull())
+            return bgfx_->ReadRenderTargetToImage(offscreenColor_.Get(), destImage);
+        // 回退：若外部显式绑定了离屏 RT，也支持读回
+        RenderSurface* surface = GetRenderTarget(0);
+        if (surface && surface->GetParentTexture())
+            return bgfx_->ReadRenderTargetToImage(static_cast<Texture2D*>(surface->GetParentTexture()), destImage);
+        URHO3D_LOGWARNING("BGFX TakeScreenShot: 未启用内置离屏且无外部 RT，无法截图");
+        return false;
+    }
+#endif
 #ifdef URHO3D_OPENGL
     if (gapi == GAPI_OPENGL)
         return TakeScreenShot_OGL(destImage);
@@ -880,6 +905,9 @@ bool Graphics::BeginFrame()
     // 宏开关：当启用 bgfx 时，以 bgfx 为主进行帧提交，便于与原管线对比。
     if (bgfx_)
     {
+        // 若启用内置离屏 RT，确保尺寸匹配
+        if (useOffscreen_)
+            EnsureOffscreenRT();
         if (!bgfx_->IsInitialized() && window_)
         {
             // 使用 SDL 窗口进行初始化（提取原生句柄）。
@@ -913,6 +941,29 @@ void Graphics::EndFrame()
 #ifdef URHO3D_BGFX
     if (bgfx_ && bgfx_->IsInitialized())
     {
+        // 若启用内置离屏渲染，将其呈现到 backbuffer
+        if (useOffscreen_ && offscreenColor_.NotNull())
+        {
+            // 切换到 backbuffer
+            bgfx_->ResetFrameBuffer();
+            // 将 UI 程序绘制一个全屏四边形到 backbuffer
+            // 注意：GraphicsBgfx::PresentOffscreen 使用 ui_ 程序，并在内部切换到 backbuffer
+            // 这里不需要更改当前 RT 状态
+            // 为防止之前视口影响，Present 将覆盖 view0 的 viewport
+            bgfx_->SetViewport(IntRect(0, 0, width_, height_));
+            // 使用 UI 提交一组全屏三角形：复用 BgfxDrawUITriangles（提供2个三角的6顶点）
+            float verts[6 * 6] = {
+                // x, y, z, color(abgr), u, v
+                -1.f,-1.f,0.f, 1, 0.f,1.f,
+                 1.f,-1.f,0.f, 1, 1.f,1.f,
+                 1.f, 1.f,0.f, 1, 1.f,0.f,
+                -1.f,-1.f,0.f, 1, 0.f,1.f,
+                 1.f, 1.f,0.f, 1, 1.f,0.f,
+                -1.f, 1.f,0.f, 1, 0.f,0.f,
+            };
+            Matrix4 id(Matrix4::IDENTITY);
+            BgfxDrawUITriangles(verts, 6, offscreenColor_.Get(), id);
+        }
         bgfx_->EndFrame();
         return;
     }
@@ -953,6 +1004,21 @@ bool Graphics::ResolveToTexture(Texture2D* destination, const IntRect& viewport)
 {
     GAPI gapi = Graphics::GetGAPI();
 
+#ifdef URHO3D_BGFX
+    if (bgfx_ && gapi == GAPI_BGFX)
+    {
+        // 简化：仅当当前绑定了离屏 RT 时，支持从当前颜色附件 blit 到目标纹理。
+        if (!destination)
+            return false;
+        if (bgfxColorRT_)
+        {
+            IntRect vp = viewport;
+            return bgfx_->Blit(destination, bgfxColorRT_, &vp);
+        }
+        URHO3D_LOGWARNING("BGFX ResolveToTexture: 当前未绑定离屏颜色目标，无法从 backbuffer 解析");
+        return false;
+    }
+#endif
 #ifdef URHO3D_OPENGL
     if (gapi == GAPI_OPENGL)
         return ResolveToTexture_OGL(destination, viewport);
@@ -1495,6 +1561,15 @@ void Graphics::SetDefaultTextureFilterMode(TextureFilterMode mode)
 {
     GAPI gapi = Graphics::GetGAPI();
 
+#ifdef URHO3D_BGFX
+    if (bgfx_ && gapi == GAPI_BGFX)
+    {
+        // 与各向异性一起统一下发
+        bgfx_->SetDefaultSampler(mode, GetDefaultTextureAnisotropy());
+        defaultTextureFilterMode_ = mode;
+        return;
+    }
+#endif
 #ifdef URHO3D_OPENGL
     if (gapi == GAPI_OPENGL)
         return SetDefaultTextureFilterMode_OGL(mode);
@@ -1510,6 +1585,14 @@ void Graphics::SetDefaultTextureAnisotropy(unsigned level)
 {
     GAPI gapi = Graphics::GetGAPI();
 
+#ifdef URHO3D_BGFX
+    if (bgfx_ && gapi == GAPI_BGFX)
+    {
+        bgfx_->SetDefaultSampler(GetDefaultTextureFilterMode(), level);
+        defaultTextureAnisotropy_ = level;
+        return;
+    }
+#endif
 #ifdef URHO3D_OPENGL
     if (gapi == GAPI_OPENGL)
         return SetDefaultTextureAnisotropy_OGL(level);
@@ -1528,9 +1611,25 @@ void Graphics::ResetRenderTargets()
 #ifdef URHO3D_BGFX
     if (bgfx_ && bgfx_->IsInitialized())
     {
-        bgfxColorRT_ = nullptr;
-        bgfxDepthRT_ = nullptr;
-        bgfx_->ResetFrameBuffer();
+        if (useOffscreen_ && offscreenColor_.NotNull())
+        {
+            bgfxColorRT_ = offscreenColor_.Get();
+            // 默认无需深度
+            bgfxDepthRT_ = nullptr;
+            if (!bgfx_->SetFrameBuffer(bgfxColorRT_, bgfxDepthRT_))
+            {
+                URHO3D_LOGWARNING("BGFX ResetRenderTargets: SetFrameBuffer failed, fallback to backbuffer");
+                bgfxColorRT_ = nullptr;
+                bgfxDepthRT_ = nullptr;
+                bgfx_->ResetFrameBuffer();
+            }
+        }
+        else
+        {
+            bgfxColorRT_ = nullptr;
+            bgfxDepthRT_ = nullptr;
+            bgfx_->ResetFrameBuffer();
+        }
         return;
     }
 #endif
@@ -2033,6 +2132,23 @@ bool Graphics::BgfxDrawUIWithMaterial(const float* vertices, int numVertices, Ma
     (void)vertices; (void)numVertices; (void)material; (void)mvp; return false;
 #endif
 }
+
+#ifdef URHO3D_BGFX
+void Graphics::EnsureOffscreenRT()
+{
+    if (!useOffscreen_)
+        return;
+    const unsigned w = (unsigned)(width_ > 0 ? width_ : 1);
+    const unsigned h = (unsigned)(height_ > 0 ? height_ : 1);
+    if (!offscreenColor_ || offscreenColor_->GetWidth() != (int)w || offscreenColor_->GetHeight() != (int)h)
+    {
+        offscreenColor_ = new Texture2D(context_);
+        offscreenColor_->SetSize((int)w, (int)h, GetRGBAFormat(), TEXTURE_RENDERTARGET);
+        offscreenColor_->SetFilterMode(defaultTextureFilterMode_);
+        offscreenColor_->SetAnisotropy(defaultTextureAnisotropy_);
+    }
+}
+#endif
 
 bool Graphics::BgfxCreateTextureFromImage(Texture2D* texture, Image* image, bool useAlpha)
 {

@@ -53,7 +53,7 @@ bool GraphicsBgfx::Initialize(void* nativeWindowHandle, unsigned width, unsigned
     init.type = bgfx::RendererType::Count;
     init.resolution.width  = width_;
     init.resolution.height = height_;
-    init.resolution.reset  = BGFX_RESET_VSYNC;
+    init.resolution.reset  = BGFX_RESET_VSYNC | (srgbBackbuffer_ ? BGFX_RESET_SRGB_BACKBUFFER : 0);
 
     // 提供原生窗口句柄（由上层获取，例如 SDL_GetProperty 获取 HWND/NSWindow/X11 Window）。
     init.platformData.nwh = nativeWindowHandle; // Win32: HWND, macOS: NSWindow*, X11: Window (cast)
@@ -79,6 +79,59 @@ void GraphicsBgfx::Shutdown()
 #ifdef URHO3D_BGFX
     if (!initialized_)
         return;
+    // 先销毁我们创建的资源
+    for (auto& kv : textureCache_)
+    {
+        bgfx::TextureHandle h; h.idx = kv.second;
+        if (bgfx::isValid(h)) bgfx::destroy(h);
+    }
+    textureCache_.clear();
+    for (auto& kv : fbCache_)
+    {
+        bgfx::FrameBufferHandle fh; fh.idx = kv.second;
+        if (bgfx::isValid(fh)) bgfx::destroy(fh);
+    }
+    fbCache_.clear();
+    if (ui_.whiteTex != bgfx::kInvalidHandle)
+    {
+        bgfx::TextureHandle wh; wh.idx = ui_.whiteTex;
+        if (bgfx::isValid(wh)) bgfx::destroy(wh);
+        ui_.whiteTex = bgfx::kInvalidHandle;
+    }
+    if (ui_.u_mvp != bgfx::kInvalidHandle)
+    {
+        bgfx::UniformHandle uh; uh.idx = ui_.u_mvp; if (bgfx::isValid(uh)) bgfx::destroy(uh);
+        ui_.u_mvp = bgfx::kInvalidHandle;
+    }
+    if (ui_.s_tex != bgfx::kInvalidHandle)
+    {
+        bgfx::UniformHandle uh; uh.idx = ui_.s_tex; if (bgfx::isValid(uh)) bgfx::destroy(uh);
+        ui_.s_tex = bgfx::kInvalidHandle;
+    }
+    if (ui_.s_texAlt != bgfx::kInvalidHandle)
+    {
+        bgfx::UniformHandle uh; uh.idx = ui_.s_texAlt; if (bgfx::isValid(uh)) bgfx::destroy(uh);
+        ui_.s_texAlt = bgfx::kInvalidHandle;
+    }
+    if (ui_.programDiff != bgfx::kInvalidHandle)
+    {
+        bgfx::ProgramHandle ph; ph.idx = ui_.programDiff; if (bgfx::isValid(ph)) bgfx::destroy(ph);
+        ui_.programDiff = bgfx::kInvalidHandle;
+    }
+    if (ui_.programAlpha != bgfx::kInvalidHandle)
+    {
+        bgfx::ProgramHandle ph; ph.idx = ui_.programAlpha; if (bgfx::isValid(ph)) bgfx::destroy(ph);
+        ui_.programAlpha = bgfx::kInvalidHandle;
+    }
+    if (ui_.programMask != bgfx::kInvalidHandle)
+    {
+        bgfx::ProgramHandle ph; ph.idx = ui_.programMask; if (bgfx::isValid(ph)) bgfx::destroy(ph);
+        ui_.programMask = bgfx::kInvalidHandle;
+    }
+    // 动态 uniform/sampler 缓存
+    for (auto& kv : samplerCache_){ bgfx::UniformHandle u{kv.second}; if (bgfx::isValid(u)) bgfx::destroy(u);} samplerCache_.clear();
+    for (auto& kv : vec4Cache_){ bgfx::UniformHandle u{kv.second}; if (bgfx::isValid(u)) bgfx::destroy(u);} vec4Cache_.clear();
+    for (auto& kv : mat4Cache_){ bgfx::UniformHandle u{kv.second}; if (bgfx::isValid(u)) bgfx::destroy(u);} mat4Cache_.clear();
     bgfx::shutdown();
     initialized_ = false;
     width_ = height_ = 0;
@@ -92,7 +145,7 @@ void GraphicsBgfx::Reset(unsigned width, unsigned height)
     height_ = height;
     if (initialized_)
     {
-        bgfx::reset(static_cast<uint16_t>(width_), static_cast<uint16_t>(height_), BGFX_RESET_VSYNC);
+        bgfx::reset(static_cast<uint16_t>(width_), static_cast<uint16_t>(height_), BGFX_RESET_VSYNC | (srgbBackbuffer_ ? BGFX_RESET_SRGB_BACKBUFFER : 0));
         bgfx::setViewRect(0, 0, 0, static_cast<uint16_t>(width_), static_cast<uint16_t>(height_));
     }
 #else
@@ -742,7 +795,30 @@ unsigned short GraphicsBgfx::GetOrCreateTexture(Texture2D* tex, ResourceCache* c
     URHO3D_LOGDEBUGF("GetOrCreateTexture: Creating bgfx texture for %s (format=%u, size=%dx%d)", 
         resName.CString(), tex->GetFormat(), tex->GetWidth(), tex->GetHeight());
 
-    // 优先根据纹理格式决定获取像素的方式，避免对非 RGBA/RGB 纹理调用 GetImage() 触发错误日志
+    // 如果这是渲染目标纹理（存在 RenderSurface），则创建可作为附件的 RT 纹理
+    if (tex->GetRenderSurface() != nullptr)
+    {
+        const uint16_t w = (uint16_t)Max(1, tex->GetWidth());
+        const uint16_t h = (uint16_t)Max(1, tex->GetHeight());
+        uint64_t rtFlags = 0;
+#ifdef BGFX_TEXTURE_SRGB
+        if (tex->GetSRGB()) rtFlags |= BGFX_TEXTURE_SRGB;
+#endif
+        // 标记为渲染目标（可采样，用于呈现）
+#ifdef BGFX_TEXTURE_RT
+        rtFlags |= BGFX_TEXTURE_RT;
+#endif
+        bgfx::TextureHandle th = bgfx::createTexture2D(w, h, false, 1, bgfx::TextureFormat::RGBA8, rtFlags, nullptr);
+        if (!bgfx::isValid(th))
+        {
+            URHO3D_LOGERRORF("BGFX: Failed to create RT texture (%ux%u) for framebuffer", w, h);
+            return ui_.whiteTex;
+        }
+        textureCache_[tex] = th.idx;
+        return th.idx;
+    }
+
+    // 采样纹理：优先根据纹理格式决定获取像素的方式，避免对非 RGBA/RGB 纹理调用 GetImage() 触发错误日志
     const unsigned fmt = tex->GetFormat();
     const unsigned alphaFmt = Graphics::GetAlphaFormat();
     const unsigned rgbaFmt = Graphics::GetRGBAFormat();
@@ -1099,6 +1175,22 @@ bool GraphicsBgfx::DrawQuads(const void* qvertices, int numVertices, Texture2D* 
     bgfx::TextureHandle texh; texh.idx = GetOrCreateTexture(texture, cache);
     bgfx::setUniform(umvp, mvpArr);
     uint64_t sflags = texture ? GetBgfxSamplerFlagsFromTexture(texture) : 0;
+    if (texture)
+    {
+        if (texture->GetFilterMode() == FILTER_TRILINEAR)
+        {
+            if (defaultFilter_ == FILTER_NEAREST)
+                sflags |= (BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIP_POINT);
+            else if (defaultFilter_ == FILTER_BILINEAR)
+                sflags |= BGFX_SAMPLER_MIP_POINT;
+        }
+        if (texture->GetAnisotropy() <= 1 && defaultAniso_ > 1)
+        {
+#ifdef BGFX_SAMPLER_ANISOTROPIC
+            sflags |= BGFX_SAMPLER_ANISOTROPIC;
+#endif
+        }
+    }
     bgfx::setTexture(0, stex1, texh, (uint32_t)sflags);
     bgfx::setTexture(1, stex2, texh, (uint32_t)sflags);
 
@@ -1228,6 +1320,22 @@ bool GraphicsBgfx::DrawUITriangles(const float* vertices, int numVertices, Textu
     bgfx::TextureHandle texh; texh.idx = GetOrCreateTexture(texture, cache);
     bgfx::setUniform(umvp, mvpArr);
     uint64_t sflags2 = texture ? GetBgfxSamplerFlagsFromTexture(texture) : 0;
+    if (texture)
+    {
+        if (texture->GetFilterMode() == FILTER_TRILINEAR)
+        {
+            if (defaultFilter_ == FILTER_NEAREST)
+                sflags2 |= (BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIP_POINT);
+            else if (defaultFilter_ == FILTER_BILINEAR)
+                sflags2 |= BGFX_SAMPLER_MIP_POINT;
+        }
+        if (texture->GetAnisotropy() <= 1 && defaultAniso_ > 1)
+        {
+#ifdef BGFX_SAMPLER_ANISOTROPIC
+            sflags2 |= BGFX_SAMPLER_ANISOTROPIC;
+#endif
+        }
+    }
     bgfx::setTexture(0, stex1, texh, (uint32_t)sflags2);
     bgfx::setTexture(1, stex2, texh, (uint32_t)sflags2);
 
@@ -1420,7 +1528,20 @@ bool GraphicsBgfx::DrawUIWithMaterial(const float* vertices, int numVertices, Ma
                 if (!t2d) continue;
                 if (!primaryTex) primaryTex = t2d;
 
-                const uint64_t sflags = GetBgfxSamplerFlagsFromTexture(t2d);
+                uint64_t sflags = GetBgfxSamplerFlagsFromTexture(t2d);
+                if (t2d->GetFilterMode() == FILTER_TRILINEAR)
+                {
+                    if (defaultFilter_ == FILTER_NEAREST)
+                        sflags |= (BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIP_POINT);
+                    else if (defaultFilter_ == FILTER_BILINEAR)
+                        sflags |= BGFX_SAMPLER_MIP_POINT;
+                }
+                if (t2d->GetAnisotropy() <= 1 && defaultAniso_ > 1)
+                {
+#ifdef BGFX_SAMPLER_ANISOTROPIC
+                    sflags |= BGFX_SAMPLER_ANISOTROPIC;
+#endif
+                }
                 bgfx::TextureHandle th; th.idx = GetOrCreateTexture(t2d, cache);
                 if (!bgfx::isValid(th)) continue;
 
@@ -1554,20 +1675,88 @@ bool GraphicsBgfx::UpdateTextureRegion(Texture2D* tex, int x, int y, int width, 
 #endif
 }
 
+bool GraphicsBgfx::ReadRenderTargetToImage(Texture2D* color, Image& dest)
+{
+#ifdef URHO3D_BGFX
+    if (!initialized_ || !color)
+        return false;
+
+    auto it = textureCache_.find(color);
+    if (it == textureCache_.end())
+        return false;
+    bgfx::TextureHandle th; th.idx = it->second;
+    if (!bgfx::isValid(th))
+        return false;
+
+    const uint32_t w = color->GetWidth();
+    const uint32_t h = color->GetHeight();
+    std::vector<uint8_t> cpu;
+    cpu.resize(w * h * 4u);
+    const uint32_t targetFrame = bgfx::readTexture(th, cpu.data());
+    // 等待读回完成（阻塞若干帧，避免无限等待）
+    uint32_t last = 0;
+    for (int i = 0; i < 8; ++i)
+    {
+        last = bgfx::frame();
+        if (last >= targetFrame)
+            break;
+    }
+
+    if (!dest.SetSize(w, h, 4))
+        return false;
+    dest.SetData(cpu.data());
+    return true;
+#else
+    (void)color; (void)dest; return false;
+#endif
+}
+
+bool GraphicsBgfx::Blit(Texture2D* dst, Texture2D* src, const IntRect* rect)
+{
+#ifdef URHO3D_BGFX
+    if (!initialized_ || !dst || !src)
+        return false;
+    auto itS = textureCache_.find(src);
+    auto itD = textureCache_.find(dst);
+    if (itS == textureCache_.end() || itD == textureCache_.end())
+        return false;
+    bgfx::TextureHandle hs; hs.idx = itS->second;
+    bgfx::TextureHandle hd; hd.idx = itD->second;
+    if (!bgfx::isValid(hs) || !bgfx::isValid(hd))
+        return false;
+    uint16_t x = 0, y = 0, z = 0, w = (uint16_t)src->GetWidth(), h = (uint16_t)src->GetHeight();
+    if (rect)
+    {
+        x = (uint16_t)Max(0, rect->left_);
+        y = (uint16_t)Max(0, rect->top_);
+        w = (uint16_t)Max(0, rect->Width());
+        h = (uint16_t)Max(0, rect->Height());
+    }
+    // 使用保留的拷贝视图 id（30）
+    const uint16_t blitView = 30;
+    const uint8_t dstMip = 0;
+    const uint8_t srcMip = 0;
+    const uint16_t dstX = 0, dstY = 0, dstZ = 0;
+    const uint16_t depth = 1;
+    bgfx::blit(blitView, hd, dstMip, dstX, dstY, dstZ, hs, srcMip, x, y, z, w, h, depth);
+    return true;
+#else
+    (void)dst; (void)src; (void)rect; return false;
+#endif
+}
+
 bool GraphicsBgfx::SetFrameBuffer(Texture2D* color, Texture2D* depth)
 {
 #ifdef URHO3D_BGFX
-    // 构造 key 并查询缓存
+    // 构造 key 并查询缓存（若存在旧的 FB，先销毁以防尺寸或句柄变化导致无效引用）
     FBKey key{color, depth};
     auto it = fbCache_.find(key);
     if (it != fbCache_.end())
     {
-        bgfx::FrameBufferHandle fh; fh.idx = it->second;
-        if (bgfx::isValid(fh))
-        {
-            bgfx::setViewFrameBuffer(0, fh);
-            return true;
-        }
+        bgfx::FrameBufferHandle oldFh; oldFh.idx = it->second;
+        if (bgfx::isValid(oldFh))
+            bgfx::destroy(oldFh);
+        fbCache_.erase(it);
     }
 
     // 构建附件
@@ -1577,33 +1766,21 @@ bool GraphicsBgfx::SetFrameBuffer(Texture2D* color, Texture2D* depth)
     if (color)
     {
         unsigned short ti = GetOrCreateTexture(color, nullptr);
-        if (ti != bgfx::kInvalidHandle)
+        if (ti != bgfx::kInvalidHandle && ti != ui_.whiteTex)
         {
-            atts[num].init(bgfx::TextureHandle{ti});
+            // 明确不做自动 mip 生成/resolve
+            atts[num].init(bgfx::TextureHandle{ti}, bgfx::Access::Write, 0, 1, 0, BGFX_RESOLVE_NONE);
             ++num;
             texW = color->GetWidth();
             texH = color->GetHeight();
         }
-    }
-    if (depth)
-    {
-        unsigned short ti = GetOrCreateTexture(depth, nullptr);
-        if (ti != bgfx::kInvalidHandle)
+        else
         {
-            // 检查尺寸一致性；若不一致则忽略 depth 并给出日志
-            if (texW != 0 && (depth->GetWidth() != (unsigned)texW || depth->GetHeight() != (unsigned)texH))
-            {
-                URHO3D_LOGWARNINGF("BGFX SetFrameBuffer: depth attachment size %ux%u mismatches color %dx%d, ignoring depth",
-                    depth->GetWidth(), depth->GetHeight(), texW, texH);
-            }
-            else
-            {
-                if (texW == 0) { texW = depth->GetWidth(); texH = depth->GetHeight(); }
-                atts[num].init(bgfx::TextureHandle{ti});
-                ++num;
-            }
+            URHO3D_LOGERROR("BGFX SetFrameBuffer: failed to acquire RT texture handle for color attachment");
         }
     }
+    // 2D-only：忽略深度附件，避免在 D3D11 下因格式不匹配导致的 FrameBuffer 创建失败
+    (void)depth;
     if (num==0)
     {
         URHO3D_LOGERROR("SetFrameBuffer called with no valid attachments");
