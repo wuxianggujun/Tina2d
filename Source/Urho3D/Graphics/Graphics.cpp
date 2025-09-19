@@ -2199,6 +2199,30 @@ bool Graphics::BgfxUpdateTextureRegion(Texture2D* texture, int x, int y, int wid
     (void)texture; (void)x; (void)y; (void)width; (void)height; (void)data; (void)level; return false;
 #endif
 }
+
+#ifdef URHO3D_BGFX
+void Graphics::SetUseOffscreen(bool enable)
+{
+    if (useOffscreen_ == enable)
+        return;
+    useOffscreen_ = enable;
+    if (enable)
+    {
+        EnsureOffscreenRT();
+        // 下次 ResetRenderTargets 会将 offscreen 绑定为颜色 RT
+    }
+    else
+    {
+        // 关闭时立即回到 backbuffer
+        if (bgfx_ && bgfx_->IsInitialized())
+        {
+            bgfxColorRT_ = nullptr;
+            bgfxDepthRT_ = nullptr;
+            bgfx_->ResetFrameBuffer();
+        }
+    }
+}
+#endif
 void Graphics::EndUIDraw(RenderSurface* surface)
 {
 #ifdef URHO3D_BGFX

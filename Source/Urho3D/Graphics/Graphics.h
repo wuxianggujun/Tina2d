@@ -382,6 +382,9 @@ public:
     void BgfxReleaseTexture(Texture2D* texture);
     /// BGFX：更新纹理子矩形（数据应为 RGBA8；若纹理为 A8 将自动扩展）。
     bool BgfxUpdateTextureRegion(Texture2D* texture, int x, int y, int width, int height, const void* data, unsigned level = 0);
+    /// 运行时切换“默认离屏渲染 + backbuffer 呈现”方案（默认 false）。
+    void SetUseOffscreen(bool enable);
+    bool GetUseOffscreen() const { return useOffscreen_; }
 #endif
 
     /// 开始一次 UI 提交（统一设置渲染目标与视口）。返回 true 表示由后端处理，UI 层可跳过旧管线路径。
