@@ -1479,38 +1479,7 @@ bool GraphicsBgfx::DrawColored(PrimitiveType prim, const float* vertices, int nu
         .add(bgfx::Attrib::Color0,   4, bgfx::AttribType::Uint8, true)
         .end();
 
-    // 复制并重打包颜色
     struct Vtx { float x,y,z; uint32_t abgr; };
-    if (bgfx::getAvailTransientVertexBuffer((uint32_t)numVertices, layout) < (uint32_t)numVertices)
-        return false;
-    bgfx::TransientVertexBuffer tvb;
-    bgfx::allocTransientVertexBuffer(&tvb, (uint32_t)numVertices, layout);
-    auto* vdst = reinterpret_cast<Vtx*>(tvb.data);
-    for (int i = 0; i < numVertices; ++i)
-    {
-        const float* src = vertices + i * 4; // x,y,z,colorPackedInFloat
-        uint32_t colorPacked;
-        memcpy(&colorPacked, &src[3], sizeof(uint32_t));
-        vdst[i] = { src[0], src[1], src[2], colorPacked };
-    }
-
-    // 统一 MVP 与纹理（白纹理）
-    float mvpArr[16] = {
-        mvp.m00_, mvp.m10_, mvp.m20_, mvp.m30_,
-        mvp.m01_, mvp.m11_, mvp.m21_, mvp.m31_,
-        mvp.m02_, mvp.m12_, mvp.m22_, mvp.m32_,
-        mvp.m03_, mvp.m13_, mvp.m23_, mvp.m33_,
-    };
-    bgfx::UniformHandle umvp; umvp.idx = ui_.u_mvp;
-    if (bgfx::isValid(umvp))
-        bgfx::setUniform(umvp, mvpArr);
-
-    bgfx::UniformHandle stex1; stex1.idx = ui_.s_tex;
-    bgfx::UniformHandle stex2; stex2.idx = ui_.s_texAlt;
-    bgfx::TextureHandle texw; texw.idx = ui_.whiteTex;
-    // 绑定到两个采样器（兼容不同片元程序）
-    bgfx::setTexture(0, stex1, texw);
-    bgfx::setTexture(1, stex2, texw);
 
     // 选择拓扑
     uint64_t primState = 0;
@@ -1523,19 +1492,81 @@ bool GraphicsBgfx::DrawColored(PrimitiveType prim, const float* vertices, int nu
     default: primState = 0; break; // TRIANGLE_LIST
     }
 
+    // 程序与常量
     bgfx::ProgramHandle ph; ph.idx = ui_.programDiff;
-    bgfx::setState((state_ | BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | primState));
-    bgfx::setVertexBuffer(0, &tvb);
-    // 为非索引绘制构造顺序索引
-    if (numVertices > 0xFFFF)
-        return false;
-    bgfx::TransientIndexBuffer tib;
-    bgfx::allocTransientIndexBuffer(&tib, (uint32_t)numVertices, false);
-    auto* idst = reinterpret_cast<uint16_t*>(tib.data);
-    for (int i = 0; i < numVertices; ++i)
-        idst[i] = (uint16_t)i;
-    bgfx::setIndexBuffer(&tib);
-    bgfx::submit(0, ph);
+    bgfx::UniformHandle umvp; umvp.idx = ui_.u_mvp;
+    bgfx::UniformHandle stex1; stex1.idx = ui_.s_tex;
+    bgfx::UniformHandle stex2; stex2.idx = ui_.s_texAlt;
+    bgfx::TextureHandle texw; texw.idx = ui_.whiteTex;
+    float mvpArr[16] = {
+        mvp.m00_, mvp.m10_, mvp.m20_, mvp.m30_,
+        mvp.m01_, mvp.m11_, mvp.m21_, mvp.m31_,
+        mvp.m02_, mvp.m12_, mvp.m22_, mvp.m32_,
+        mvp.m03_, mvp.m13_, mvp.m23_, mvp.m33_,
+    };
+
+    // 自动分批：根据 transient 缓冲区可用空间与索引宽度选择每批顶点数
+    int remaining = numVertices;
+    int start = 0;
+    while (remaining > 0)
+    {
+        // 首先尝试全部剩余顶点
+        uint32_t want = (uint32_t)remaining;
+        // 顶点可用数
+        uint32_t availVB = bgfx::getAvailTransientVertexBuffer(want, layout);
+        if (availVB == 0)
+            return false;
+        // 索引缓冲：若超出 16 位范围，使用 32 位索引
+        bool use32 = (want > 0xFFFFu);
+        uint32_t availIB = bgfx::getAvailTransientIndexBuffer(want, use32);
+        if (availIB == 0)
+            return false;
+        uint32_t batch = std::min(want, std::min(availVB, availIB));
+
+        // 为了兼顾 strip 拓扑的连续性，这里尽量整批提交。
+        // DebugRenderer 仅使用 LIST 拓扑，可安全分批；如外部传入 STRIP，则尽量一次性提交（若 batch < want 则可能出现断裂）。
+        // 若严格需要 strip 连续分批，可在此按拓扑插入重复顶点/索引（此处保持简单实现）。
+
+        bgfx::TransientVertexBuffer tvb;
+        bgfx::allocTransientVertexBuffer(&tvb, batch, layout);
+        auto* vdst = reinterpret_cast<Vtx*>(tvb.data);
+        const float* srcBase = vertices + start * 4; // 每顶点 4 float: x,y,z,colorBitsAsFloat
+        for (uint32_t i = 0; i < batch; ++i)
+        {
+            const float* src = srcBase + i * 4;
+            uint32_t colorPacked; memcpy(&colorPacked, &src[3], sizeof(uint32_t));
+            vdst[i] = { src[0], src[1], src[2], colorPacked };
+        }
+
+        bgfx::TransientIndexBuffer tib;
+        use32 = (batch > 0xFFFFu);
+        bgfx::allocTransientIndexBuffer(&tib, batch, use32);
+        if (use32)
+        {
+            auto* idst = reinterpret_cast<uint32_t*>(tib.data);
+            for (uint32_t i = 0; i < batch; ++i)
+                idst[i] = i;
+        }
+        else
+        {
+            auto* idst = reinterpret_cast<uint16_t*>(tib.data);
+            for (uint32_t i = 0; i < batch; ++i)
+                idst[i] = (uint16_t)i;
+        }
+
+        // 设置状态、常量与纹理（每个提交都需要设置）
+        if (bgfx::isValid(umvp))
+            bgfx::setUniform(umvp, mvpArr);
+        bgfx::setTexture(0, stex1, texw);
+        bgfx::setTexture(1, stex2, texw);
+        bgfx::setState((state_ | BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | primState));
+        bgfx::setVertexBuffer(0, &tvb);
+        bgfx::setIndexBuffer(&tib);
+        bgfx::submit(0, ph);
+
+        start += (int)batch;
+        remaining -= (int)batch;
+    }
     return true;
 #else
     (void)prim; (void)vertices; (void)numVertices; (void)mvp; return false;
