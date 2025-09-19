@@ -1773,6 +1773,11 @@ void Graphics::SetDepthBias(float constantBias, float slopeScaledBias)
 {
     GAPI gapi = Graphics::GetGAPI();
 
+#ifdef URHO3D_BGFX
+    if (bgfx_ && bgfx_->IsInitialized())
+        return bgfx_->SetDepthBias(constantBias, slopeScaledBias);
+#endif
+
 #ifdef URHO3D_OPENGL
     if (gapi == GAPI_OPENGL)
         return SetDepthBias_OGL(constantBias, slopeScaledBias);
@@ -1828,6 +1833,11 @@ void Graphics::SetFillMode(FillMode mode)
 {
     GAPI gapi = Graphics::GetGAPI();
 
+#ifdef URHO3D_BGFX
+    if (bgfx_ && bgfx_->IsInitialized())
+        return bgfx_->SetFillMode(mode);
+#endif
+
 #ifdef URHO3D_OPENGL
     if (gapi == GAPI_OPENGL)
         return SetFillMode_OGL(mode);
@@ -1842,6 +1852,11 @@ void Graphics::SetFillMode(FillMode mode)
 void Graphics::SetLineAntiAlias(bool enable)
 {
     GAPI gapi = Graphics::GetGAPI();
+
+#ifdef URHO3D_BGFX
+    if (bgfx_ && bgfx_->IsInitialized())
+        return bgfx_->SetLineAntiAlias(enable);
+#endif
 
 #ifdef URHO3D_OPENGL
     if (gapi == GAPI_OPENGL)
@@ -1902,6 +1917,17 @@ void Graphics::SetClipPlane(bool enable, const Plane& clipPlane, const Matrix3x4
 {
     GAPI gapi = Graphics::GetGAPI();
 
+#ifdef URHO3D_BGFX
+    if (bgfx_ && bgfx_->IsInitialized())
+    {
+        // 将平面从世界/视空间转换到后续使用空间由上层处理；2D-only 暂记录为无效果。
+        (void)view; (void)projection;
+        Vector4 p(clipPlane.normal_.x_, clipPlane.normal_.y_, clipPlane.normal_.z_, clipPlane.d_);
+        bgfx_->SetClipPlane(enable, p);
+        return;
+    }
+#endif
+
 #ifdef URHO3D_OPENGL
     if (gapi == GAPI_OPENGL)
         return SetClipPlane_OGL(enable, clipPlane, view, projection);
@@ -1917,6 +1943,11 @@ void Graphics::SetStencilTest(bool enable, CompareMode mode, StencilOp pass, Ste
     u32 compareMask, u32 writeMask)
 {
     GAPI gapi = Graphics::GetGAPI();
+
+#ifdef URHO3D_BGFX
+    if (bgfx_ && bgfx_->IsInitialized())
+        return bgfx_->SetStencilTest(enable, mode, pass, fail, zFail, stencilRef, compareMask, writeMask);
+#endif
 
 #ifdef URHO3D_OPENGL
     if (gapi == GAPI_OPENGL)
@@ -1991,6 +2022,18 @@ bool Graphics::BgfxDrawUITriangles(const float* vertices, int numVertices, Textu
     return bgfx_->DrawUITriangles(vertices, numVertices, texture, cache, mvp);
 }
 
+bool Graphics::BgfxDrawUIWithMaterial(const float* vertices, int numVertices, Material* material, const Matrix4& mvp)
+{
+#ifdef URHO3D_BGFX
+    if (!bgfx_)
+        return false;
+    auto* cache = GetSubsystem<ResourceCache>();
+    return bgfx_->DrawUIWithMaterial(vertices, numVertices, material, cache, mvp);
+#else
+    (void)vertices; (void)numVertices; (void)material; (void)mvp; return false;
+#endif
+}
+
 bool Graphics::BgfxCreateTextureFromImage(Texture2D* texture, Image* image, bool useAlpha)
 {
     if (!bgfx_)
@@ -2027,6 +2070,17 @@ void Graphics::BgfxReleaseTexture(Texture2D* texture)
     bgfx_->ReleaseTexture(texture);
 #else
     (void)texture;
+#endif
+}
+
+bool Graphics::BgfxUpdateTextureRegion(Texture2D* texture, int x, int y, int width, int height, const void* data, unsigned level)
+{
+#ifdef URHO3D_BGFX
+    if (!bgfx_)
+        return false;
+    return bgfx_->UpdateTextureRegion(texture, x, y, width, height, data, level);
+#else
+    (void)texture; (void)x; (void)y; (void)width; (void)height; (void)data; (void)level; return false;
 #endif
 }
 void Graphics::EndUIDraw(RenderSurface* surface)

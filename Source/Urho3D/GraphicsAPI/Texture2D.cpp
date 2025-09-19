@@ -270,25 +270,15 @@ bool Texture2D::SetData(unsigned level, int x, int y, int width, int height, con
 #ifdef URHO3D_BGFX
     if (gapi == GAPI_BGFX)
     {
-        // 仅支持整幅（level=0, x=y=0, 尺寸等于纹理尺寸）的上传/更新，满足 Urho2D 合图构建路径。
-        if (level == 0 && x == 0 && y == 0 && width == width_ && height == height_ && data)
-        {
-            // 将 RGBA8 数据包装成临时 Image，再复用 BGFX 创建逻辑，确保缓存映射建立。
-            auto* cache = GetSubsystem<ResourceCache>();
-            auto* graphics = GetSubsystem<Graphics>();
-            if (!graphics || !graphics->IsBgfxActive())
-                return false;
+        auto* graphics = GetSubsystem<Graphics>();
+        if (!graphics || !graphics->IsBgfxActive())
+            return false;
 
-            SharedPtr<Image> img(new Image(context_));
-            if (!img->SetSize(width, height, 4))
-                return false;
-            img->SetData(reinterpret_cast<const unsigned char*>(data));
+        if (!data || width <= 0 || height <= 0)
+            return false;
 
-            // useAlpha=false：数据已为 RGBA8
-            return graphics->BgfxCreateTextureFromImage(this, img, false);
-        }
-        // 非整幅更新：当前不支持，返回 false，避免误用。
-        return false;
+        // 支持整幅与子矩形更新。若尚未创建 bgfx 纹理，会先分配空纹理存储再更新。
+        return graphics->BgfxUpdateTextureRegion(this, x, y, width, height, data, level);
     }
 #endif
 

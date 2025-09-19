@@ -10,13 +10,17 @@
 #include "../Math/Rect.h"
 #include "../Math/Color.h"
 #include "../Math/Matrix4.h"
+#include "../Math/Vector4.h"
 #include <unordered_map>
+#include <string>
 
 namespace Urho3D
 {
 
 class Texture2D;
 class ResourceCache;
+class Material;
+class Variant;
 
 /// bgfx 渲染器薄封装（最小骨架）。
 /// 说明：仅提供初始化/帧提交等基础能力，具体渲染管线、资源管理与 Urho3D 类型映射将在后续阶段逐步完善。
@@ -58,6 +62,12 @@ public:
     void SetDepthTest(CompareMode mode);
     void SetDepthWrite(bool enable);
     void SetScissor(bool enable, const IntRect& rect);
+    void SetStencilTest(bool enable, CompareMode mode, StencilOp pass, StencilOp fail, StencilOp zFail,
+                        unsigned stencilRef, unsigned compareMask, unsigned writeMask);
+    void SetFillMode(FillMode mode);
+    void SetDepthBias(float constantBias, float slopeScaledBias);
+    void SetLineAntiAlias(bool enable);
+    void SetClipPlane(bool enable, const Vector4& clipPlane);
 
     /// 是否已完成初始化。
     bool IsInitialized() const { return initialized_; }
@@ -73,6 +83,8 @@ public:
     bool DrawTriangles(const void* tvertices /*SpriteBatchBase::TVertex[]*/, int numVertices, ResourceCache* cache, const Matrix4& mvp);
     // UI: 直接从 UI 顶点浮点数组绘制三角形（pos, color, uv，按 UI_VERTEX_SIZE=6 排列）
     bool DrawUITriangles(const float* vertices, int numVertices, Texture2D* texture, ResourceCache* cache, const Matrix4& mvp);
+    // UI: 使用自定义材质（贴图+uniform），仍然复用 UI 顶点布局与通用 UI 程序集
+    bool DrawUIWithMaterial(const float* vertices, int numVertices, Material* material, ResourceCache* cache, const Matrix4& mvp);
 
     // 从 Image 创建 BGFX 纹理并保存到映射（供 UI 字体等路径使用）
     bool CreateTextureFromImage(Texture2D* tex, class Image* image, bool useAlpha);
@@ -82,6 +94,9 @@ public:
     // 渲染目标与帧缓冲
     bool SetFrameBuffer(Texture2D* color, Texture2D* depth);
     bool ResetFrameBuffer();
+
+    // 纹理局部更新（level=0 默认），数据应为 RGBA8；若纹理为 A8 则自动扩展为 RGBA8。
+    bool UpdateTextureRegion(Texture2D* tex, int x, int y, int width, int height, const void* data, unsigned level = 0);
 
 private:
     void ApplyState();
@@ -112,6 +127,11 @@ private:
     // 纹理缓存：Urho3D Texture2D* -> bgfx::TextureHandle.idx
     std::unordered_map<const Texture2D*, unsigned short> textureCache_;
     unsigned short GetOrCreateTexture(Texture2D* tex, class ResourceCache* cache);
+    // 动态 uniform/sampler 缓存
+    unsigned short GetOrCreateSampler(const char* name);
+    unsigned short GetOrCreateVec4(const char* name);
+    unsigned short GetOrCreateMat4(const char* name);
+    void SetUniformByVariant(const char* name, const Variant& v);
 
     struct FBKey
     {
@@ -121,6 +141,26 @@ private:
     };
     struct FBKeyHash { size_t operator()(const FBKey& k) const { return (reinterpret_cast<size_t>(k.color)>>4) ^ (reinterpret_cast<size_t>(k.depth)<<1); } };
     std::unordered_map<FBKey, unsigned short, FBKeyHash> fbCache_;
+
+    // 状态扩展
+    bool stencilEnabled_{};
+    CompareMode stencilFunc_{CMP_ALWAYS};
+    StencilOp stencilPass_{OP_KEEP};
+    StencilOp stencilFail_{OP_KEEP};
+    StencilOp stencilZFail_{OP_KEEP};
+    unsigned stencilRef_{};
+    unsigned stencilReadMask_{0xFF};
+    unsigned stencilWriteMask_{0xFF};
+    FillMode fillMode_{FILL_SOLID};
+    float depthBiasConst_{};
+    float depthBiasSlope_{};
+    bool lineAA_{};
+    bool clipPlaneEnabled_{};
+    Vector4 clipPlane_{};
+
+    std::unordered_map<std::string, unsigned short> samplerCache_;
+    std::unordered_map<std::string, unsigned short> vec4Cache_;
+    std::unordered_map<std::string, unsigned short> mat4Cache_;
 };
 
 } // namespace Urho3D

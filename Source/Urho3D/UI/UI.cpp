@@ -1077,8 +1077,17 @@ void UI::Render(VertexBuffer* buffer, const Vector<UIBatch>& batches, unsigned b
 
                 const int numVerts = (batch.vertexEnd_ - batch.vertexStart_) / UI_VERTEX_SIZE;
                 const float* src = &vdata->At(batch.vertexStart_);
-                Texture2D* tex2d = static_cast<Texture2D*>(batch.texture_);
-                graphics_->SubmitUIBatch(src, numVerts, tex2d, scissor, batch.blendMode_, proj2);
+                if (batch.customMaterial_)
+                {
+                    graphics_->SetBlendMode(batch.blendMode_);
+                    graphics_->SetScissorTest(true, scissor);
+                    graphics_->BgfxDrawUIWithMaterial(src, numVerts, batch.customMaterial_, proj2);
+                }
+                else
+                {
+                    Texture2D* tex2d = static_cast<Texture2D*>(batch.texture_);
+                    graphics_->SubmitUIBatch(src, numVerts, tex2d, scissor, batch.blendMode_, proj2);
+                }
             }
             graphics_->EndUIDraw(surface);
             return;
