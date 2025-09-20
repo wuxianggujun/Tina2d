@@ -83,7 +83,7 @@ bool Sound::BeginLoad(Deserializer& source)
 
 bool Sound::LoadOggVorbis(Deserializer& source)
 {
-    unsigned dataSize = source.GetSize();
+    unsigned dataSize = (unsigned)source.GetSize();
     SharedArrayPtr<signed char> data(new signed char[dataSize]);
     source.Read(data.Get(), dataSize);
 
@@ -179,7 +179,7 @@ bool Sound::LoadWav(Deserializer& source)
     }
 
     // Allocate sound and load audio data
-    unsigned length = header.dataLength_;
+    unsigned length = (unsigned)header.dataLength_;
     SetSize(length);
     SetFormat(header.frequency_, header.bits_ == 16, header.channels_ == 2);
     source.Read(data_.Get(), length);
@@ -196,7 +196,7 @@ bool Sound::LoadWav(Deserializer& source)
 
 bool Sound::LoadRaw(Deserializer& source)
 {
-    unsigned dataSize = source.GetSize();
+    unsigned dataSize = (unsigned)source.GetSize();
     SetSize(dataSize);
     return source.Read(data_.Get(), dataSize) == dataSize;
 }

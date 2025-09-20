@@ -321,23 +321,12 @@ bool View::Define(RenderSurface* renderTarget, Viewport* viewport)
         if (sourceView_ && sourceView_->scene_ == scene_ && sourceView_->renderPath_ == renderPath_)
         {
             // Copy properties needed later in rendering
-        #ifndef TINA2D_DISABLE_3D
-            deferred_ = sourceView_->deferred_;
-            deferredAmbient_ = sourceView_->deferredAmbient_;
-            useLitBase_ = sourceView_->useLitBase_;
-            hasScenePasses_ = sourceView_->hasScenePasses_;
-            noStencil_ = sourceView_->noStencil_;
-            lightVolumeCommand_ = sourceView_->lightVolumeCommand_;
-            forwardLightsCommand_ = sourceView_->forwardLightsCommand_;
-        #else
+            // 2D-only：不复制 3D 渲染相关标志
             deferred_ = false;
             deferredAmbient_ = false;
             useLitBase_ = false;
             hasScenePasses_ = sourceView_->hasScenePasses_;
             noStencil_ = sourceView_->noStencil_;
-            lightVolumeCommand_ = nullptr;
-            forwardLightsCommand_ = nullptr;
-        #endif
             octree_ = sourceView_->octree_;
             return true;
         }
@@ -361,8 +350,7 @@ bool View::Define(RenderSurface* renderTarget, Viewport* viewport)
     useLitBase_ = false;
     hasScenePasses_ = false;
     noStencil_ = false;
-    lightVolumeCommand_ = nullptr;
-    forwardLightsCommand_ = nullptr;
+    // 2D-only：无 3D 渲染命令指针
 
     scenePasses_.Clear();
     geometriesUpdated_ = false;
@@ -470,29 +458,12 @@ bool View::Define(RenderSurface* renderTarget, Viewport* viewport)
             if (CheckViewportWrite(command))
                 deferredAmbient_ = true;
         }
-        else if (command.type_ == CMD_LIGHTVOLUMES)
-        {
-        #ifndef TINA2D_DISABLE_3D
-            lightVolumeCommand_ = &command;
-            deferred_ = true;
-        #endif
-        }
-        else if (command.type_ == CMD_FORWARDLIGHTS)
-        {
-        #ifndef TINA2D_DISABLE_3D
-            forwardLightsCommand_ = &command;
-            useLitBase_ = command.useLitBase_;
-        #endif
-        }
+        // CMD_LIGHTVOLUMES / CMD_FORWARDLIGHTS 已移除（2D-only）
     }
 
-#ifdef TINA2D_DISABLE_3D
-    // 2D-only：明确关闭延迟渲染相关标记，避免触发多余的缓冲策略
+    // 2D-only：明确关闭延迟渲染相关标记
     deferred_ = false;
     deferredAmbient_ = false;
-    lightVolumeCommand_ = nullptr;
-    forwardLightsCommand_ = nullptr;
-#endif
 
     drawShadows_ = renderer_->GetDrawShadows();
     materialQuality_ = renderer_->GetMaterialQuality();
@@ -1052,79 +1023,11 @@ void View::GetLightBatches()
                 lightQueue.shadowMap_ = nullptr;
                 lightQueue.litBaseBatches_.Clear(maxSortedInstances);
                 lightQueue.litBatches_.Clear(maxSortedInstances);
-                if (forwardLightsCommand_)
-                {
-                    SetQueueShaderDefines(lightQueue.litBaseBatches_, *forwardLightsCommand_);
-                    SetQueueShaderDefines(lightQueue.litBatches_, *forwardLightsCommand_);
-                }
-                else
-                {
-                    lightQueue.litBaseBatches_.hasExtraDefines_ = false;
-                    lightQueue.litBatches_.hasExtraDefines_ = false;
-                }
+                lightQueue.litBaseBatches_.hasExtraDefines_ = false;
+                lightQueue.litBatches_.hasExtraDefines_ = false;
                 lightQueue.volumeBatches_.Clear();
 
-                // Allocate shadow map now
-                if (shadowSplits > 0)
-                {
-                    lightQueue.shadowMap_ = renderer_->GetShadowMap(light, cullCamera_, viewSize_.x_, viewSize_.y_);
-                    // If did not manage to get a shadow map, convert the light to unshadowed
-                    if (!lightQueue.shadowMap_)
-                        shadowSplits = 0;
-                }
-
-                // Setup shadow batch queues
-                lightQueue.shadowSplits_.Resize(shadowSplits);
-                for (i32 j = 0; j < shadowSplits; ++j)
-                {
-                    ShadowBatchQueue& shadowQueue = lightQueue.shadowSplits_[j];
-                    Camera* shadowCamera = query.shadowCameras_[j];
-                    shadowQueue.shadowCamera_ = shadowCamera;
-                    shadowQueue.nearSplit_ = query.shadowNearSplits_[j];
-                    shadowQueue.farSplit_ = query.shadowFarSplits_[j];
-                    shadowQueue.shadowBatches_.Clear(maxSortedInstances);
-
-                    // Setup the shadow split viewport and finalize shadow camera parameters
-                    shadowQueue.shadowViewport_ = GetShadowMapViewport(light, j, lightQueue.shadowMap_);
-                    FinalizeShadowCamera(shadowCamera, light, shadowQueue.shadowViewport_, query.shadowCasterBox_[j]);
-
-                    // Loop through shadow casters
-                    for (Vector<Drawable*>::ConstIterator k = query.shadowCasters_.Begin() + query.shadowCasterBegin_[j];
-                         k < query.shadowCasters_.Begin() + query.shadowCasterEnd_[j]; ++k)
-                    {
-                        Drawable* drawable = *k;
-                        // If drawable is not in actual view frustum, mark it in view here and check its geometry update type
-                        if (!drawable->IsInView(frame_, true))
-                        {
-                            drawable->MarkInView(frame_.frameNumber_);
-                            UpdateGeometryType type = drawable->GetUpdateGeometryType();
-                            if (type == UPDATE_MAIN_THREAD)
-                                nonThreadedGeometries_.Push(drawable);
-                            else if (type == UPDATE_WORKER_THREAD)
-                                threadedGeometries_.Push(drawable);
-                        }
-
-                        const Vector<SourceBatch>& batches = drawable->GetBatches();
-
-                        for (const SourceBatch& srcBatch : batches)
-                        {
-                            Technique* tech = GetTechnique(drawable, srcBatch.material_);
-                            if (!srcBatch.geometry_ || !srcBatch.numWorldTransforms_ || !tech)
-                                continue;
-
-                            Pass* pass = tech->GetSupportedPass(Technique::shadowPassIndex);
-                            // Skip if material has no shadow pass
-                            if (!pass)
-                                continue;
-
-                            Batch destBatch(srcBatch);
-                            destBatch.pass_ = pass;
-                            destBatch.zone_ = nullptr;
-
-                            AddBatchToQueue(shadowQueue.shadowBatches_, destBatch, tech);
-                        }
-                    }
-                }
+                // 2D-only：不处理阴影分配与阴影批次
 
                 // Process lit geometries
                 for (Vector<Drawable*>::ConstIterator j = query.litGeometries_.Begin(); j != query.litGeometries_.End(); ++j)
@@ -1139,25 +1042,7 @@ void View::GetLightBatches()
                         maxLightsDrawables_.Insert(drawable);
                 }
 
-                // In deferred modes, store the light volume batch now. Since light mask 8 lowest bits are output to the stencil,
-                // lights that have all zeroes in the low 8 bits can be skipped; they would not affect geometry anyway
-                if (deferred_ && (light->GetLightMask() & 0xffu) != 0)
-                {
-                    Batch volumeBatch;
-                    volumeBatch.geometry_ = renderer_->GetLightGeometry(light);
-                    volumeBatch.geometryType_ = GEOM_STATIC;
-                    volumeBatch.worldTransform_ = &light->GetVolumeTransform(cullCamera_);
-                    volumeBatch.numWorldTransforms_ = 1;
-                    volumeBatch.lightQueue_ = &lightQueue;
-                    volumeBatch.distance_ = light->GetDistance();
-                    volumeBatch.material_ = nullptr;
-                    volumeBatch.pass_ = nullptr;
-                    volumeBatch.zone_ = nullptr;
-                    renderer_->SetLightVolumeBatchShaders(volumeBatch, cullCamera_, lightVolumeCommand_->vertexShaderName_,
-                        lightVolumeCommand_->pixelShaderName_, lightVolumeCommand_->vertexShaderDefines_,
-                        lightVolumeCommand_->pixelShaderDefines_);
-                    lightQueue.volumeBatches_.Push(volumeBatch);
-                }
+                // 2D-only：不处理体积光批次
             }
             // Per-vertex light
             else
@@ -1672,45 +1557,7 @@ void View::ExecuteRenderPathCommands()
 #endif
                 break;
 
-            case CMD_LIGHTVOLUMES:
-#ifndef TINA2D_DISABLE_3D
-                // Render shadow maps + light volumes（3D-only）
-                if (!actualView->lightQueues_.Empty())
-                {
-                    URHO3D_PROFILE(RenderLightVolumes);
-
-                    SetRenderTargets(command);
-                    for (Vector<LightBatchQueue>::Iterator i = actualView->lightQueues_.Begin(); i != actualView->lightQueues_.End(); ++i)
-                    {
-                        // If reusing shadowmaps, render each of them before the lit batches
-                        if (renderer_->GetReuseShadowMaps() && NeedRenderShadowMap(*i))
-                        {
-                            RenderShadowMap(*i);
-                            SetRenderTargets(command);
-                        }
-
-                        SetTextures(command);
-
-                        if (command.shaderParameters_.Size())
-                        {
-                            graphics_->ClearParameterSources();
-                            passCommand_ = &command;
-                        }
-
-                        for (Batch& volumeBatch : i->volumeBatches_)
-                        {
-                            SetupLightVolumeBatch(volumeBatch);
-                            volumeBatch.Draw(this, camera_, false);
-                        }
-
-                        passCommand_ = nullptr;
-                    }
-
-                    graphics_->SetScissorTest(false);
-                    graphics_->SetStencilTest(false);
-                }
-#endif
-                break;
+            // CMD_LIGHTVOLUMES 已移除（2D-only）
 
             case CMD_RENDERUI:
                 {

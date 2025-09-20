@@ -27,7 +27,6 @@ enum RenderCommandType
     CMD_SCENEPASS,
     CMD_QUAD,
     CMD_FORWARDLIGHTS,
-    CMD_LIGHTVOLUMES,
     CMD_RENDERUI,
     CMD_SENDEVENT
 };

@@ -21,7 +21,6 @@ static const char* commandTypeNames[] =
     "scenepass",
     "quad",
     "forwardlights",
-    "lightvolumes",
     "renderui",
     "sendevent",
     nullptr
@@ -138,7 +137,6 @@ void RenderPathCommand::Load(const XMLElement& element)
             useLitBase_ = element.GetBool("uselitbase");
         break;
 
-    case CMD_LIGHTVOLUMES:
     case CMD_QUAD:
         vertexShaderName_ = element.GetAttribute("vs");
         pixelShaderName_ = element.GetAttribute("ps");

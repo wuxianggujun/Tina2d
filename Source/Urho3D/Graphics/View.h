@@ -218,21 +218,6 @@ private:
     void ProcessLight(LightQueryResult& query, i32 threadIndex);
     /// Process shadow casters' visibilities and build their combined view- or projection-space bounding box.
     void ProcessShadowCasters(LightQueryResult& query, const Vector<Drawable*>& drawables, i32 splitIndex);
-    /// Set up initial shadow camera view(s).
-    void SetupShadowCameras(LightQueryResult& query);
-    /// Set up a directional light shadow camera.
-    void SetupDirLightShadowCamera(Camera* shadowCamera, Light* light, float nearSplit, float farSplit);
-    /// Finalize shadow camera view after shadow casters and the shadow map are known.
-    void
-        FinalizeShadowCamera(Camera* shadowCamera, Light* light, const IntRect& shadowViewport, const BoundingBox& shadowCasterBox);
-    /// Quantize a directional light shadow camera view to eliminate swimming.
-    void
-        QuantizeDirLightShadowCamera(Camera* shadowCamera, Light* light, const IntRect& shadowViewport, const BoundingBox& viewBox);
-    /// Check visibility of one shadow caster.
-    bool IsShadowCasterVisible(Drawable* drawable, BoundingBox lightViewBox, Camera* shadowCamera, const Matrix3x4& lightView,
-        const Frustum& lightViewFrustum, const BoundingBox& lightViewFrustumBox);
-    /// Return the viewport for a shadow map split.
-    IntRect GetShadowMapViewport(Light* light, int splitIndex, Texture2D* shadowMap);
     /// Find and set a new zone for a drawable when it has moved.
     void FindZone(Drawable* drawable);
     /// Return material technique, considering the drawable's LOD distance.
@@ -245,12 +230,6 @@ private:
     void AddBatchToQueue(BatchQueue& queue, Batch& batch, Technique* tech, bool allowInstancing = true, bool allowShadows = true);
     /// Prepare instancing buffer by filling it with all instance transforms.
     void PrepareInstancingBuffer();
-    /// Set up a light volume rendering batch.
-    void SetupLightVolumeBatch(Batch& batch);
-    /// Check whether a light queue needs shadow rendering.
-    bool NeedRenderShadowMap(const LightBatchQueue& queue);
-    /// Render a shadow map.
-    void RenderShadowMap(const LightBatchQueue& queue);
     /// Return the proper depth-stencil surface to use for a rendertarget.
     RenderSurface* GetDepthStencil(RenderSurface* renderTarget);
     /// Helper function to get the render surface from a texture. 2D textures will always return the first face only.
@@ -407,10 +386,25 @@ private:
     i32 litBasePassIndex_{};
     /// Index of the litalpha pass.
     i32 litAlphaPassIndex_{};
-    /// Pointer to the light volume command if any.
-    const RenderPathCommand* lightVolumeCommand_{};
-    /// Pointer to the forwardlights command if any.
-    const RenderPathCommand* forwardLightsCommand_{};
+    /// Set up initial shadow camera view(s).
+    void SetupShadowCameras(LightQueryResult& query);
+    /// Set up a directional light shadow camera.
+    void SetupDirLightShadowCamera(Camera* shadowCamera, Light* light, float nearSplit, float farSplit);
+    /// Finalize shadow camera view after shadow casters and the shadow map are known.
+    void FinalizeShadowCamera(Camera* shadowCamera, Light* light, const IntRect& shadowViewport, const BoundingBox& shadowCasterBox);
+    /// Quantize a directional light shadow camera view to eliminate swimming.
+    void QuantizeDirLightShadowCamera(Camera* shadowCamera, Light* light, const IntRect& shadowViewport, const BoundingBox& viewBox);
+    /// Check visibility of one shadow caster.
+    bool IsShadowCasterVisible(Drawable* drawable, BoundingBox lightViewBox, Camera* shadowCamera, const Matrix3x4& lightView,
+        const Frustum& lightViewFrustum, const BoundingBox& lightViewFrustumBox);
+    /// Return the viewport for a shadow map split.
+    IntRect GetShadowMapViewport(Light* light, int splitIndex, Texture2D* shadowMap);
+    /// Set up a light volume rendering batch.
+    void SetupLightVolumeBatch(Batch& batch);
+    /// Check whether a light queue needs shadow rendering.
+    bool NeedRenderShadowMap(const LightBatchQueue& queue);
+    /// Render a shadow map.
+    void RenderShadowMap(const LightBatchQueue& queue);
     /// Pointer to the current commmand if it contains shader parameters to be set for a render pass.
     const RenderPathCommand* passCommand_{};
     /// Flag for scene being resolved from the backbuffer.
