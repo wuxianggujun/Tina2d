@@ -211,6 +211,10 @@ endif ()
 set (THIRD_PARTY_INCLUDE_DIR ${CMAKE_BINARY_DIR}/${DEST_INCLUDE_DIR}/ThirdParty)
 file (MAKE_DIRECTORY ${THIRD_PARTY_INCLUDE_DIR})
 
+# 永久禁用 3D：强制开启 2D-only 宏定义，覆盖缓存
+set (TINA2D_DISABLE_3D ON CACHE BOOL "Disable 3D permanently (2D-only)" FORCE)
+add_compile_definitions(TINA2D_DISABLE_3D)
+
 # Urho3D source
 add_subdirectory (Source)
 
@@ -240,5 +244,3 @@ endif()
 
 # Urho3D documentation
 add_subdirectory (Docs)
-# 通过开关控制是否在编译期屏蔽 3D 相关代码（以宏包裹，后续便于逐步删除）
-option(TINA2D_DISABLE_3D "禁用 3D 功能（通过宏包裹屏蔽 3D 渲染/对象等代码）" ON)

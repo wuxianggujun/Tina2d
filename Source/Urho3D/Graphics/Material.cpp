@@ -12,7 +12,9 @@
 #include "../Graphics/Technique.h"
 #include "../GraphicsAPI/Texture2D.h"
 #include "../GraphicsAPI/Texture2DArray.h"
-#include "../GraphicsAPI/Texture3D.h" // 为了类型识别/哈希常量，始终提供声明；3D 分支仍受宏控制
+#ifndef TINA2D_DISABLE_3D
+#include "../GraphicsAPI/Texture3D.h"
+#endif
 #include "../GraphicsAPI/TextureCube.h"
 #include "../IO/FileSystem.h"
 #include "../IO/Log.h"
