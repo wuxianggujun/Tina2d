@@ -6,6 +6,7 @@
 #include "../Audio/Audio.h"
 #include "../Audio/Sound.h"
 #include "../Audio/SoundListener.h"
+#include "../Audio/SoundSource.h" // 使用 SoundSource 成员与静态注册需要完整类型
 #ifndef TINA2D_DISABLE_3D
 #include "../Audio/SoundSource3D.h"
 #endif

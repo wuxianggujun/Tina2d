@@ -12,7 +12,7 @@
 #include "../Graphics/Technique.h"
 #include "../GraphicsAPI/Texture2D.h"
 #include "../GraphicsAPI/Texture2DArray.h"
-#include "../GraphicsAPI/Texture3D.h"
+#include "../GraphicsAPI/Texture3D.h" // 为了类型识别/哈希常量，始终提供声明；3D 分支仍受宏控制
 #include "../GraphicsAPI/TextureCube.h"
 #include "../IO/FileSystem.h"
 #include "../IO/Log.h"
@@ -113,7 +113,13 @@ StringHash ParseTextureTypeName(const String& name)
     else if (lowerCaseName == "cubemap")
         return TextureCube::GetTypeStatic();
     else if (lowerCaseName == "texture3d")
+    {
+#ifndef TINA2D_DISABLE_3D
         return Texture3D::GetTypeStatic();
+#else
+        return nullptr;
+#endif
+    }
     else if (lowerCaseName == "texturearray")
         return Texture2DArray::GetTypeStatic();
 
@@ -276,20 +282,36 @@ bool Material::BeginLoadXML(Deserializer& source)
                 // Detect cube maps and arrays by file extension: they are defined by an XML file
                 if (GetExtension(name) == ".xml")
                 {
+// 桌面/GLES3 平台：识别 3D/数组/Cube map 的 XML 包装类型
 #ifdef DESKTOP_GRAPHICS_OR_GLES3
                     StringHash type = ParseTextureTypeXml(cache, name);
                     if (!type && textureElem.HasAttribute("unit"))
                     {
                         TextureUnit unit = ParseTextureUnitName(textureElem.GetAttribute("unit"));
                         if (unit == TU_VOLUMEMAP)
+                        {
+#ifndef TINA2D_DISABLE_3D
                             type = Texture3D::GetTypeStatic();
+#else
+                            type = nullptr; // 2D-only 下忽略 3D 纹理
+#endif
+                        }
                     }
 
+                    bool handled = false;
+#ifndef TINA2D_DISABLE_3D
                     if (type == Texture3D::GetTypeStatic())
+                    {
                         cache->BackgroundLoadResource<Texture3D>(name, true, this);
-                    else if (type == Texture2DArray::GetTypeStatic())
+                        handled = true;
+                    }
+#endif
+                    if (!handled && type == Texture2DArray::GetTypeStatic())
+                    {
                         cache->BackgroundLoadResource<Texture2DArray>(name, true, this);
-                    else
+                        handled = true;
+                    }
+                    if (!handled)
 #endif
                         cache->BackgroundLoadResource<TextureCube>(name, true, this);
                 }
@@ -335,20 +357,36 @@ bool Material::BeginLoadJSON(Deserializer& source)
                 // Detect cube maps and arrays by file extension: they are defined by an XML file
                 if (GetExtension(name) == ".xml")
                 {
+// 桌面/GLES3 平台：识别 3D/数组/Cube map 的 XML 包装类型
 #ifdef DESKTOP_GRAPHICS_OR_GLES3
                     StringHash type = ParseTextureTypeXml(cache, name);
                     if (!type && !unitString.Empty())
                     {
                         TextureUnit unit = ParseTextureUnitName(unitString);
                         if (unit == TU_VOLUMEMAP)
+                        {
+#ifndef TINA2D_DISABLE_3D
                             type = Texture3D::GetTypeStatic();
+#else
+                            type = nullptr;
+#endif
+                        }
                     }
 
+                    bool handled = false;
+#ifndef TINA2D_DISABLE_3D
                     if (type == Texture3D::GetTypeStatic())
+                    {
                         cache->BackgroundLoadResource<Texture3D>(name, true, this);
-                    else if (type == Texture2DArray::GetTypeStatic())
+                        handled = true;
+                    }
+#endif
+                    if (!handled && type == Texture2DArray::GetTypeStatic())
+                    {
                         cache->BackgroundLoadResource<Texture2DArray>(name, true, this);
-                    else
+                        handled = true;
+                    }
+                    if (!handled)
 #endif
                         cache->BackgroundLoadResource<TextureCube>(name, true, this);
                 }
@@ -427,16 +465,32 @@ bool Material::Load(const XMLElement& source)
             // Detect cube maps and arrays by file extension: they are defined by an XML file
             if (GetExtension(name) == ".xml")
             {
+// 桌面/GLES3 平台：识别 3D/数组/Cube map 的 XML 包装类型
 #ifdef DESKTOP_GRAPHICS_OR_GLES3
                 StringHash type = ParseTextureTypeXml(cache, name);
                 if (!type && unit == TU_VOLUMEMAP)
+                {
+#ifndef TINA2D_DISABLE_3D
                     type = Texture3D::GetTypeStatic();
+#else
+                    type = nullptr;
+#endif
+                }
 
+                bool handled = false;
+#ifndef TINA2D_DISABLE_3D
                 if (type == Texture3D::GetTypeStatic())
+                {
                     SetTexture(unit, cache->GetResource<Texture3D>(name));
-                else if (type == Texture2DArray::GetTypeStatic())
+                    handled = true;
+                }
+#endif
+                if (!handled && type == Texture2DArray::GetTypeStatic())
+                {
                     SetTexture(unit, cache->GetResource<Texture2DArray>(name));
-                else
+                    handled = true;
+                }
+                if (!handled)
 #endif
                     SetTexture(unit, cache->GetResource<TextureCube>(name));
             }
@@ -583,16 +637,32 @@ bool Material::Load(const JSONValue& source)
             // Detect cube maps and arrays by file extension: they are defined by an XML file
             if (GetExtension(textureName) == ".xml")
             {
+// 桌面/GLES3 平台：识别 3D/数组/Cube map 的 XML 包装类型
 #ifdef DESKTOP_GRAPHICS_OR_GLES3
                 StringHash type = ParseTextureTypeXml(cache, textureName);
                 if (!type && unit == TU_VOLUMEMAP)
+                {
+#ifndef TINA2D_DISABLE_3D
                     type = Texture3D::GetTypeStatic();
+#else
+                    type = nullptr;
+#endif
+                }
 
+                bool handled = false;
+#ifndef TINA2D_DISABLE_3D
                 if (type == Texture3D::GetTypeStatic())
+                {
                     SetTexture(unit, cache->GetResource<Texture3D>(textureName));
-                else if (type == Texture2DArray::GetTypeStatic())
+                    handled = true;
+                }
+#endif
+                if (!handled && type == Texture2DArray::GetTypeStatic())
+                {
                     SetTexture(unit, cache->GetResource<Texture2DArray>(textureName));
-                else
+                    handled = true;
+                }
+                if (!handled)
 #endif
                     SetTexture(unit, cache->GetResource<TextureCube>(textureName));
             }

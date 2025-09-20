@@ -23,7 +23,9 @@
 #include "../GraphicsAPI/ShaderVariation.h"
 #include "../GraphicsAPI/Texture2D.h"
 #include "../GraphicsAPI/Texture2DArray.h"
+#ifndef TINA2D_DISABLE_3D
 #include "../GraphicsAPI/Texture3D.h"
+#endif
 #include "../GraphicsAPI/TextureCube.h"
 #include "../GraphicsAPI/VertexBuffer.h"
 #include "../IO/FileSystem.h"
@@ -3177,7 +3179,11 @@ Texture* View::FindNamedTexture(const String& name, bool isRenderTarget, bool is
     if (!texture)
         texture = cache->GetExistingResource<TextureCube>(name);
     if (!texture)
+    {
+#ifndef TINA2D_DISABLE_3D
         texture = cache->GetExistingResource<Texture3D>(name);
+#endif
+    }
     if (!texture)
         texture = cache->GetExistingResource<Texture2DArray>(name);
     if (texture)
@@ -3193,15 +3199,26 @@ Texture* View::FindNamedTexture(const String& name, bool isRenderTarget, bool is
 #ifdef DESKTOP_GRAPHICS_OR_GLES3
             StringHash type = ParseTextureTypeXml(cache, name);
             if (!type && isVolumeMap)
+            {
+#ifndef TINA2D_DISABLE_3D
                 type = Texture3D::GetTypeStatic();
-
-            if (type == Texture3D::GetTypeStatic())
-                return cache->GetResource<Texture3D>(name);
-            else if (type == Texture2DArray::GetTypeStatic())
-                return cache->GetResource<Texture2DArray>(name);
-            else
 #endif
-                return cache->GetResource<TextureCube>(name);
+            }
+
+            bool handled = false;
+#ifndef TINA2D_DISABLE_3D
+            if (type == Texture3D::GetTypeStatic())
+            {
+                return cache->GetResource<Texture3D>(name);
+            }
+#endif
+            if (type == Texture2DArray::GetTypeStatic())
+            {
+                return cache->GetResource<Texture2DArray>(name);
+            }
+            // 其余情况按 CubeMap 处理
+#endif
+            return cache->GetResource<TextureCube>(name);
         }
         else
             return cache->GetResource<Texture2D>(name);
