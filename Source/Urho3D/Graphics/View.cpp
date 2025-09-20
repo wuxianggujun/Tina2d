@@ -2441,6 +2441,11 @@ void View::ProcessShadowCasters(LightQueryResult& query, const Vector<Drawable*>
 bool View::IsShadowCasterVisible(Drawable* drawable, BoundingBox lightViewBox, Camera* shadowCamera, const Matrix3x4& lightView,
     const Frustum& lightViewFrustum, const BoundingBox& lightViewFrustumBox)
 {
+#ifdef TINA2D_DISABLE_3D
+    (void)drawable; (void)lightViewBox; (void)shadowCamera; (void)lightView; (void)lightViewFrustum; (void)lightViewFrustumBox;
+    // 2D-only：不计算 3D 阴影投射体可见性
+    return false;
+#else
     if (shadowCamera->IsOrthographic())
     {
         // Extrude the light space bounding box up to the far edge of the frustum's light space bounding box
@@ -2472,10 +2477,16 @@ bool View::IsShadowCasterVisible(Drawable* drawable, BoundingBox lightViewBox, C
 
         return lightViewFrustum.IsInsideFast(lightViewBox) != OUTSIDE;
     }
+#endif
 }
 
 IntRect View::GetShadowMapViewport(Light* light, int splitIndex, Texture2D* shadowMap)
 {
+#ifdef TINA2D_DISABLE_3D
+    (void)light; (void)splitIndex; (void)shadowMap;
+    // 2D-only：无阴影贴图视口
+    return {};
+#else
     int width = shadowMap->GetWidth();
     int height = shadowMap->GetHeight();
 
@@ -2502,10 +2513,15 @@ IntRect View::GetShadowMapViewport(Light* light, int splitIndex, Texture2D* shad
     }
 
     return {};
+#endif
 }
 
 void View::SetupShadowCameras(LightQueryResult& query)
 {
+#ifdef TINA2D_DISABLE_3D
+    (void)query; // 2D-only：不设置 3D 阴影相机
+    return;
+#else
     Light* light = query.light_;
 
     i32 splits = 0;
@@ -2658,11 +2674,16 @@ void View::SetupDirLightShadowCamera(Camera* shadowCamera, Light* light, float n
 
     // Center shadow camera on the bounding box. Can not snap to texels yet as the shadow map viewport is unknown
     QuantizeDirLightShadowCamera(shadowCamera, light, IntRect(0, 0, 0, 0), shadowBox);
+#endif
 }
 
 void View::FinalizeShadowCamera(Camera* shadowCamera, Light* light, const IntRect& shadowViewport,
     const BoundingBox& shadowCasterBox)
 {
+#ifdef TINA2D_DISABLE_3D
+    (void)shadowCamera; (void)light; (void)shadowViewport; (void)shadowCasterBox;
+    return;
+#else
     const FocusParameters& parameters = light->GetShadowFocus();
     auto shadowMapWidth = (float)(shadowViewport.Width());
     LightType type = light->GetLightType();
@@ -2708,11 +2729,16 @@ void View::FinalizeShadowCamera(Camera* shadowCamera, Light* light, const IntRec
                 shadowCamera->SetZoom(shadowCamera->GetZoom() * ((shadowMapWidth - 4.0f) / shadowMapWidth));
         }
     }
+#endif
 }
 
 void View::QuantizeDirLightShadowCamera(Camera* shadowCamera, Light* light, const IntRect& shadowViewport,
     const BoundingBox& viewBox)
 {
+#ifdef TINA2D_DISABLE_3D
+    (void)shadowCamera; (void)light; (void)shadowViewport; (void)viewBox;
+    return;
+#else
     Node* shadowCameraNode = shadowCamera->GetNode();
     const FocusParameters& parameters = light->GetShadowFocus();
     auto shadowMapWidth = (float)(shadowViewport.Width());
@@ -2759,6 +2785,7 @@ void View::QuantizeDirLightShadowCamera(Camera* shadowCamera, Light* light, cons
         Vector3 snap(-fmodf(viewPos.x_, texelSize.x_), -fmodf(viewPos.y_, texelSize.y_), 0.0f);
         shadowCameraNode->Translate(rot * snap, TransformSpace::World);
     }
+#endif
 }
 
 void View::FindZone(Drawable* drawable)

@@ -510,6 +510,10 @@ void Renderer::ReloadShaders()
 
 void Renderer::ApplyShadowMapFilter(View* view, Texture2D* shadowMap, float blurScale)
 {
+#ifdef TINA2D_DISABLE_3D
+    (void)view; (void)shadowMap; (void)blurScale;
+    return;
+#endif
     if (shadowMapFilterInstance_ && shadowMapFilter_)
         (shadowMapFilterInstance_->*shadowMapFilter_)(view, shadowMap, blurScale);
 }
@@ -742,6 +746,11 @@ void Renderer::Render()
 
 void Renderer::DrawDebugGeometry(bool depthTest)
 {
+#ifdef TINA2D_DISABLE_3D
+    (void)depthTest;
+    // 2D-only：不绘制 3D 调试几何
+    return;
+#endif
     URHO3D_PROFILE(RendererDrawDebug);
 
     /// \todo Because debug geometry is per-scene, if two cameras show views of the same area, occlusion is not shown correctly
@@ -830,6 +839,10 @@ Geometry* Renderer::GetQuadGeometry()
 
 Texture2D* Renderer::GetShadowMap(Light* light, Camera* camera, i32 viewWidth, i32 viewHeight)
 {
+#ifdef TINA2D_DISABLE_3D
+    (void)light; (void)camera; (void)viewWidth; (void)viewHeight;
+    return nullptr;
+#endif
     assert(viewWidth > 0);
     assert(viewHeight > 0);
 
@@ -1123,6 +1136,9 @@ OcclusionBuffer* Renderer::GetOcclusionBuffer(Camera* camera)
 
 Camera* Renderer::GetShadowCamera()
 {
+#ifdef TINA2D_DISABLE_3D
+    return nullptr;
+#endif
     MutexLock lock(rendererMutex_);
 
     assert(numShadowCameras_ <= shadowCameraNodes_.Size());
