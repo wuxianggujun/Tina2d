@@ -386,25 +386,7 @@ private:
     i32 litBasePassIndex_{};
     /// Index of the litalpha pass.
     i32 litAlphaPassIndex_{};
-    /// Set up initial shadow camera view(s).
-    void SetupShadowCameras(LightQueryResult& query);
-    /// Set up a directional light shadow camera.
-    void SetupDirLightShadowCamera(Camera* shadowCamera, Light* light, float nearSplit, float farSplit);
-    /// Finalize shadow camera view after shadow casters and the shadow map are known.
-    void FinalizeShadowCamera(Camera* shadowCamera, Light* light, const IntRect& shadowViewport, const BoundingBox& shadowCasterBox);
-    /// Quantize a directional light shadow camera view to eliminate swimming.
-    void QuantizeDirLightShadowCamera(Camera* shadowCamera, Light* light, const IntRect& shadowViewport, const BoundingBox& viewBox);
-    /// Check visibility of one shadow caster.
-    bool IsShadowCasterVisible(Drawable* drawable, BoundingBox lightViewBox, Camera* shadowCamera, const Matrix3x4& lightView,
-        const Frustum& lightViewFrustum, const BoundingBox& lightViewFrustumBox);
-    /// Return the viewport for a shadow map split.
-    IntRect GetShadowMapViewport(Light* light, int splitIndex, Texture2D* shadowMap);
-    /// Set up a light volume rendering batch.
-    void SetupLightVolumeBatch(Batch& batch);
-    /// Check whether a light queue needs shadow rendering.
-    bool NeedRenderShadowMap(const LightBatchQueue& queue);
-    /// Render a shadow map.
-    void RenderShadowMap(const LightBatchQueue& queue);
+    // 2D-only：移除阴影/体积光/延迟渲染相关接口
     /// Pointer to the current commmand if it contains shader parameters to be set for a render pass.
     const RenderPathCommand* passCommand_{};
     /// Flag for scene being resolved from the backbuffer.
