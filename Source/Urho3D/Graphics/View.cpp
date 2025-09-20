@@ -567,13 +567,15 @@ void View::Render()
     if (camera_ && camera_->GetAutoAspectRatio())
         camera_->SetAspectRatioInternal((float)(viewSize_.x_) / (float)(viewSize_.y_));
 
-    // Bind the face selection and indirection cube maps for point light shadows
-#ifndef URHO3D_GLES2
+    // Bind the face selection and indirection cube maps for point light shadows（3D-only）
+#ifndef TINA2D_DISABLE_3D
+    #ifndef URHO3D_GLES2
     if (renderer_->GetDrawShadows())
     {
         graphics_->SetTexture(TU_FACESELECT, renderer_->GetFaceSelectCubeMap());
         graphics_->SetTexture(TU_INDIRECTION, renderer_->GetIndirectionCubeMap());
     }
+    #endif
 #endif
 
     if (Graphics::GetGAPI() == GAPI_OPENGL && renderTarget_)
@@ -2985,6 +2987,12 @@ void View::PrepareInstancingBuffer()
 
 void View::SetupLightVolumeBatch(Batch& batch)
 {
+//#if defined(TINA2D_DISABLE_3D)
+#ifdef TINA2D_DISABLE_3D
+    (void)batch; // 避免未使用参数告警
+    // 2D-only：不处理 3D 光体积
+    return;
+#else
     Light* light = batch.lightQueue_->light_;
     LightType type = light->GetLightType();
     Vector3 cameraPos = camera_->GetNode()->GetWorldPosition();
@@ -3030,17 +3038,29 @@ void View::SetupLightVolumeBatch(Batch& batch)
         graphics_->SetStencilTest(true, CMP_NOTEQUAL, OP_KEEP, OP_KEEP, OP_KEEP, 0, light->GetLightMask());
     else
         graphics_->SetStencilTest(false);
+#endif // TINA2D_DISABLE_3D
 }
 
 bool View::NeedRenderShadowMap(const LightBatchQueue& queue)
 {
+#ifdef TINA2D_DISABLE_3D
+    (void)queue; // 避免未使用参数告警
+    // 2D-only：不需要渲染阴影贴图
+    return false;
+#else
     // Must have a shadow map, and either forward or deferred lit batches
     return queue.shadowMap_ && (!queue.litBatches_.IsEmpty() || !queue.litBaseBatches_.IsEmpty() ||
         !queue.volumeBatches_.Empty());
+#endif
 }
 
 void View::RenderShadowMap(const LightBatchQueue& queue)
 {
+#ifdef TINA2D_DISABLE_3D
+    (void)queue; // 避免未使用参数告警
+    // 2D-only：跳过阴影贴图渲染
+    return;
+#else
     URHO3D_PROFILE(RenderShadowMap);
 
     Texture2D* shadowMap = queue.shadowMap_;
@@ -3119,6 +3139,7 @@ void View::RenderShadowMap(const LightBatchQueue& queue)
     // reset some parameters
     graphics_->SetColorWrite(true);
     graphics_->SetDepthBias(0.0f, 0.0f);
+#endif // TINA2D_DISABLE_3D
 }
 
 RenderSurface* View::GetDepthStencil(RenderSurface* renderTarget)
