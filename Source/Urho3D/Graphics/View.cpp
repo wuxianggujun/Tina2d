@@ -321,6 +321,7 @@ bool View::Define(RenderSurface* renderTarget, Viewport* viewport)
         if (sourceView_ && sourceView_->scene_ == scene_ && sourceView_->renderPath_ == renderPath_)
         {
             // Copy properties needed later in rendering
+        #ifndef TINA2D_DISABLE_3D
             deferred_ = sourceView_->deferred_;
             deferredAmbient_ = sourceView_->deferredAmbient_;
             useLitBase_ = sourceView_->useLitBase_;
@@ -328,6 +329,15 @@ bool View::Define(RenderSurface* renderTarget, Viewport* viewport)
             noStencil_ = sourceView_->noStencil_;
             lightVolumeCommand_ = sourceView_->lightVolumeCommand_;
             forwardLightsCommand_ = sourceView_->forwardLightsCommand_;
+        #else
+            deferred_ = false;
+            deferredAmbient_ = false;
+            useLitBase_ = false;
+            hasScenePasses_ = sourceView_->hasScenePasses_;
+            noStencil_ = sourceView_->noStencil_;
+            lightVolumeCommand_ = nullptr;
+            forwardLightsCommand_ = nullptr;
+        #endif
             octree_ = sourceView_->octree_;
             return true;
         }
@@ -462,15 +472,27 @@ bool View::Define(RenderSurface* renderTarget, Viewport* viewport)
         }
         else if (command.type_ == CMD_LIGHTVOLUMES)
         {
+        #ifndef TINA2D_DISABLE_3D
             lightVolumeCommand_ = &command;
             deferred_ = true;
+        #endif
         }
         else if (command.type_ == CMD_FORWARDLIGHTS)
         {
+        #ifndef TINA2D_DISABLE_3D
             forwardLightsCommand_ = &command;
             useLitBase_ = command.useLitBase_;
+        #endif
         }
     }
+
+#ifdef TINA2D_DISABLE_3D
+    // 2D-only：明确关闭延迟渲染相关标记，避免触发多余的缓冲策略
+    deferred_ = false;
+    deferredAmbient_ = false;
+    lightVolumeCommand_ = nullptr;
+    forwardLightsCommand_ = nullptr;
+#endif
 
     drawShadows_ = renderer_->GetDrawShadows();
     materialQuality_ = renderer_->GetMaterialQuality();
