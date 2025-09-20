@@ -1433,7 +1433,8 @@ void View::ExecuteRenderPathCommands()
 {
     View* actualView = sourceView_ ? sourceView_ : this;
 
-    // If not reusing shadowmaps, render all of them first
+    // If not reusing shadowmaps, render all of them first（3D-only）
+#ifndef TINA2D_DISABLE_3D
     if (!renderer_->GetReuseShadowMaps() && renderer_->GetDrawShadows() && !actualView->lightQueues_.Empty())
     {
         URHO3D_PROFILE(RenderShadowMaps);
@@ -1444,6 +1445,7 @@ void View::ExecuteRenderPathCommands()
                 RenderShadowMap(*i);
         }
     }
+#endif
 
     {
         URHO3D_PROFILE(ExecuteRenderPath);
@@ -1600,7 +1602,8 @@ void View::ExecuteRenderPathCommands()
                 break;
 
             case CMD_FORWARDLIGHTS:
-                // Render shadow maps + opaque objects' additive lighting
+#ifndef TINA2D_DISABLE_3D
+                // Render shadow maps + opaque objects' additive lighting（3D-only）
                 if (!actualView->lightQueues_.Empty())
                 {
                     URHO3D_PROFILE(RenderLights);
@@ -1644,10 +1647,12 @@ void View::ExecuteRenderPathCommands()
                     graphics_->SetScissorTest(false);
                     graphics_->SetStencilTest(false);
                 }
+#endif
                 break;
 
             case CMD_LIGHTVOLUMES:
-                // Render shadow maps + light volumes
+#ifndef TINA2D_DISABLE_3D
+                // Render shadow maps + light volumes（3D-only）
                 if (!actualView->lightQueues_.Empty())
                 {
                     URHO3D_PROFILE(RenderLightVolumes);
@@ -1682,6 +1687,7 @@ void View::ExecuteRenderPathCommands()
                     graphics_->SetScissorTest(false);
                     graphics_->SetStencilTest(false);
                 }
+#endif
                 break;
 
             case CMD_RENDERUI:

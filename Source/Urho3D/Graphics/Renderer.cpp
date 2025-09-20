@@ -692,9 +692,11 @@ void Renderer::Render()
 
     URHO3D_PROFILE(RenderViews);
 
-    // If the indirection textures have lost content (OpenGL mode only), restore them now
+    // If the indirection textures have lost content (OpenGL mode only), restore them now（3D-only）
+#ifndef TINA2D_DISABLE_3D
     if (faceSelectCubeMap_ && faceSelectCubeMap_->IsDataLost())
         SetIndirectionTextureData();
+#endif
 
     graphics_->SetDefaultTextureFilterMode(textureFilterMode_);
     graphics_->SetDefaultTextureAnisotropy((unsigned)textureAnisotropy_);
@@ -1834,6 +1836,7 @@ void Renderer::CreateGeometries()
     pointLightGeometry_->SetDrawRange(TRIANGLE_LIST, 0, plib->GetIndexCount());
 
 #if !defined(URHO3D_GLES2)
+#ifndef TINA2D_DISABLE_3D
     if (graphics_->GetShadowMapFormat())
     {
         faceSelectCubeMap_ = new TextureCube(context_);
@@ -1851,6 +1854,7 @@ void Renderer::CreateGeometries()
 
         SetIndirectionTextureData();
     }
+#endif
 #endif
 }
 

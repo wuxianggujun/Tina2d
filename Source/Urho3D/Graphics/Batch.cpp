@@ -64,6 +64,10 @@ inline bool CompareBatchGroupOrder(BatchGroup* lhs, BatchGroup* rhs)
 
 void CalculateShadowMatrix(Matrix4& dest, LightBatchQueue* queue, i32 split, Renderer* renderer)
 {
+#ifdef TINA2D_DISABLE_3D
+    (void)dest; (void)queue; (void)split; (void)renderer;
+    return;
+#else
     assert(split >= 0);
 
     Camera* shadowCamera = queue->shadowSplits_[split].shadowCamera_;
@@ -116,10 +120,15 @@ void CalculateShadowMatrix(Matrix4& dest, LightBatchQueue* queue, i32 split, Ren
     texAdjust.SetScale(scale);
 
     dest = texAdjust * shadowProj * shadowView;
+#endif
 }
 
 void CalculateSpotMatrix(Matrix4& dest, Light* light)
 {
+#ifdef TINA2D_DISABLE_3D
+    (void)dest; (void)light;
+    return;
+#else
     Node* lightNode = light->GetNode();
     Matrix3x4 spotView = Matrix3x4(lightNode->GetWorldPosition(), lightNode->GetWorldRotation(), 1.0f).Inverse();
     Matrix4 spotProj(Matrix4::ZERO);
@@ -145,6 +154,7 @@ void CalculateSpotMatrix(Matrix4& dest, Light* light)
     }
 
     dest = texAdjust * spotProj * spotView;
+#endif
 }
 
 void Batch::CalculateSortKey()
@@ -172,7 +182,11 @@ void Batch::Prepare(View* view, Camera* camera, bool setModelTransform, bool all
     Renderer* renderer = view->GetRenderer();
     Node* cameraNode = camera ? camera->GetNode() : nullptr;
     Light* light = lightQueue_ ? lightQueue_->light_ : nullptr;
+#ifdef TINA2D_DISABLE_3D
+    Texture2D* shadowMap = nullptr;
+#else
     Texture2D* shadowMap = lightQueue_ ? lightQueue_->shadowMap_ : nullptr;
+#endif
 
     // Set shaders first. The available shader parameters and their register/uniform positions depend on the currently set shaders
     graphics->SetShaders(vertexShader_, pixelShader_);
