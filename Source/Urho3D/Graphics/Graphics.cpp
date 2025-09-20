@@ -17,9 +17,6 @@
 #include "../GraphicsAPI/ShaderPrecache.h"
 #include "../GraphicsAPI/Texture2D.h"
 #include "../GraphicsAPI/Texture2DArray.h"
-#ifndef TINA2D_DISABLE_3D
-#include "../GraphicsAPI/Texture3D.h"
-#endif
 #include "../GraphicsAPI/TextureCube.h"
 #include "../GraphicsAPI/RenderSurface.h"
 #ifdef URHO3D_BGFX
@@ -2870,9 +2867,7 @@ void RegisterGraphicsLibrary(Context* context)
     Texture2D::RegisterObject(context);
     Texture2DArray::RegisterObject(context);
     // 2D-only：不注册 3D 纹理类型
-#ifndef TINA2D_DISABLE_3D
-    Texture3D::RegisterObject(context);
-#endif
+    // 2D-only：不注册 Texture3D 类型
     TextureCube::RegisterObject(context);
     Camera::RegisterObject(context);
     Drawable::RegisterObject(context);
