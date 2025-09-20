@@ -48,6 +48,17 @@ cmake ..
 cmake --build .
 ```
 
+### 2D-only 宏开关（屏蔽 3D 代码）
+
+- 通过 `TINA2D_DISABLE_3D`（默认 ON）在编译期屏蔽 3D 相关代码路径，便于渐进式清理：
+
+```bash
+cmake -DTINA2D_DISABLE_3D=ON ..  # 屏蔽 3D 代码（默认）
+cmake -DTINA2D_DISABLE_3D=OFF .. # 恢复 3D 相关代码（若仍保留）
+```
+
+- 当前已以宏包裹 3D 音频类（SoundSource3D），并在 `Audio` 子系统注册时按开关决定是否注册；后续可对更多 3D 渲染路径做同样处理，完成迁移后再物理删除源码。
+
 ## 示例项目
 
 TINA2D 包含多个2D游戏示例：

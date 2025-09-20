@@ -6,7 +6,9 @@
 #include "../Audio/Audio.h"
 #include "../Audio/Sound.h"
 #include "../Audio/SoundListener.h"
+#ifndef TINA2D_DISABLE_3D
 #include "../Audio/SoundSource3D.h"
+#endif
 #include "../Core/Context.h"
 #include "../Core/CoreEvents.h"
 #include "../Core/ProcessUtils.h"
@@ -341,8 +343,11 @@ void RegisterAudioLibrary(Context* context)
 {
     Sound::RegisterObject(context);
     SoundSource::RegisterObject(context);
-    SoundSource3D::RegisterObject(context);
     SoundListener::RegisterObject(context);
+#ifndef TINA2D_DISABLE_3D
+    // 在 2D-only 构建中屏蔽 3D 音源类的注册，避免引入 3D 依赖
+    SoundSource3D::RegisterObject(context);
+#endif
 }
 
 }

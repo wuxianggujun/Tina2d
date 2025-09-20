@@ -240,3 +240,5 @@ endif()
 
 # Urho3D documentation
 add_subdirectory (Docs)
+# 通过开关控制是否在编译期屏蔽 3D 相关代码（以宏包裹，后续便于逐步删除）
+option(TINA2D_DISABLE_3D "禁用 3D 功能（通过宏包裹屏蔽 3D 渲染/对象等代码）" ON)

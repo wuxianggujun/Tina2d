@@ -1,3 +1,8 @@
+// Tina2D：当启用 2D-only 构建时，屏蔽 3D 音源类
+#ifdef TINA2D_DISABLE_3D
+// 仅占位头保护，避免被不小心包含时报错；不开启任何 3D 符号
+#pragma once
+#else
 // Copyright (c) 2008-2023 the Urho3D project
 // License: MIT
 
@@ -83,3 +88,5 @@ protected:
 };
 
 }
+
+#endif // TINA2D_DISABLE_3D

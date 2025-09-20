@@ -1,3 +1,7 @@
+// Tina2D：当启用 2D-only 构建时，屏蔽 3D 音源实现
+#ifdef TINA2D_DISABLE_3D
+// 占位空实现文件，避免目标聚合时缺少 TU；不导出任何符号
+#else
 // Copyright (c) 2008-2023 the Urho3D project
 // License: MIT
 
@@ -186,3 +190,5 @@ void SoundSource3D::CalculateAttenuation()
 }
 
 }
+
+#endif // TINA2D_DISABLE_3D
