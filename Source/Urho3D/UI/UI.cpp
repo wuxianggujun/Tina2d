@@ -36,18 +36,9 @@
 #include "../UI/Slider.h"
 #include "../UI/Sprite.h"
 #include "../UI/Text.h"
-#if 0
-#include "../UI/Text3D.h"
-#endif
 #include "../UI/ToolTip.h"
 #include "../UI/UI.h"
-#if 0
-#include "../UI/UIComponent.h"
-#endif
 #include "../UI/UIEvents.h"
-#if 0
-#include "../UI/View3D.h"
-#endif
 #include "../UI/Window.h"
 
 #include <cassert>
