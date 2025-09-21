@@ -89,12 +89,12 @@ void Texture::SetBackupTexture(Texture* texture)
 
 void Texture::SetMipsToSkip(MaterialQuality quality, int toSkip)
 {
-    if (quality >= QUALITY_LOW && quality < MAX_TEXTURE_QUALITY_LEVELS)
+    if (quality >= QUALITY_LOW && static_cast<int>(quality) < static_cast<int>(MAX_TEXTURE_QUALITY_LEVELS))
     {
         mipsToSkip_[quality] = (unsigned)toSkip;
 
         // Make sure a higher quality level does not actually skip more mips
-        for (int i = 1; i < MAX_TEXTURE_QUALITY_LEVELS; ++i)
+        for (int i = 1; i < static_cast<int>(MAX_TEXTURE_QUALITY_LEVELS); ++i)
         {
             if (mipsToSkip_[i] > mipsToSkip_[i - 1])
                 mipsToSkip_[i] = mipsToSkip_[i - 1];
@@ -104,7 +104,7 @@ void Texture::SetMipsToSkip(MaterialQuality quality, int toSkip)
 
 int Texture::GetMipsToSkip(MaterialQuality quality) const
 {
-    return (quality >= QUALITY_LOW && quality < MAX_TEXTURE_QUALITY_LEVELS) ? mipsToSkip_[quality] : 0;
+    return (quality >= QUALITY_LOW && static_cast<int>(quality) < static_cast<int>(MAX_TEXTURE_QUALITY_LEVELS)) ? mipsToSkip_[quality] : 0;
 }
 
 int Texture::GetLevelWidth(unsigned level) const

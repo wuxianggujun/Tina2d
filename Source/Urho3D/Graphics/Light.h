@@ -20,18 +20,16 @@ struct LightBatchQueue;
 enum LightType
 {
     LIGHT_DIRECTIONAL = 0,
-    LIGHT_SPOT,
-    LIGHT_POINT
+    // 2D-only: 添加占位符避免编译错误，但设为无效值
+    LIGHT_SPOT = -1,       // 无效值
+    LIGHT_POINT = -1       // 无效值
 };
 
+// 2D-only: 保留必要的常量以避免编译错误，但设为最小值
 inline constexpr float SHADOW_MIN_QUANTIZE = 0.1f;
 inline constexpr float SHADOW_MIN_VIEW = 1.0f;
-inline constexpr i32 MAX_LIGHT_SPLITS = 6;
-#ifdef DESKTOP_GRAPHICS
-inline constexpr i32 MAX_CASCADE_SPLITS = 4;
-#else
-inline constexpr i32 MAX_CASCADE_SPLITS = 1;
-#endif
+inline constexpr i32 MAX_LIGHT_SPLITS = 1;  // 2D只需要1个
+inline constexpr i32 MAX_CASCADE_SPLITS = 1; // 2D只需要1个
 
 /// Depth bias parameters. Used both by lights (for shadow mapping) and materials.
 struct URHO3D_API BiasParameters

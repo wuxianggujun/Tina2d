@@ -31,7 +31,6 @@ class OcclusionBuffer;
 class Technique;
 class Texture;
 class Texture2D;
-class TextureCube;
 class View;
 class Zone;
 struct BatchQueue;
@@ -39,52 +38,37 @@ struct BatchQueue;
 static const int SHADOW_MIN_PIXELS = 64;
 static const int INSTANCING_BUFFER_DEFAULT_SIZE = 1024;
 
-/// Light vertex shader variations.
+/// Light vertex shader variations. (2D-only: minimal set)
 enum LightVSVariation
 {
     LVS_DIR = 0,
-    LVS_SPOT,
-    LVS_POINT,
-    LVS_SHADOW,
-    LVS_SPOTSHADOW,
-    LVS_POINTSHADOW,
-    LVS_SHADOWNORMALOFFSET,
-    LVS_SPOTSHADOWNORMALOFFSET,
-    LVS_POINTSHADOWNORMALOFFSET,
-    MAX_LIGHT_VS_VARIATIONS
+    // 2D-only: 移除其他3D光照变体，但保留占位符避免编译错误
+    LVS_SPOT = -1,         // 无效值
+    LVS_POINT = -1,        // 无效值
+    LVS_SHADOW = -1,       // 无效值
+    LVS_SHADOWNORMALOFFSET = -1, // 无效值
+    MAX_LIGHT_VS_VARIATIONS = 1
 };
 
-/// Per-vertex light vertex shader variations.
+/// Per-vertex light vertex shader variations. (2D-only: minimal set)  
 enum VertexLightVSVariation
 {
     VLVS_NOLIGHTS = 0,
-    VLVS_1LIGHT,
-    VLVS_2LIGHTS,
-    VLVS_3LIGHTS,
-    VLVS_4LIGHTS,
-    MAX_VERTEXLIGHT_VS_VARIATIONS
+    // 2D-only: 移除多光源变体
+    MAX_VERTEXLIGHT_VS_VARIATIONS = 1
 };
 
-/// Light pixel shader variations.
+/// Light pixel shader variations. (2D-only: minimal set)
 enum LightPSVariation
 {
     LPS_NONE = 0,
-    LPS_SPOT,
-    LPS_POINT,
-    LPS_POINTMASK,
-    LPS_SPEC,
-    LPS_SPOTSPEC,
-    LPS_POINTSPEC,
-    LPS_POINTMASKSPEC,
-    LPS_SHADOW,
-    LPS_SPOTSHADOW,
-    LPS_POINTSHADOW,
-    LPS_POINTMASKSHADOW,
-    LPS_SHADOWSPEC,
-    LPS_SPOTSHADOWSPEC,
-    LPS_POINTSHADOWSPEC,
-    LPS_POINTMASKSHADOWSPEC,
-    MAX_LIGHT_PS_VARIATIONS
+    // 2D-only: 移除其他3D光照变体，但保留占位符避免编译错误
+    LPS_SPEC = -1,         // 无效值
+    LPS_SHADOW = -1,       // 无效值
+    LPS_SPOT = -1,         // 无效值
+    LPS_POINT = -1,        // 无效值
+    LPS_POINTMASK = -1,    // 无效值
+    MAX_LIGHT_PS_VARIATIONS = 1
 };
 
 /// Deferred light volume vertex shader variations.
@@ -418,11 +402,6 @@ public:
     /// @property
     Texture2D* GetDefaultLightSpot() const { return defaultLightSpot_; }
 
-    /// Return the shadowed pointlight face selection cube map.
-    TextureCube* GetFaceSelectCubeMap() const { return faceSelectCubeMap_; }
-
-    /// Return the shadowed pointlight indirection cube map.
-    TextureCube* GetIndirectionCubeMap() const { return indirectionCubeMap_; }
 
     /// Return the instancing vertex buffer.
     VertexBuffer* GetInstancingBuffer() const { return dynamicInstancing_ ? instancingBuffer_.Get() : nullptr; }
@@ -494,8 +473,6 @@ private:
     void CreateGeometries();
     /// Create instancing vertex buffer.
     void CreateInstancingBuffer();
-    /// Create point light shadow indirection texture data.
-    void SetIndirectionTextureData();
     /// Update a queued viewport for rendering.
     void UpdateQueuedViewport(i32 index);
     /// Prepare for rendering of a new view.
@@ -541,10 +518,6 @@ private:
     SharedPtr<Texture2D> defaultLightRamp_;
     /// Default spotlight attenuation texture.
     SharedPtr<Texture2D> defaultLightSpot_;
-    /// Face selection cube map for shadowed pointlights.
-    SharedPtr<TextureCube> faceSelectCubeMap_;
-    /// Indirection cube map for shadowed pointlights.
-    SharedPtr<TextureCube> indirectionCubeMap_;
     /// Reusable scene nodes with shadow camera components.
     Vector<SharedPtr<Node>> shadowCameraNodes_;
     /// Reusable occlusion buffers.

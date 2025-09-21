@@ -23,7 +23,6 @@
 #include "../GraphicsAPI/ShaderVariation.h"
 #include "../GraphicsAPI/Texture2D.h"
 #include "../GraphicsAPI/Texture2DArray.h"
-#include "../GraphicsAPI/TextureCube.h"
 #include "../GraphicsAPI/VertexBuffer.h"
 #include "../IO/FileSystem.h"
 #include "../IO/Log.h"
@@ -1809,10 +1808,7 @@ void View::AllocateScreenBuffers()
         if (!renderTarget_ && graphics_->GetMultiSample() < 2)
             needSubstitute = true;
 
-        // If we have viewport read and target is a cube map, must allocate a substitute target instead as BlitFramebuffer()
-        // does not support reading a cube map
-        if (renderTarget_ && renderTarget_->GetParentTexture()->GetType() == TextureCube::GetTypeStatic())
-            needSubstitute = true;
+        // 2D-only：不考虑立方体纹理
 
         // If rendering to a texture, but the viewport is less than the whole texture, use a substitute to ensure
         // postprocessing shaders will never read outside the viewport
@@ -2058,12 +2054,12 @@ void View::ProcessLight(LightQueryResult& query, i32 threadIndex)
     const Frustum& frustum = cullCamera_->GetFrustum();
 
     // Check if light should be shadowed
-    bool isShadowed = drawShadows_ && light->GetCastShadows() && !light->GetPerVertex() && light->GetShadowIntensity() < 1.0f;
+    bool isShadowed = false; // 2D-only：禁用阴影
     // If shadow distance non-zero, check it
     if (isShadowed && light->GetShadowDistance() > 0.0f && light->GetDistance() > light->GetShadowDistance())
         isShadowed = false;
-    // OpenGL ES can not support point light shadows
-    if (isShadowed && type == LIGHT_POINT)
+    // 2D-only: 移除点光源阴影检查，由于LIGHT_POINT=-1，永远不会执行
+    if (isShadowed && type == LIGHT_POINT) // 永远为false
         isShadowed = false;
     // Get lit geometries. They must match the light mask and be inside the main camera frustum to be considered
     Vector<Drawable*>& tempDrawables = tempDrawables_[threadIndex];
@@ -2078,33 +2074,8 @@ void View::ProcessLight(LightQueryResult& query, i32 threadIndex)
                 query.litGeometries_.Push(geometry);
         }
         break;
-
-    case LIGHT_SPOT:
-        {
-            FrustumOctreeQuery octreeQuery(tempDrawables, light->GetFrustum(), DrawableTypes::Geometry,
-                cullCamera_->GetViewMask());
-            octree_->GetDrawables(octreeQuery);
-
-            for (Drawable* tempDrawable : tempDrawables)
-            {
-                if (tempDrawable->IsInView(frame_) && (GetLightMask(tempDrawable) & lightMask))
-                    query.litGeometries_.Push(tempDrawable);
-            }
-        }
-        break;
-
-    case LIGHT_POINT:
-        {
-            SphereOctreeQuery octreeQuery(tempDrawables, Sphere(light->GetNode()->GetWorldPosition(), light->GetRange()),
-                DrawableTypes::Geometry, cullCamera_->GetViewMask());
-            octree_->GetDrawables(octreeQuery);
-
-            for (Drawable* tempDrawable : tempDrawables)
-            {
-                if (tempDrawable->IsInView(frame_) && (GetLightMask(tempDrawable) & lightMask))
-                    query.litGeometries_.Push(tempDrawable);
-            }
-        }
+    default:
+        // 2D-only：忽略非方向光
         break;
     }
 
@@ -2207,7 +2178,7 @@ void View::CheckMaterialForAuxView(Material* material)
         Texture* texture = i->second_.Get();
         if (texture && texture->GetUsage() == TEXTURE_RENDERTARGET)
         {
-            // Have to check cube & 2D textures separately
+            // 2D-only：仅处理 2D 纹理的可见更新
             if (texture->GetType() == Texture2D::GetTypeStatic())
             {
                 auto* tex2D = static_cast<Texture2D*>(texture);
@@ -2215,15 +2186,9 @@ void View::CheckMaterialForAuxView(Material* material)
                 if (target && target->GetUpdateMode() == SURFACE_UPDATEVISIBLE)
                     target->QueueUpdate();
             }
-            else if (texture->GetType() == TextureCube::GetTypeStatic())
+            else
             {
-                auto* texCube = static_cast<TextureCube*>(texture);
-                for (i32 j = 0; j < MAX_CUBEMAP_FACES; ++j)
-                {
-                    RenderSurface* target = texCube->GetRenderSurface((CubeMapFace)j);
-                    if (target && target->GetUpdateMode() == SURFACE_UPDATEVISIBLE)
-                        target->QueueUpdate();
-                }
+                // 非 2D 纹理（例如已移除的立方体纹理）不做处理
             }
         }
     }
@@ -2380,8 +2345,6 @@ RenderSurface* View::GetRenderSurfaceFromTexture(Texture* texture, CubeMapFace f
 
     if (texture->GetType() == Texture2D::GetTypeStatic())
         return static_cast<Texture2D*>(texture)->GetRenderSurface();
-    else if (texture->GetType() == TextureCube::GetTypeStatic())
-        return static_cast<TextureCube*>(texture)->GetRenderSurface(face);
     else
         return nullptr;
 }
@@ -2415,8 +2378,6 @@ Texture* View::FindNamedTexture(const String& name, bool isRenderTarget, bool is
     // without having to rely on the file extension
     Texture* texture = cache->GetExistingResource<Texture2D>(name);
     if (!texture)
-        texture = cache->GetExistingResource<TextureCube>(name);
-    if (!texture)
     {
     }
     if (!texture)
@@ -2430,19 +2391,11 @@ Texture* View::FindNamedTexture(const String& name, bool isRenderTarget, bool is
     {
         if (GetExtension(name) == ".xml")
         {
-            // Assume 3D textures are only bound to the volume map unit, otherwise it's a cube texture
+            // 2D-only：仅处理 2D 与 2DArray
             StringHash type = ParseTextureTypeXml(cache, name);
-            if (!type && isVolumeMap)
-            {
-            }
-
-            bool handled = false;
             if (type == Texture2DArray::GetTypeStatic())
-            {
                 return cache->GetResource<Texture2DArray>(name);
-            }
-            // 其余情况按 CubeMap 处理
-            return cache->GetResource<TextureCube>(name);
+            return cache->GetResource<Texture2D>(name);
         }
         else
             return cache->GetResource<Texture2D>(name);

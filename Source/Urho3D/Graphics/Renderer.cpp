@@ -22,7 +22,6 @@
 #include "../GraphicsAPI/IndexBuffer.h"
 #include "../GraphicsAPI/ShaderVariation.h"
 #include "../GraphicsAPI/Texture2D.h"
-#include "../GraphicsAPI/TextureCube.h"
 #include "../GraphicsAPI/VertexBuffer.h"
 #include "../IO/Log.h"
 #include "../Resource/ResourceCache.h"
@@ -533,9 +532,9 @@ Technique* Renderer::GetDefaultTechnique() const
 i32 Renderer::GetNumGeometries(bool allViews) const
 {
     i32 numGeometries = 0;
-    i32 lastView = allViews ? views_.Size() : 1;
+    i32 lastView = allViews ? static_cast<i32>(views_.Size()) : 1;
 
-    for (unsigned i = 0; i < lastView; ++i)
+    for (i32 i = 0; i < lastView; ++i)
     {
         // Use the source view's statistics if applicable
         View* view = GetActualView(views_[i]);
@@ -551,9 +550,9 @@ i32 Renderer::GetNumGeometries(bool allViews) const
 i32 Renderer::GetNumLights(bool allViews) const
 {
     i32 numLights = 0;
-    i32 lastView = allViews ? views_.Size() : 1;
+    i32 lastView = allViews ? static_cast<i32>(views_.Size()) : 1;
 
-    for (unsigned i = 0; i < lastView; ++i)
+    for (i32 i = 0; i < lastView; ++i)
     {
         View* view = GetActualView(views_[i]);
         if (!view)
@@ -568,9 +567,9 @@ i32 Renderer::GetNumLights(bool allViews) const
 i32 Renderer::GetNumShadowMaps(bool allViews) const
 {
     i32 numShadowMaps = 0;
-    i32 lastView = allViews ? views_.Size() : 1;
+    i32 lastView = allViews ? static_cast<i32>(views_.Size()) : 1;
 
-    for (unsigned i = 0; i < lastView; ++i)
+    for (i32 i = 0; i < lastView; ++i)
     {
         View* view = GetActualView(views_[i]);
         if (!view)
@@ -590,9 +589,9 @@ i32 Renderer::GetNumShadowMaps(bool allViews) const
 i32 Renderer::GetNumOccluders(bool allViews) const
 {
     i32 numOccluders = 0;
-    i32 lastView = allViews ? views_.Size() : 1;
+    i32 lastView = allViews ? static_cast<i32>(views_.Size()) : 1;
 
-    for (unsigned i = 0; i < lastView; ++i)
+    for (i32 i = 0; i < lastView; ++i)
     {
         View* view = GetActualView(views_[i]);
         if (!view)
@@ -785,13 +784,9 @@ Geometry* Renderer::GetLightGeometry(Light* light)
     {
     case LIGHT_DIRECTIONAL:
         return dirLightGeometry_;
-    case LIGHT_SPOT:
-        return spotLightGeometry_;
-    case LIGHT_POINT:
-        return pointLightGeometry_;
+    default:
+        return nullptr;
     }
-
-    return nullptr;
 }
 
 Geometry* Renderer::GetQuadGeometry()
@@ -924,18 +919,8 @@ void Renderer::SetBatchShaders(Batch& batch, Technique* tech, bool allowShadows,
             case LIGHT_DIRECTIONAL:
                 vsi += LVS_DIR;
                 break;
-
-            case LIGHT_SPOT:
-                psi += LPS_SPOT;
-                vsi += LVS_SPOT;
-                break;
-
-            case LIGHT_POINT:
-                if (light->GetShapeTexture())
-                    psi += LPS_POINTMASK;
-                else
-                    psi += LPS_POINT;
-                vsi += LVS_POINT;
+            default:
+                // 2D-only：忽略非方向光
                 break;
             }
 
@@ -992,16 +977,7 @@ void Renderer::SetLightVolumeBatchShaders(Batch& batch, Camera* camera, const St
     case LIGHT_DIRECTIONAL:
         vsi += DLVS_DIR;
         break;
-
-    case LIGHT_SPOT:
-        psi += DLPS_SPOT;
-        break;
-
-    case LIGHT_POINT:
-        if (light->GetShapeTexture())
-            psi += DLPS_POINTMASK;
-        else
-            psi += DLPS_POINT;
+    default:
         break;
     }
 
@@ -1248,11 +1224,11 @@ Texture* Renderer::GetScreenBuffer(int width, int height, unsigned format, int m
         }
         else
         {
-            SharedPtr<TextureCube> newTexCube(new TextureCube(context_));
-            newTexCube->SetNumLevels(1);
-            newTexCube->SetSize(width, format, TEXTURE_RENDERTARGET, multiSample);
-
-            newBuffer = newTexCube;
+            // 2D-only：与非 cubemap 路径一致，分配 2D 纹理
+            SharedPtr<Texture2D> newTex2D(new Texture2D(context_));
+            newTex2D->SetNumLevels(1);
+            newTex2D->SetSize(width, height, format, depthStencil ? TEXTURE_DEPTHSTENCIL : TEXTURE_RENDERTARGET, multiSample, autoResolve);
+            newBuffer = newTex2D;
         }
 
         newBuffer->SetSRGB(srgb);
@@ -1273,26 +1249,9 @@ Texture* Renderer::GetScreenBuffer(int width, int height, unsigned format, int m
 
 const Rect& Renderer::GetLightScissor(Light* light, Camera* camera)
 {
-    Pair<Light*, Camera*> combination(light, camera);
-
-    HashMap<Pair<Light*, Camera*>, Rect>::Iterator i = lightScissorCache_.Find(combination);
-    if (i != lightScissorCache_.End())
-        return i->second_;
-
-    const Matrix3x4& view = camera->GetView();
-    const Matrix4& projection = camera->GetProjection();
-
-    assert(light->GetLightType() != LIGHT_DIRECTIONAL);
-    if (light->GetLightType() == LIGHT_SPOT)
-    {
-        Frustum viewFrustum(light->GetViewSpaceFrustum(view));
-        return lightScissorCache_[combination] = viewFrustum.Projected(projection);
-    }
-    else // LIGHT_POINT
-    {
-        BoundingBox viewBox(light->GetWorldBoundingBox().Transformed(view));
-        return lightScissorCache_[combination] = viewBox.Projected(projection);
-    }
+    (void)light; (void)camera;
+    static Rect full(0.0f, 0.0f, 1.0f, 1.0f);
+    return full;
 }
 
 void Renderer::UpdateQueuedViewport(i32 index)
@@ -1584,10 +1543,7 @@ void Renderer::ReloadTextures()
     for (Resource* texture : textures)
         cache->ReloadResource(texture);
 
-    cache->GetResources(textures, TextureCube::GetTypeStatic());
-
-    for (Resource* texture : textures)
-        cache->ReloadResource(texture);
+    // 2D-only：不再重载立方体纹理
 }
 
 void Renderer::CreateGeometries()
@@ -1641,53 +1597,7 @@ void Renderer::CreateGeometries()
 #endif
 }
 
-void Renderer::SetIndirectionTextureData()
-{
-    unsigned char data[256 * 256 * 4];
-
-    for (unsigned i = 0; i < MAX_CUBEMAP_FACES; ++i)
-    {
-        unsigned axis = i / 2;
-        data[0] = (unsigned char)((axis == 0) ? 255 : 0);
-        data[1] = (unsigned char)((axis == 1) ? 255 : 0);
-        data[2] = (unsigned char)((axis == 2) ? 255 : 0);
-        data[3] = 0;
-        faceSelectCubeMap_->SetData((CubeMapFace)i, 0, 0, 0, 1, 1, data);
-    }
-
-    for (unsigned i = 0; i < MAX_CUBEMAP_FACES; ++i)
-    {
-        auto faceX = (unsigned char)((i & 1u) * 255);
-        auto faceY = (unsigned char)((i / 2) * 255 / 3);
-        unsigned char* dest = data;
-        for (unsigned y = 0; y < 256; ++y)
-        {
-            for (unsigned x = 0; x < 256; ++x)
-            {
-                if (Graphics::GetGAPI() == GAPI_OPENGL)
-                {
-                    dest[0] = (unsigned char)x;
-                    dest[1] = (unsigned char)(255 - y);
-                    dest[2] = faceX;
-                    dest[3] = (unsigned char)(255 * 2 / 3 - faceY);
-                }
-                else
-                {
-                    dest[0] = (unsigned char)x;
-                    dest[1] = (unsigned char)y;
-                    dest[2] = faceX;
-                    dest[3] = faceY;
-                }
-                dest += 4;
-            }
-        }
-
-        indirectionCubeMap_->SetData((CubeMapFace)i, 0, 0, 0, 256, 256, data);
-    }
-
-    faceSelectCubeMap_->ClearDataLost();
-    indirectionCubeMap_->ClearDataLost();
-}
+// 2D-only：移除点光阴影的立方体重定向贴图生成逻辑
 
 void Renderer::CreateInstancingBuffer()
 {

@@ -17,7 +17,8 @@
 #include "../GraphicsAPI/ShaderPrecache.h"
 #include "../GraphicsAPI/Texture2D.h"
 #include "../GraphicsAPI/Texture2DArray.h"
-#include "../GraphicsAPI/TextureCube.h"
+// 2D-only：不需要 TextureCube
+// #include "../GraphicsAPI/TextureCube.h"
 #include "../GraphicsAPI/RenderSurface.h"
 #ifdef URHO3D_BGFX
 #include "../Graphics/GraphicsBgfx.h"
@@ -1048,22 +1049,7 @@ bool Graphics::ResolveToTexture(Texture2D* texture)
     return {}; // Prevent warning
 }
 
-bool Graphics::ResolveToTexture(TextureCube* texture)
-{
-    GAPI gapi = Graphics::GetGAPI();
-
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return ResolveToTexture_OGL(texture);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return ResolveToTexture_D3D11(texture);
-#endif
-
-    return {}; // Prevent warning
-}
+// 2D-only：移除对立方体纹理解析的支持
 
 void Graphics::Draw(PrimitiveType type, unsigned vertexStart, unsigned vertexCount)
 {
@@ -2867,8 +2853,7 @@ void RegisterGraphicsLibrary(Context* context)
     Texture2D::RegisterObject(context);
     Texture2DArray::RegisterObject(context);
     // 2D-only：不注册 3D 纹理类型
-    // 2D-only：不注册 Texture3D 类型
-    TextureCube::RegisterObject(context);
+    // 2D-only：不注册 Texture3D 和 TextureCube 类型
     Camera::RegisterObject(context);
     Drawable::RegisterObject(context);
     DebugRenderer::RegisterObject(context);

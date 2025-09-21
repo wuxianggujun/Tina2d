@@ -252,30 +252,9 @@ Texture2D* shadowMap = nullptr;
                     }
                     break;
 
-                case LIGHT_SPOT:
-                    {
-                        Matrix4 shadowMatrices[2];
-
-                        CalculateSpotMatrix(shadowMatrices[0], light);
-                        bool isShadowed = shadowMap && graphics->HasTextureUnit(TU_SHADOWMAP);
-                        if (isShadowed)
-                            CalculateShadowMatrix(shadowMatrices[1], lightQueue_, 0, renderer);
-
-                        graphics->SetShaderParameter(VSP_LIGHTMATRICES, shadowMatrices[0].Data(), isShadowed ? 32 : 16);
-                    }
-                    break;
-
-                case LIGHT_POINT:
-                    {
-                        Matrix4 lightVecRot(lightNode->GetWorldRotation().RotationMatrix());
-                        // HLSL compiler will pack the parameters as if the matrix is only 3x4, so must be careful to not overwrite
-                        // the next parameter
-                        if (Graphics::GetGAPI() == GAPI_OPENGL)
-                            graphics->SetShaderParameter(VSP_LIGHTMATRICES, lightVecRot.Data(), 16);
-                        else
-                            graphics->SetShaderParameter(VSP_LIGHTMATRICES, lightVecRot.Data(), 12);
-                    }
-                    break;
+                // 2D-only: 移除 LIGHT_SPOT 和 LIGHT_POINT 处理
+                // case LIGHT_SPOT: ... break;
+                // case LIGHT_POINT: ... break;
                 }
             }
 
@@ -311,30 +290,9 @@ Texture2D* shadowMap = nullptr;
                     }
                     break;
 
-                case LIGHT_SPOT:
-                    {
-                        Matrix4 shadowMatrices[2];
-
-                        CalculateSpotMatrix(shadowMatrices[0], light);
-                        bool isShadowed = lightQueue_->shadowMap_ != nullptr;
-                        if (isShadowed)
-                            CalculateShadowMatrix(shadowMatrices[1], lightQueue_, 0, renderer);
-
-                        graphics->SetShaderParameter(PSP_LIGHTMATRICES, shadowMatrices[0].Data(), isShadowed ? 32 : 16);
-                    }
-                    break;
-
-                case LIGHT_POINT:
-                    {
-                        Matrix4 lightVecRot(lightNode->GetWorldRotation().RotationMatrix());
-                        // HLSL compiler will pack the parameters as if the matrix is only 3x4, so must be careful to not overwrite
-                        // the next parameter
-                        if (Graphics::GetGAPI() == GAPI_OPENGL)
-                            graphics->SetShaderParameter(PSP_LIGHTMATRICES, lightVecRot.Data(), 16);
-                        else
-                            graphics->SetShaderParameter(PSP_LIGHTMATRICES, lightVecRot.Data(), 12);
-                    }
-                    break;
+                // 2D-only: 移除第二组 LIGHT_SPOT 和 LIGHT_POINT 处理
+                // case LIGHT_SPOT: ... break;
+                // case LIGHT_POINT: ... break;
                 }
             }
 
@@ -471,7 +429,8 @@ Texture2D* shadowMap = nullptr;
                     invRange = 0.0f;
                 else
                     invRange = 1.0f / Max(vertexLight->GetRange(), M_EPSILON);
-                if (type == LIGHT_SPOT)
+                // 2D-only: 移除LIGHT_SPOT检查
+                if (false) // type == LIGHT_SPOT
                 {
                     cutoff = Cos(vertexLight->GetFov() * 0.5f);
                     invCutoff = 1.0f / (1.0f - cutoff);
@@ -547,8 +506,9 @@ Texture2D* shadowMap = nullptr;
         if (graphics->HasTextureUnit(TU_LIGHTSHAPE))
         {
             Texture* shapeTexture = light->GetShapeTexture();
-            if (!shapeTexture && light->GetLightType() == LIGHT_SPOT)
-                shapeTexture = renderer->GetDefaultLightSpot();
+            // 2D-only: 移除LIGHT_SPOT检查
+            if (!shapeTexture && false) // light->GetLightType() == LIGHT_SPOT
+                // shapeTexture = renderer->GetDefaultLightSpot(); // 2D-only: 移除
             graphics->SetTexture(TU_LIGHTSHAPE, shapeTexture);
         }
     }

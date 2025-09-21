@@ -31,7 +31,6 @@ class ShaderVariation;
 class Texture;
 class Texture2D;
 class Texture2DArray;
-class TextureCube;
 class Vector3;
 class Vector4;
 class Matrix4;
@@ -207,8 +206,6 @@ public:
     bool ResolveToTexture(Texture2D* destination, const IntRect& viewport);
     /// Resolve a multisampled texture on itself.
     bool ResolveToTexture(Texture2D* texture);
-    /// Resolve a multisampled cube texture on itself.
-    bool ResolveToTexture(TextureCube* texture);
     /// Draw non-indexed geometry.
     void Draw(PrimitiveType type, unsigned vertexStart, unsigned vertexCount);
     /// Draw indexed geometry.
@@ -875,7 +872,6 @@ private:
     void Clear_OGL(ClearTargetFlags flags, const Color& color = Color(0.0f, 0.0f, 0.0f, 0.0f), float depth = 1.0f, u32 stencil = 0);
     bool ResolveToTexture_OGL(Texture2D* destination, const IntRect& viewport);
     bool ResolveToTexture_OGL(Texture2D* texture);
-    bool ResolveToTexture_OGL(TextureCube* texture);
     void Draw_OGL(PrimitiveType type, unsigned vertexStart, unsigned vertexCount);
     void Draw_OGL(PrimitiveType type, unsigned indexStart, unsigned indexCount, unsigned minVertex, unsigned vertexCount);
     void Draw_OGL(PrimitiveType type, unsigned indexStart, unsigned indexCount, unsigned baseVertexIndex, unsigned minVertex, unsigned vertexCount);
@@ -979,7 +975,6 @@ private:
     void Clear_D3D11(ClearTargetFlags flags, const Color& color = Color(0.0f, 0.0f, 0.0f, 0.0f), float depth = 1.0f, u32 stencil = 0);
     bool ResolveToTexture_D3D11(Texture2D* destination, const IntRect& viewport);
     bool ResolveToTexture_D3D11(Texture2D* texture);
-    bool ResolveToTexture_D3D11(TextureCube* texture);
     void Draw_D3D11(PrimitiveType type, unsigned vertexStart, unsigned vertexCount);
     void Draw_D3D11(PrimitiveType type, unsigned indexStart, unsigned indexCount, unsigned minVertex, unsigned vertexCount);
     void Draw_D3D11(PrimitiveType type, unsigned indexStart, unsigned indexCount, unsigned baseVertexIndex, unsigned minVertex, unsigned vertexCount);

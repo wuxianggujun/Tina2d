@@ -177,13 +177,14 @@ set (EXCLUDE_3D_PATTERNS
     "Graphics/Skeleton\\.[^;]+"
     "Graphics/Skybox\\.[^;]+"
     "Graphics/Particle(Effect|Emitter)\\.[^;]+"
+    "GraphicsAPI/TextureCube\\.[^;]+"
     "UI/Text3D\\.[^;]+"
     "UI/View3D\\.[^;]+"
     "UI/UIComponent\\.[^;]+"
 )
 list (APPEND EXCLUDE_PATTERNS ${EXCLUDE_3D_PATTERNS})
 
-# 已删除 3D 类与脚本系统，不再需要 2D-only 宏
+# 已删除 3D 类与脚本系统
 
 define_source_files (EXCLUDE_PATTERNS ${EXCLUDE_PATTERNS} GLOB_CPP_PATTERNS *.cpp ${GLOB_OBJC_PATTERN} RECURSE GROUP)
 
