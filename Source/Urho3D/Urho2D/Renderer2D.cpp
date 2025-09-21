@@ -89,8 +89,8 @@ static inline bool CompareRayQueryResults(RayQueryResult& lr, RayQueryResult& rr
 void Renderer2D::ProcessRayQuery(const RayOctreeQuery& query, Vector<RayQueryResult>& results)
 {
     unsigned resultSize = results.Size();
-    for (unsigned i = 0; i < drawables_.Size(); ++i)
-    {
+    for (unsigned i = 0; i < static_cast<unsigned>(drawables_.Size()); ++i)
+        {
         if (drawables_[i]->GetViewMask() & query.viewMask_)
             drawables_[i]->ProcessRayQuery(query, results);
     }
@@ -115,7 +115,7 @@ void Renderer2D::UpdateGeometry(const FrameInfo& frame)
 {
     unsigned indexCount = 0;
     for (HashMap<Camera*, ViewBatchInfo2D>::ConstIterator i = viewBatchInfos_.Begin(); i != viewBatchInfos_.End(); ++i)
-    {
+        {
         if (i->second_.batchUpdatedFrameNumber_ == frame_.frameNumber_)
             indexCount = Max(indexCount, i->second_.indexCount_);
     }
@@ -186,7 +186,7 @@ void Renderer2D::UpdateGeometry(const FrameInfo& frame)
             if (dest)
             {
                 const Vector<const SourceBatch2D*>& sourceBatches = viewBatchInfo.sourceBatches_;
-                for (unsigned b = 0; b < sourceBatches.Size(); ++b)
+                for (unsigned b = 0; b < static_cast<unsigned>(sourceBatches.Size()); ++b)
                 {
                     const Vector<Vertex2D>& vertices = sourceBatches[b]->vertices_;
                     for (unsigned i = 0; i < vertices.Size(); ++i)
@@ -530,7 +530,7 @@ void Renderer2D::UpdateViewBatchInfo(ViewBatchInfo2D& viewBatchInfo, Camera* cam
 
     Vector<const SourceBatch2D*>& sourceBatches = viewBatchInfo.sourceBatches_;
     sourceBatches.Clear();
-    for (unsigned d = 0; d < drawables_.Size(); ++d)
+    for (unsigned d = 0; d < static_cast<unsigned>(drawables_.Size()); ++d)
     {
         if (!drawables_[d]->IsInView(camera))
             continue;
@@ -560,7 +560,7 @@ void Renderer2D::UpdateViewBatchInfo(ViewBatchInfo2D& viewBatchInfo, Camera* cam
     unsigned vCount = 0;
     float distance = M_INFINITY;
 
-    for (unsigned b = 0; b < sourceBatches.Size(); ++b)
+    for (unsigned b = 0; b < static_cast<unsigned>(sourceBatches.Size()); ++b)
     {
         distance = Min(distance, sourceBatches[b]->distance_);
         Material* material = sourceBatches[b]->material_;

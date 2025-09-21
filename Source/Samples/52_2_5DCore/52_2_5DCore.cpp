@@ -31,6 +31,8 @@ public:
     {
         // 基础 Sample 初始化
         Sample::Start();
+        // 显示系统鼠标，便于交互观察
+        InitMouseMode(MM_FREE);
 
         // 创建 2D 场景
         CreateScene();
@@ -86,7 +88,8 @@ private:
 
             // 第三朵，做上下往返运动，动态展示遮挡切换
             mover_ = scene_->CreateChild("MoverSprite");
-            mover_->SetPosition(Vector3(0.8f, -2.5f, 0.0f));
+            // 将移动精灵的 x 放到 -1.0，确保上下移动时穿过两朵花，直观看到遮挡切换
+            mover_->SetPosition(Vector3(-1.0f, -2.5f, 0.0f));
             auto* ssm = mover_->CreateComponent<StaticSprite2D>();
             ssm->SetSprite(sprite);
             ssm->SetColor(Color(1.0f, 0.8f, 0.8f));
