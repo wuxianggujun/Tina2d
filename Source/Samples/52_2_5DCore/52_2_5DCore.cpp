@@ -150,12 +150,13 @@ private:
             if (pos.y_ < -3.0f){ pos.y_ = -3.0f; moverSpeed_ =  fabsf(moverSpeed_); }
             mover_->SetPosition(pos);
 
-            // 点光左右小幅摆动
+            // 让点光跟随移动花朵，在其附近偏移，确保会“靠近并穿过”两朵花，效果更直观
             if (pointLightNode_)
             {
-                Vector3 lp = pointLightNode_->GetPosition();
                 phase_ += dt;
-                lp.x_ = 0.5f + 0.8f * Sin(phase_ * 1.2f);
+                Vector3 lp = pos;
+                lp.x_ += 0.3f * Cos(phase_ * 1.5f);
+                lp.y_ += 0.5f; // 位于花朵上方一些
                 pointLightNode_->SetPosition(lp);
             }
         });
