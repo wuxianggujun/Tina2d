@@ -18,7 +18,6 @@ class DebugRenderer;
 class Light;
 class Drawable;
 class Graphics;
-class OcclusionBuffer;
 class Octree;
 class Renderer;
 class RenderPath;
@@ -152,7 +151,6 @@ public:
     const Vector<LightBatchQueue>& GetLightQueues() const { return lightQueues_; }
 
     /// Return the last used software occlusion buffer.
-    OcclusionBuffer* GetOcclusionBuffer() const { return occlusionBuffer_; }
 
     /// Return number of occluders that were actually rendered. Occluders may be rejected if running out of triangles or if behind other occluders.
     i32 GetNumActiveOccluders() const { return activeOccluders_; }
@@ -213,7 +211,6 @@ private:
     /// Query for occluders as seen from a camera.
     void UpdateOccluders(Vector<Drawable*>& occluders, Camera* camera);
     /// Draw occluders to occlusion buffer.
-    void DrawOccluders(OcclusionBuffer* buffer, const Vector<Drawable*>& occluders);
     /// Query for lit geometries and shadow casters for a light.
     void ProcessLight(LightQueryResult& query, i32 threadIndex);
     /// Process shadow casters' visibilities and build their combined view- or projection-space bounding box.
@@ -285,8 +282,6 @@ private:
     Zone* cameraZone_{};
     /// Zone at far clip plane.
     Zone* farClipZone_{};
-    /// Occlusion buffer for the main camera.
-    OcclusionBuffer* occlusionBuffer_{};
     /// Destination color rendertarget.
     RenderSurface* renderTarget_{};
     /// Substitute rendertarget for deferred rendering. Allocated if necessary.

@@ -208,7 +208,8 @@ void SpriteBatchBase::Flush()
             graphics_->ResetRenderTargets();
             graphics_->ClearParameterSources();
             graphics_->SetCullMode(CULL_NONE);
-            graphics_->SetDepthWrite(false);
+            // 2.5D: 对使用 SpriteBatch 的形状/四边形也允许写深度，便于与其他内容正确遮挡
+            graphics_->SetDepthWrite(true);
             graphics_->SetStencilTest(false);
             graphics_->SetScissorTest(false);
             graphics_->SetColorWrite(true);
@@ -227,7 +228,7 @@ void SpriteBatchBase::Flush()
         graphics_->ResetRenderTargets();
         graphics_->ClearParameterSources();
         graphics_->SetCullMode(CULL_NONE);
-        graphics_->SetDepthWrite(false);
+        graphics_->SetDepthWrite(true);
         graphics_->SetStencilTest(false);
         graphics_->SetScissorTest(false);
         graphics_->SetColorWrite(true);
@@ -264,7 +265,7 @@ void SpriteBatchBase::Flush()
             graphics_->ResetRenderTargets();
             graphics_->ClearParameterSources();
             graphics_->SetCullMode(CULL_NONE);
-            graphics_->SetDepthWrite(false);
+            graphics_->SetDepthWrite(true);
             graphics_->SetStencilTest(false);
             graphics_->SetScissorTest(false);
             graphics_->SetColorWrite(true);
@@ -281,7 +282,7 @@ void SpriteBatchBase::Flush()
         graphics_->ResetRenderTargets();
         graphics_->ClearParameterSources();
         graphics_->SetCullMode(CULL_NONE);
-        graphics_->SetDepthWrite(false);
+        graphics_->SetDepthWrite(true);
         graphics_->SetStencilTest(false);
         graphics_->SetScissorTest(false);
         graphics_->SetColorWrite(true);

@@ -53,7 +53,9 @@ Renderer2D::Renderer2D(Context* context) :
     Pass* pass = tech->CreatePass("alpha");
     pass->SetVertexShader("Urho2D");
     pass->SetPixelShader("Urho2D");
-    pass->SetDepthWrite(false);
+    // 2.5D: 启用深度写入与深度测试（前向，减少遮挡过绘）
+    pass->SetDepthWrite(true);
+    pass->SetDepthTestMode(CMP_LESSEQUAL);
     cachedTechniques_[BLEND_REPLACE] = tech;
 
     material_->SetTechnique(0, tech);
@@ -187,7 +189,12 @@ void Renderer2D::UpdateGeometry(const FrameInfo& frame)
                 {
                     const Vector<Vertex2D>& vertices = sourceBatches[b]->vertices_;
                     for (unsigned i = 0; i < vertices.Size(); ++i)
+                    {
                         dest[i] = vertices[i];
+                        // 2.5D: y→z 映射，利用深度测试实现层级遮挡
+                        // 经验系数：0.001f，可按项目世界坐标范围调节
+                        dest[i].position_.z_ = -dest[i].position_.y_ * 0.001f;
+                    }
                     dest += vertices.Size();
                 }
 

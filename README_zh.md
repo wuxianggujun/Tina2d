@@ -2,6 +2,14 @@
 
 **TINA2D** 是一个基于 [Urho3D](https://github.com/urho3d/Urho3D) 的轻量级2D游戏引擎。
 
+## 2.5D（核心能力）
+
+Tina2D 将“2.5D”作为核心能力进行演进：在保持 2D 管线高性能的基础上，引入基于深度的遮挡（Depth Test/Write）、轻量 2D 光照（Light2D）与可选的低成本阴影。设计与路线图见文档：
+
+- `Docs/2_5D_Design.md`
+
+示例：新增 `52_2_5DCore`（初版为占位，后续迭代增强）。
+
 [English](README.md) | 中文
 
 ## 项目概述

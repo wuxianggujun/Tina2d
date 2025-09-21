@@ -51,7 +51,8 @@ set (ALLOWED_2D_SAMPLES
     47_Typography
     49_Urho2DIsometricDemo
     50_Urho2DPlatformer
-    51_Urho2DStretchableSprite)
+    51_Urho2DStretchableSprite
+    52_2_5DCore)
 
 foreach (DIR ${DIRS})
     get_filename_component (DIR ${DIR} PATH)

@@ -777,8 +777,7 @@ void View::GetDrawables()
     if (farClipZone_ == renderer_->GetDefaultZone())
         farClipZone_ = cameraZone_;
 
-    // 2D-only：不使用遮挡缓冲，直接清空遮挡体
-    occlusionBuffer_ = nullptr;
+    // 2D-only：不使用遮挡缓冲
     occluders_.Clear();
 
     // 获取光源与几何体：2D-only 直接使用普通视锥体查询
