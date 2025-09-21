@@ -864,52 +864,8 @@ void Renderer::SetBatchShaders(Batch& batch, Technique* tech, bool allowShadows,
 void Renderer::SetLightVolumeBatchShaders(Batch& batch, Camera* camera, const String& vsName, const String& psName, const String& vsDefines,
     const String& psDefines)
 {
-#ifndef TINA2D_DISABLE_3D
-    assert(deferredLightPSVariations_.Size());
-
-    unsigned vsi = DLVS_NONE;
-    unsigned psi = DLPS_NONE;
-    Light* light = batch.lightQueue_->light_;
-
-    switch (light->GetLightType())
-    {
-    case LIGHT_DIRECTIONAL:
-        vsi += DLVS_DIR;
-        break;
-    default:
-        break;
-    }
-
-    if (batch.lightQueue_->shadowMap_)
-    {
-        if (light->GetShadowBias().normalOffset_ > 0.0)
-            psi += DLPS_SHADOWNORMALOFFSET;
-        else
-            psi += DLPS_SHADOW;
-    }
-
-    if (specularLighting_ && light->GetSpecularIntensity() > 0.0f)
-        psi += DLPS_SPEC;
-
-    if (camera->IsOrthographic())
-    {
-        vsi += DLVS_ORTHO;
-        psi += DLPS_ORTHO;
-    }
-
-    if (vsDefines.Length())
-        batch.vertexShader_ = graphics_->GetShader(VS, vsName, deferredLightVSVariations[vsi] + vsDefines);
-    else
-        batch.vertexShader_ = graphics_->GetShader(VS, vsName, deferredLightVSVariations[vsi]);
-
-    if (psDefines.Length())
-        batch.pixelShader_ = graphics_->GetShader(PS, psName, deferredLightPSVariations_[psi] + psDefines);
-    else
-        batch.pixelShader_ = graphics_->GetShader(PS, psName, deferredLightPSVariations_[psi]);
-#else
     (void)batch; (void)camera; (void)vsName; (void)psName; (void)vsDefines; (void)psDefines;
     // 2D-only：无延迟光照体积渲染，保持空实现
-#endif
 }
 
 void Renderer::SetCullMode(CullMode mode, Camera* camera)
@@ -956,81 +912,16 @@ bool Renderer::ResizeInstancingBuffer(i32 numInstances)
 
 void Renderer::OptimizeLightByScissor(Light* light, Camera* camera)
 {
-    if (light && light->GetLightType() != LIGHT_DIRECTIONAL)
-        graphics_->SetScissorTest(true, GetLightScissor(light, camera));
-    else
-        graphics_->SetScissorTest(false);
+    // 2D-only：不使用基于光照体积的裁剪优化
+    (void)light; (void)camera;
+    graphics_->SetScissorTest(false);
 }
 
 void Renderer::OptimizeLightByStencil(Light* light, Camera* camera)
 {
-    if (light)
-    {
-        LightType type = light->GetLightType();
-        if (type == LIGHT_DIRECTIONAL)
-        {
-            graphics_->SetStencilTest(false);
-            return;
-        }
-
-        Geometry* geometry = GetLightGeometry(light);
-        const Matrix3x4& view = camera->GetView();
-        const Matrix4& projection = camera->GetGPUProjection();
-        Vector3 cameraPos = camera->GetNode()->GetWorldPosition();
-        float lightDist;
-
-        if (type == LIGHT_POINT)
-            lightDist = Sphere(light->GetNode()->GetWorldPosition(), light->GetRange() * 1.25f).Distance(cameraPos);
-        else
-            lightDist = light->GetFrustum().Distance(cameraPos);
-
-        // If the camera is actually inside the light volume, do not draw to stencil as it would waste fillrate
-        if (lightDist < M_EPSILON)
-        {
-            graphics_->SetStencilTest(false);
-            return;
-        }
-
-        // If the stencil value has wrapped, clear the whole stencil first
-        if (!lightStencilValue_)
-        {
-            graphics_->Clear(CLEAR_STENCIL);
-            lightStencilValue_ = 1;
-        }
-
-        // If possible, render the stencil volume front faces. However, close to the near clip plane render back faces instead
-        // to avoid clipping.
-        if (lightDist < camera->GetNearClip() * 2.0f)
-        {
-            SetCullMode(CULL_CW, camera);
-            graphics_->SetDepthTest(CMP_GREATER);
-        }
-        else
-        {
-            SetCullMode(CULL_CCW, camera);
-            graphics_->SetDepthTest(CMP_LESSEQUAL);
-        }
-
-        graphics_->SetColorWrite(false);
-        graphics_->SetDepthWrite(false);
-        graphics_->SetStencilTest(true, CMP_ALWAYS, OP_REF, OP_KEEP, OP_KEEP, lightStencilValue_);
-        graphics_->SetShaders(graphics_->GetShader(VS, "Stencil"), graphics_->GetShader(PS, "Stencil"));
-        graphics_->SetShaderParameter(VSP_VIEW, view);
-        graphics_->SetShaderParameter(VSP_VIEWINV, camera->GetEffectiveWorldTransform());
-        graphics_->SetShaderParameter(VSP_VIEWPROJ, projection * view);
-        graphics_->SetShaderParameter(VSP_MODEL, light->GetVolumeTransform(camera));
-
-        geometry->Draw(graphics_);
-
-        graphics_->ClearTransformSources();
-        graphics_->SetColorWrite(true);
-        graphics_->SetStencilTest(true, CMP_EQUAL, OP_KEEP, OP_KEEP, OP_KEEP, lightStencilValue_);
-
-        // Increase stencil value for next light
-        ++lightStencilValue_;
-    }
-    else
-        graphics_->SetStencilTest(false);
+    // 2D-only：不使用光照体积模板优化
+    (void)light; (void)camera;
+    graphics_->SetStencilTest(false);
 }
 
 Viewport* Renderer::GetViewport(i32 index) const
@@ -1506,47 +1397,8 @@ void Renderer::ResetBuffers()
 
 String Renderer::GetShadowVariations() const
 {
-#ifndef TINA2D_DISABLE_3D
-    switch (shadowQuality_)
-    {
-        case SHADOWQUALITY_SIMPLE_16BIT:
-            if (Graphics::GetGAPI() == GAPI_OPENGL)
-            {
-                return "SIMPLE_SHADOW ";
-            }
-            else
-            {
-                if (graphics_->GetHardwareShadowSupport())
-                    return "SIMPLE_SHADOW ";
-                else
-                    return "SIMPLE_SHADOW SHADOWCMP ";
-            }
-        case SHADOWQUALITY_SIMPLE_24BIT:
-            return "SIMPLE_SHADOW ";
-        case SHADOWQUALITY_PCF_16BIT:
-            if (Graphics::GetGAPI() == GAPI_OPENGL)
-            {
-                return "PCF_SHADOW ";
-            }
-            else
-            {
-                if (graphics_->GetHardwareShadowSupport())
-                    return "PCF_SHADOW ";
-                else
-                    return "PCF_SHADOW SHADOWCMP ";
-            }
-        case SHADOWQUALITY_PCF_24BIT:
-            return "PCF_SHADOW ";
-        case SHADOWQUALITY_VSM:
-            return "VSM_SHADOW ";
-        case SHADOWQUALITY_BLUR_VSM:
-            return "VSM_SHADOW ";
-    }
-    return "";
-#else
     // 2D-only：不使用阴影变体
     return "";
-#endif
 }
 
 void Renderer::HandleScreenMode(StringHash eventType, VariantMap& eventData)

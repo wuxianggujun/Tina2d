@@ -41,21 +41,11 @@ static const float DEFAULT_TEMPERATURE = 6590.0f;
 static const float DEFAULT_RADIUS = 0.0f;
 static const float DEFAULT_LENGTH = 0.0f;
 
-#ifdef TINA2D_DISABLE_3D
 static const char* typeNames[] =
 {
     "Directional",
     nullptr
 };
-#else
-static const char* typeNames[] =
-{
-    "Directional",
-    "Spot",
-    "Point",
-    nullptr
-};
-#endif
 
 void BiasParameters::Validate()
 {
@@ -176,19 +166,10 @@ void Light::ProcessRayQuery(const RayOctreeQuery& query, Vector<RayQueryResult>&
         break;
 
     case RAY_TRIANGLE:
-        // 2D-only: 移除LIGHT_SPOT检查，改为永不执行
-        if (lightType_ == LIGHT_SPOT) // 由于LIGHT_SPOT=-1，永远不会执行
-        {
-            distance = query.ray_.HitDistance(GetFrustum());
-            if (distance >= query.maxDistance_)
-                return;
-        }
-        else
-        {
-            distance = query.ray_.HitDistance(Sphere(node_->GetWorldPosition(), range_));
-            if (distance >= query.maxDistance_)
-                return;
-        }
+        // 2D-only：不处理聚光体，沿用包围球检测（对定向光无效，上方已提前返回）
+        distance = query.ray_.HitDistance(Sphere(node_->GetWorldPosition(), range_));
+        if (distance >= query.maxDistance_)
+            return;
         break;
 
     case RAY_TRIANGLE_UV:

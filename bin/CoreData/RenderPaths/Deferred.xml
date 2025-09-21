@@ -17,7 +17,7 @@
     </command>
     <command type="scenepass" pass="postopaque" />
     <command type="scenepass" pass="refract">
-        <texture unit="environment" name="viewport" />
+        <texture unit="custom1" name="viewport" />
     </command>
     <command type="scenepass" pass="alpha" vertexlights="true" sort="backtofront" metadata="alpha">
         <texture unit="depth" name="depth" />

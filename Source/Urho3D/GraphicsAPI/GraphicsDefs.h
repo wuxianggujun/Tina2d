@@ -324,7 +324,7 @@ enum ShaderParameterGroup
     MAX_SHADER_PARAMETER_GROUPS
 };
 
-/// Texture units.
+/// 2D-only 纹理单元（移除 3D/阴影专用）
 /// @manualbind
 enum TextureUnit
 {
@@ -334,28 +334,12 @@ enum TextureUnit
     TU_NORMALBUFFER = 1,
     TU_SPECULAR = 2,
     TU_EMISSIVE = 3,
-    TU_ENVIRONMENT = 4,
-#ifdef DESKTOP_GRAPHICS_OR_GLES3
-    TU_VOLUMEMAP = 5,
-    TU_CUSTOM1 = 6,
-    TU_CUSTOM2 = 7,
-    TU_LIGHTRAMP = 8,
-    TU_LIGHTSHAPE = 9,
-    TU_SHADOWMAP = 10,
-    TU_FACESELECT = 11,
-    TU_INDIRECTION = 12,
-    TU_DEPTHBUFFER = 13,
-    TU_LIGHTBUFFER = 14,
-    TU_ZONE = 15,
+    TU_VOLUMEMAP = 4,
+    TU_CUSTOM1 = 5,
+    TU_CUSTOM2 = 6,
+    TU_ZONE = 7,
     MAX_MATERIAL_TEXTURE_UNITS = 8,
-    MAX_TEXTURE_UNITS = 16
-#else
-    TU_LIGHTRAMP = 5,
-    TU_LIGHTSHAPE = 6,
-    TU_SHADOWMAP = 7,
-    MAX_MATERIAL_TEXTURE_UNITS = 5,
     MAX_TEXTURE_UNITS = 8
-#endif
 };
 
 /// Billboard camera facing modes.

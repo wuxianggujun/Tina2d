@@ -464,15 +464,9 @@ Texture2D* shadowMap = nullptr;
         }
     }
 
-    // Set zone texture if necessary
-#ifndef URHO3D_GLES2
+    // 设置 Zone 纹理（2D-only：统一使用 TU_ZONE）
     if (zone_ && graphics->HasTextureUnit(TU_ZONE))
         graphics->SetTexture(TU_ZONE, zone_->GetZoneTexture());
-#else
-    // On OpenGL ES2 set the zone texture to the environment unit instead
-    if (zone_ && zone_->GetZoneTexture() && graphics->HasTextureUnit(TU_ENVIRONMENT))
-        graphics->SetTexture(TU_ENVIRONMENT, zone_->GetZoneTexture());
-#endif
     // Set material-specific shader parameters and textures
     if (material_)
     {
@@ -491,27 +485,7 @@ Texture2D* shadowMap = nullptr;
         }
     }
 
-    // Set light-related textures
-    if (light)
-    {
-        if (shadowMap && graphics->HasTextureUnit(TU_SHADOWMAP))
-            graphics->SetTexture(TU_SHADOWMAP, shadowMap);
-        if (graphics->HasTextureUnit(TU_LIGHTRAMP))
-        {
-            Texture* rampTexture = light->GetRampTexture();
-            if (!rampTexture)
-                rampTexture = renderer->GetDefaultLightRamp();
-            graphics->SetTexture(TU_LIGHTRAMP, rampTexture);
-        }
-        if (graphics->HasTextureUnit(TU_LIGHTSHAPE))
-        {
-            Texture* shapeTexture = light->GetShapeTexture();
-            // 2D-only: 移除LIGHT_SPOT检查
-            if (!shapeTexture && false) // light->GetLightType() == LIGHT_SPOT
-                // shapeTexture = renderer->GetDefaultLightSpot(); // 2D-only: 移除
-            graphics->SetTexture(TU_LIGHTSHAPE, shapeTexture);
-        }
-    }
+    // 2D-only：不再设置与阴影/体积光相关的 3D 纹理单元
 }
 
 void Batch::Draw(View* view, Camera* camera, bool allowDepthWrite) const

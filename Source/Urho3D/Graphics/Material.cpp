@@ -33,19 +33,11 @@ static const char* textureUnitNames[] =
 {
     "diffuse",     // TU_DIFFUSE
     "normal",      // TU_NORMAL
-    "specular",    // TU_SPECULAR
+    "specular",    // TU_SPECULAR（2D可保留，不影响）
     "emissive",    // TU_EMISSIVE
-    "environment", // TU_ENVIRONMENT
-    "volume",      // TU_VOLUMEMAP (保留名称映射，2D-only 不使用)
+    "volume",      // TU_VOLUMEMAP（2D通常不使用）
     "custom1",     // TU_CUSTOM1
     "custom2",     // TU_CUSTOM2
-    "lightramp",   // TU_LIGHTRAMP
-    "lightshape",  // TU_LIGHTSHAPE
-    "shadowmap",   // TU_SHADOWMAP
-    "faceselect",  // TU_FACESELECT
-    "indirection", // TU_INDIRECTION
-    "depth",       // TU_DEPTH
-    "light",       // TU_LIGHT
     "zone",        // TU_ZONE
     nullptr
 };
@@ -73,7 +65,7 @@ TextureUnit ParseTextureUnitName(String name)
     TextureUnit unit = (TextureUnit)GetStringListIndex(name.CString(), textureUnitNames, MAX_TEXTURE_UNITS);
     if (unit == MAX_TEXTURE_UNITS)
     {
-        // Check also for shorthand names
+        // 检查简写名（仅限 2D 可用简写）
         if (name == "diff")
             unit = TU_DIFFUSE;
         else if (name == "albedo")
@@ -82,9 +74,7 @@ TextureUnit ParseTextureUnitName(String name)
             unit = TU_NORMAL;
         else if (name == "spec")
             unit = TU_SPECULAR;
-        else if (name == "env")
-            unit = TU_ENVIRONMENT;
-        // Finally check for specifying the texture unit directly as a number
+        // 也允许以数字指定纹理单元索引（如 "0"、"1"）
         else if (name.Length() < 3)
             unit = (TextureUnit)Clamp(ToI32(name), 0, MAX_TEXTURE_UNITS - 1);
     }

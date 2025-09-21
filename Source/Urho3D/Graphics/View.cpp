@@ -12,7 +12,6 @@
 #include "../Graphics/GraphicsEvents.h"
 #include "../GraphicsAPI/GraphicsDefs.h"
 #include "../Graphics/Material.h"
-#include "../Graphics/OcclusionBuffer.h"
 #include "../Graphics/Octree.h"
 #include "../Graphics/Renderer.h"
 #include "../Graphics/RenderPath.h"
@@ -93,56 +92,14 @@ public:
 };
 
 /// %Frustum octree query with occlusion.
-class OccludedFrustumOctreeQuery : public FrustumOctreeQuery
-{
-public:
-    /// Construct with frustum, occlusion buffer and query parameters.
-    OccludedFrustumOctreeQuery(Vector<Drawable*>& result, const Frustum& frustum, OcclusionBuffer* buffer,
-        DrawableTypes drawableTypes = DrawableTypes::Any, unsigned viewMask = DEFAULT_VIEWMASK) :
-        FrustumOctreeQuery(result, frustum, drawableTypes, viewMask),
-        buffer_(buffer)
-    {
-    }
-
-    /// Intersection test for an octant.
-    Intersection TestOctant(const BoundingBox& box, bool inside) override
-    {
-        if (inside)
-            return buffer_->IsVisible(box) ? INSIDE : OUTSIDE;
-        else
-        {
-            Intersection result = frustum_.IsInside(box);
-            if (result != OUTSIDE && !buffer_->IsVisible(box))
-                result = OUTSIDE;
-            return result;
-        }
-    }
-
-    /// Intersection test for drawables. Note: drawable occlusion is performed later in worker threads.
-    void TestDrawables(Drawable** start, Drawable** end, bool inside) override
-    {
-        while (start != end)
-        {
-            Drawable* drawable = *start++;
-
-            if (!!(drawable->GetDrawableType() & drawableTypes_) && (drawable->GetViewMask() & viewMask_))
-            {
-                if (inside || frustum_.IsInsideFast(drawable->GetWorldBoundingBox()))
-                    result_.Push(drawable);
-            }
-        }
-    }
-
-    /// Occlusion buffer.
-    OcclusionBuffer* buffer_;
-};
+// 2D-only：移除带遮挡的视锥体查询（OccludedFrustumOctreeQuery）
 
 void CheckVisibilityWork(const WorkItem* item, i32 threadIndex)
 {
     auto* view = reinterpret_cast<View*>(item->aux_);
     auto** start = reinterpret_cast<Drawable**>(item->start_);
     auto** end = reinterpret_cast<Drawable**>(item->end_);
-    OcclusionBuffer* buffer = view->occlusionBuffer_;
+    // 2D-only：不使用遮挡缓冲
     const Matrix3x4& viewMatrix = view->cullCamera_->GetView();
     Vector3 viewZ = Vector3(viewMatrix.m20_, viewMatrix.m21_, viewMatrix.m22_);
     Vector3 absViewZ = viewZ.Abs();
@@ -154,7 +111,6 @@ void CheckVisibilityWork(const WorkItem* item, i32 threadIndex)
     {
         Drawable* drawable = *start++;
 
-        if (!buffer || !drawable->IsOccludee() || buffer->IsVisible(drawable->GetWorldBoundingBox()))
         {
             drawable->UpdateBatches(view->frame_);
             // If draw distance non-zero, update and check it
@@ -821,45 +777,15 @@ void View::GetDrawables()
     if (farClipZone_ == renderer_->GetDefaultZone())
         farClipZone_ = cameraZone_;
 
-    // If occlusion in use, get & render the occluders（2D-only 默认关闭，可在关闭 3D 时跳过）
+    // 2D-only：不使用遮挡缓冲，直接清空遮挡体
     occlusionBuffer_ = nullptr;
-#ifndef TINA2D_DISABLE_3D
-    if (maxOccluderTriangles_ > 0)
-    {
-        UpdateOccluders(occluders_, cullCamera_);
-        if (occluders_.Size())
-        {
-            URHO3D_PROFILE(DrawOcclusion);
-
-            occlusionBuffer_ = renderer_->GetOcclusionBuffer(cullCamera_);
-            DrawOccluders(occlusionBuffer_, occluders_);
-        }
-    }
-    else
-        occluders_.Clear();
-#else
     occluders_.Clear();
-#endif
 
-    // Get lights and geometries. Coarse occlusion for octants is used at this point
-#ifndef TINA2D_DISABLE_3D
-    if (occlusionBuffer_)
-    {
-        OccludedFrustumOctreeQuery query
-            (tempDrawables, cullCamera_->GetFrustum(), occlusionBuffer_, DrawableTypes::Geometry | DrawableTypes::Light, cullCamera_->GetViewMask());
-        octree_->GetDrawables(query);
-    }
-    else
+    // 获取光源与几何体：2D-only 直接使用普通视锥体查询
     {
         FrustumOctreeQuery query(tempDrawables, cullCamera_->GetFrustum(), DrawableTypes::Geometry | DrawableTypes::Light, cullCamera_->GetViewMask());
         octree_->GetDrawables(query);
     }
-#else
-    {
-        FrustumOctreeQuery query(tempDrawables, cullCamera_->GetFrustum(), DrawableTypes::Geometry | DrawableTypes::Light, cullCamera_->GetViewMask());
-        octree_->GetDrawables(query);
-    }
-#endif
 
     // Check drawable occlusion, find zones for moved drawables and collect geometries & lights in worker threads
     {
@@ -1950,111 +1876,7 @@ void View::DrawFullscreenQuad(bool setIdentityProjection)
     geometry->Draw(graphics_);
 }
 
-void View::UpdateOccluders(Vector<Drawable*>& occluders, Camera* camera)
-{
-    float occluderSizeThreshold_ = renderer_->GetOccluderSizeThreshold();
-    float halfViewSize = camera->GetHalfViewSize();
-    float invOrthoSize = 1.0f / camera->GetOrthoSize();
-
-    for (Vector<Drawable*>::Iterator i = occluders.Begin(); i != occluders.End();)
-    {
-        Drawable* occluder = *i;
-        bool erase = false;
-
-        if (!occluder->IsInView(frame_, true))
-            occluder->UpdateBatches(frame_);
-
-        // Check occluder's draw distance (in main camera view)
-        float maxDistance = occluder->GetDrawDistance();
-        if (maxDistance <= 0.0f || occluder->GetDistance() <= maxDistance)
-        {
-            // Check that occluder is big enough on the screen
-            const BoundingBox& box = occluder->GetWorldBoundingBox();
-            float diagonal = box.Size().Length();
-            float compare;
-            if (!camera->IsOrthographic())
-            {
-                // Occluders which are near the camera are more useful then occluders at the end of the camera's draw distance
-                float cameraMaxDistanceFraction = occluder->GetDistance() / camera->GetFarClip();
-                compare = diagonal * halfViewSize / (occluder->GetDistance() * cameraMaxDistanceFraction);
-
-                // Give higher priority to occluders which the camera is inside their AABB
-                const Vector3& cameraPos = camera->GetNode() ? camera->GetNode()->GetWorldPosition() : Vector3::ZERO;
-                if (box.IsInside(cameraPos))
-                    compare *= diagonal;    // size^2
-            }
-            else
-                compare = diagonal * invOrthoSize;
-
-            if (compare < occluderSizeThreshold_)
-                erase = true;
-            else
-            {
-                // Best occluders have big triangles (low density)
-                float density = occluder->GetNumOccluderTriangles() / diagonal;
-                // Lower value is higher priority
-                occluder->SetSortValue(density / compare);
-            }
-        }
-        else
-            erase = true;
-
-        if (erase)
-            i = occluders.Erase(i);
-        else
-            ++i;
-    }
-
-    // Sort occluders so that if triangle budget is exceeded, best occluders have been drawn
-    if (occluders.Size())
-        Sort(occluders.Begin(), occluders.End(), CompareDrawables);
-}
-
-void View::DrawOccluders(OcclusionBuffer* buffer, const Vector<Drawable*>& occluders)
-{
-    buffer->SetMaxTriangles(maxOccluderTriangles_);
-    buffer->Clear();
-
-    if (!buffer->IsThreaded())
-    {
-        // If not threaded, draw occluders one by one and test the next occluder against already rasterized depth
-        for (i32 i = 0; i < occluders.Size(); ++i)
-        {
-            Drawable* occluder = occluders[i];
-            if (i > 0)
-            {
-                // For subsequent occluders, do a test against the pixel-level occlusion buffer to see if rendering is necessary
-                if (!buffer->IsVisible(occluder->GetWorldBoundingBox()))
-                    continue;
-            }
-
-            // Check for running out of triangles
-            ++activeOccluders_;
-            bool success = occluder->DrawOcclusion(buffer);
-            // Draw triangles submitted by this occluder
-            buffer->DrawTriangles();
-            if (!success)
-                break;
-        }
-    }
-    else
-    {
-        // In threaded mode submit all triangles first, then render (cannot test in this case)
-        for (Drawable* occluder : occluders)
-        {
-            // Check for running out of triangles
-            ++activeOccluders_;
-
-            if (!occluder->DrawOcclusion(buffer))
-                break;
-        }
-
-        buffer->DrawTriangles();
-    }
-
-    // Finally build the depth mip levels
-    buffer->BuildDepthHierarchy();
-}
+// 2D-only：移除遮挡体筛选与绘制实现
 
 void View::ProcessLight(LightQueryResult& query, i32 threadIndex)
 {
@@ -2069,9 +1891,7 @@ void View::ProcessLight(LightQueryResult& query, i32 threadIndex)
     // If shadow distance non-zero, check it
     if (isShadowed && light->GetShadowDistance() > 0.0f && light->GetDistance() > light->GetShadowDistance())
         isShadowed = false;
-    // 2D-only: 移除点光源阴影检查，由于LIGHT_POINT=-1，永远不会执行
-    if (isShadowed && type == LIGHT_POINT) // 永远为false
-        isShadowed = false;
+    // 2D-only：无点光源阴影
     // Get lit geometries. They must match the light mask and be inside the main camera frustum to be considered
     Vector<Drawable*>& tempDrawables = tempDrawables_[threadIndex];
     query.litGeometries_.Clear();
