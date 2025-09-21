@@ -41,6 +41,13 @@ static const float DEFAULT_TEMPERATURE = 6590.0f;
 static const float DEFAULT_RADIUS = 0.0f;
 static const float DEFAULT_LENGTH = 0.0f;
 
+#ifdef TINA2D_DISABLE_3D
+static const char* typeNames[] =
+{
+    "Directional",
+    nullptr
+};
+#else
 static const char* typeNames[] =
 {
     "Directional",
@@ -48,6 +55,7 @@ static const char* typeNames[] =
     "Point",
     nullptr
 };
+#endif
 
 void BiasParameters::Validate()
 {

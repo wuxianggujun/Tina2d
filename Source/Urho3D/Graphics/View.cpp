@@ -821,8 +821,9 @@ void View::GetDrawables()
     if (farClipZone_ == renderer_->GetDefaultZone())
         farClipZone_ = cameraZone_;
 
-    // If occlusion in use, get & render the occluders
+    // If occlusion in use, get & render the occluders（2D-only 默认关闭，可在关闭 3D 时跳过）
     occlusionBuffer_ = nullptr;
+#ifndef TINA2D_DISABLE_3D
     if (maxOccluderTriangles_ > 0)
     {
         UpdateOccluders(occluders_, cullCamera_);
@@ -836,8 +837,12 @@ void View::GetDrawables()
     }
     else
         occluders_.Clear();
+#else
+    occluders_.Clear();
+#endif
 
     // Get lights and geometries. Coarse occlusion for octants is used at this point
+#ifndef TINA2D_DISABLE_3D
     if (occlusionBuffer_)
     {
         OccludedFrustumOctreeQuery query
@@ -849,6 +854,12 @@ void View::GetDrawables()
         FrustumOctreeQuery query(tempDrawables, cullCamera_->GetFrustum(), DrawableTypes::Geometry | DrawableTypes::Light, cullCamera_->GetViewMask());
         octree_->GetDrawables(query);
     }
+#else
+    {
+        FrustumOctreeQuery query(tempDrawables, cullCamera_->GetFrustum(), DrawableTypes::Geometry | DrawableTypes::Light, cullCamera_->GetViewMask());
+        octree_->GetDrawables(query);
+    }
+#endif
 
     // Check drawable occlusion, find zones for moved drawables and collect geometries & lights in worker threads
     {

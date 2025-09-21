@@ -864,6 +864,7 @@ void Renderer::SetBatchShaders(Batch& batch, Technique* tech, bool allowShadows,
 void Renderer::SetLightVolumeBatchShaders(Batch& batch, Camera* camera, const String& vsName, const String& psName, const String& vsDefines,
     const String& psDefines)
 {
+#ifndef TINA2D_DISABLE_3D
     assert(deferredLightPSVariations_.Size());
 
     unsigned vsi = DLVS_NONE;
@@ -905,6 +906,10 @@ void Renderer::SetLightVolumeBatchShaders(Batch& batch, Camera* camera, const St
         batch.pixelShader_ = graphics_->GetShader(PS, psName, deferredLightPSVariations_[psi] + psDefines);
     else
         batch.pixelShader_ = graphics_->GetShader(PS, psName, deferredLightPSVariations_[psi]);
+#else
+    (void)batch; (void)camera; (void)vsName; (void)psName; (void)vsDefines; (void)psDefines;
+    // 2D-only：无延迟光照体积渲染，保持空实现
+#endif
 }
 
 void Renderer::SetCullMode(CullMode mode, Camera* camera)
@@ -1501,6 +1506,7 @@ void Renderer::ResetBuffers()
 
 String Renderer::GetShadowVariations() const
 {
+#ifndef TINA2D_DISABLE_3D
     switch (shadowQuality_)
     {
         case SHADOWQUALITY_SIMPLE_16BIT:
@@ -1537,6 +1543,10 @@ String Renderer::GetShadowVariations() const
             return "VSM_SHADOW ";
     }
     return "";
+#else
+    // 2D-only：不使用阴影变体
+    return "";
+#endif
 }
 
 void Renderer::HandleScreenMode(StringHash eventType, VariantMap& eventData)

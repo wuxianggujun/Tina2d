@@ -19,10 +19,16 @@ struct LightBatchQueue;
 /// %Light types.
 enum LightType
 {
+#ifdef TINA2D_DISABLE_3D
     LIGHT_DIRECTIONAL = 0,
-    // 2D-only: 添加占位符避免编译错误，但设为无效值
-    LIGHT_SPOT = -1,       // 无效值
-    LIGHT_POINT = -1       // 无效值
+    // 2D-only：关闭聚光/点光，保留占位以防外部引用
+    LIGHT_SPOT = -1,
+    LIGHT_POINT = -1
+#else
+    LIGHT_DIRECTIONAL = 0,
+    LIGHT_SPOT,
+    LIGHT_POINT
+#endif
 };
 
 // 2D-only: 保留必要的常量以避免编译错误，但设为最小值
