@@ -235,6 +235,7 @@ if (URHO3D_BGFX)
         TriangleBatch_VC
         Urho2D_VC
         Urho2D_Diff_VC
+        Urho2D_Lit2D_Diff_VC
     )
         # 让占位目标依赖实际的 shaders 目标，这样示例中的依赖会按需触发编译
         if (TARGET tina2d_bgfx_shaders AND TARGET shaders)

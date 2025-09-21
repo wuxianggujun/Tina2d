@@ -109,6 +109,13 @@ public:
     bool ReadRenderTargetToImage(Texture2D* color, class Image& dest);
     bool Blit(Texture2D* dst, Texture2D* src, const IntRect* rect);
 
+    // Urho2D 专用：载入 2D 程序与设置灯光
+    bool LoadUrho2DPrograms(class ResourceCache* cache);
+    // 设置 2D 灯光（count<=8）：
+    // posRange[i] = (x, y, radius, type[0=Directional,1=Point])
+    // colorInt[i] = (r, g, b, intensity)
+    void Set2DLights(const Vector4* posRange, const Vector4* colorInt, int count, float ambient);
+
 private:
     void ApplyState();
 
@@ -142,6 +149,7 @@ private:
     unsigned short GetOrCreateSampler(const char* name);
     unsigned short GetOrCreateVec4(const char* name);
     unsigned short GetOrCreateMat4(const char* name);
+    unsigned short GetOrCreateVec4Array(const char* name, unsigned short num);
     void SetUniformByVariant(const char* name, const Variant& v);
 
     struct FBKey
@@ -172,11 +180,31 @@ private:
     std::unordered_map<std::string, unsigned short> samplerCache_;
     std::unordered_map<std::string, unsigned short> vec4Cache_;
     std::unordered_map<std::string, unsigned short> mat4Cache_;
+    std::unordered_map<std::string, unsigned short> vec4ArrayCache_;
 
     // 全局选项
     bool srgbBackbuffer_{};
     TextureFilterMode defaultFilter_{FILTER_TRILINEAR};
     unsigned defaultAniso_{4};
+
+    // Urho2D 程序与灯光 uniforms
+    struct U2DHandles
+    {
+        unsigned short programUnlit{0xFFFF};  // Urho2D_Diff_VC
+        unsigned short programLit{0xFFFF};    // Urho2D_Lit2D_Diff_VC
+        unsigned short u_mvp{0xFFFF};
+        unsigned short u_lightCountAmbient{0xFFFF};
+        unsigned short u_lightsPosRange{0xFFFF}; // array[8]
+        unsigned short u_lightsColorInt{0xFFFF}; // array[8]
+        bool ready{};
+    } u2d_;
+
+    // CPU 侧缓存的灯光参数
+    static const int MAX_U2D_LIGHTS = 8;
+    Vector4 u2d_posRange_[MAX_U2D_LIGHTS]{};
+    Vector4 u2d_colorInt_[MAX_U2D_LIGHTS]{};
+    int     u2d_count_{};
+    float   u2d_ambient_{};
 };
 
 } // namespace Urho3D

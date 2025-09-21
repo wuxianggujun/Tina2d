@@ -4,6 +4,8 @@
 #pragma once
 
 #include "../Container/ArrayPtr.h"
+#include "../Container/Vector.h"
+#include "../Math/Vector4.h"
 #include "../Container/HashSet.h"
 #include "../Core/Mutex.h"
 #include "../Core/Object.h"
@@ -383,6 +385,11 @@ public:
     /// 运行时切换“默认离屏渲染 + backbuffer 呈现”方案（默认 false）。
     void SetUseOffscreen(bool enable);
     bool GetUseOffscreen() const { return useOffscreen_; }
+
+    // 为 2D 渲染设置灯光参数（BGFX）。count<=8。
+    // posRange[i] = (x,y,radius,type[0=Directional,1=Point])
+    // colorInt[i] = (r,g,b,intensity)
+    void BgfxSet2DLights(const Vector<Vector4>& posRange, const Vector<Vector4>& colorInt, int count, float ambient);
 #endif
 
     /// 开始一次 UI 提交（统一设置渲染目标与视口）。返回 true 表示由后端处理，UI 层可跳过旧管线路径。

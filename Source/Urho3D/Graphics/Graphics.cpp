@@ -2133,6 +2133,21 @@ bool Graphics::BgfxDrawUIWithMaterial(const float* vertices, int numVertices, Ma
 }
 
 #ifdef URHO3D_BGFX
+void Graphics::BgfxSet2DLights(const Vector<Vector4>& posRange, const Vector<Vector4>& colorInt, int count, float ambient)
+{
+    if (!bgfx_)
+        return;
+    const Vector4* pr = posRange.Empty() ? nullptr : &posRange[0];
+    const Vector4* ci = colorInt.Empty() ? nullptr : &colorInt[0];
+    if (!pr || !ci || count <= 0)
+    {
+        bgfx_->Set2DLights(nullptr, nullptr, 0, 0.0f);
+        return;
+    }
+    bgfx_->LoadUrho2DPrograms(GetSubsystem<ResourceCache>());
+    bgfx_->Set2DLights(pr, ci, count, ambient);
+}
+
 void Graphics::EnsureOffscreenRT()
 {
     if (!useOffscreen_)

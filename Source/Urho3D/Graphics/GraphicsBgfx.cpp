@@ -27,7 +27,7 @@
 #include "../Core/Variant.h"
 #include "../Container/Vector.h"
 #include "../IO/Log.h"
-#include <bgfx/bgfx.h>
+// 这里不重复包含 bgfx 头，避免在未启用 URHO3D_BGFX 时产生依赖
 
 namespace Urho3D
 {
@@ -964,6 +964,108 @@ unsigned short GraphicsBgfx::GetOrCreateTexture(Texture2D* tex, ResourceCache* c
 #endif
 }
 
+bool GraphicsBgfx::LoadUrho2DPrograms(ResourceCache* cache)
+{
+#ifdef URHO3D_BGFX
+    if (!initialized_ || !cache)
+        return false;
+    if (u2d_.ready)
+        return true;
+
+    auto getProfileDir = []() -> const char*
+    {
+        using RT = bgfx::RendererType::Enum;
+        switch (bgfx::getRendererType())
+        {
+        case RT::Direct3D11: return "dx11";
+        case RT::Direct3D12: return "dx11";
+        case RT::OpenGL:     return "glsl";
+        case RT::OpenGLES:   return "essl";
+        case RT::Metal:      return "metal";
+        case RT::Vulkan:     return "spirv";
+        default:             return "glsl";
+        }
+    };
+    const String profile = getProfileDir();
+
+    auto tryOpen = [&](const String& relPath) -> SharedPtr<File>
+    {
+        if (!cache->Exists(relPath))
+            return SharedPtr<File>();
+        SharedPtr<File> f(cache->GetFile(relPath));
+        if (f && f->IsOpen()) return f; else return SharedPtr<File>();
+    };
+    auto findShader = [&](const char* base) -> SharedPtr<File>
+    {
+        if (auto f = tryOpen(String("Shaders/BGFX/") + base + ".bin")) return f;
+        if (auto f = tryOpen(String("Shaders/BGFX/") + base + ".sc.bin")) return f;
+        if (auto f = tryOpen(String("Shaders/BGFX/") + profile + "/" + base + ".bin")) return f;
+        if (auto f = tryOpen(String("Shaders/BGFX/") + profile + "/" + base + ".sc.bin")) return f;
+        return SharedPtr<File>();
+    };
+    auto loadShader = [](File* file)->bgfx::ShaderHandle
+    {
+        if (!file) return bgfx::ShaderHandle{bgfx::kInvalidHandle};
+        const uint32_t size = (uint32_t)file->GetSize();
+        if (!size) return bgfx::ShaderHandle{bgfx::kInvalidHandle};
+        SharedArrayPtr<unsigned char> buf(new unsigned char[size]);
+        file->Read(buf.Get(), size);
+        const bgfx::Memory* mem = bgfx::copy(buf.Get(), size);
+        return bgfx::createShader(mem);
+    };
+    auto findPair = [&](const char* base) -> std::pair<SharedPtr<File>, SharedPtr<File>>
+    {
+        String b(base);
+        return { findShader((b + "_vs").CString()), findShader((b + "_fs").CString()) };
+    };
+
+    auto [sv_un, sf_un] = findPair("Urho2D_Diff_VC");
+    auto [sv_lt, sf_lt] = findPair("Urho2D_Lit2D_Diff_VC");
+    if (!sv_un || !sf_un) return false;
+
+    auto v_un = loadShader(sv_un);
+    auto f_un = loadShader(sf_un);
+    if (!bgfx::isValid(v_un) || !bgfx::isValid(f_un)) return false;
+    u2d_.programUnlit = bgfx::createProgram(v_un, f_un, true).idx;
+
+    if (sv_lt && sf_lt)
+    {
+        auto v_lt = loadShader(sv_lt);
+        auto f_lt = loadShader(sf_lt);
+        if (bgfx::isValid(v_lt) && bgfx::isValid(f_lt))
+            u2d_.programLit = bgfx::createProgram(v_lt, f_lt, true).idx;
+    }
+
+    // uniforms
+    u2d_.u_mvp = GetOrCreateMat4("u_mvp");
+    u2d_.u_lightCountAmbient = GetOrCreateVec4("u_2dLightCountAmbient");
+    u2d_.u_lightsPosRange    = GetOrCreateVec4Array("u_2dLightsPosRange", MAX_U2D_LIGHTS);
+    u2d_.u_lightsColorInt    = GetOrCreateVec4Array("u_2dLightsColorInt", MAX_U2D_LIGHTS);
+
+    u2d_.ready = bgfx::isValid(bgfx::ProgramHandle{u2d_.programUnlit}) &&
+                 bgfx::isValid(bgfx::UniformHandle{u2d_.u_mvp});
+    return u2d_.ready;
+#else
+    (void)cache; return false;
+#endif
+}
+
+void GraphicsBgfx::Set2DLights(const Vector4* posRange, const Vector4* colorInt, int count, float ambient)
+{
+#ifdef URHO3D_BGFX
+    u2d_count_ = Min(count, MAX_U2D_LIGHTS);
+    u2d_ambient_ = ambient;
+    for (int i = 0; i < u2d_count_; ++i)
+    {
+        u2d_posRange_[i] = posRange[i];
+        u2d_colorInt_[i] = colorInt[i];
+    }
+#else
+    (void)posRange; (void)colorInt; (void)count; (void)ambient;
+#endif
+}
+
+
 unsigned short GraphicsBgfx::GetOrCreateSampler(const char* name)
 {
 #ifdef URHO3D_BGFX
@@ -1009,6 +1111,23 @@ unsigned short GraphicsBgfx::GetOrCreateMat4(const char* name)
     return h.idx;
 #else
     (void)name; return bgfx::kInvalidHandle;
+#endif
+}
+
+unsigned short GraphicsBgfx::GetOrCreateVec4Array(const char* name, unsigned short num)
+{
+#ifdef URHO3D_BGFX
+    std::string key = std::string(name) + "#" + std::to_string((unsigned)num);
+    auto it = vec4ArrayCache_.find(key);
+    if (it != vec4ArrayCache_.end())
+        return it->second;
+    bgfx::UniformHandle h = bgfx::createUniform(name, bgfx::UniformType::Vec4, num);
+    if (!bgfx::isValid(h))
+        return bgfx::kInvalidHandle;
+    vec4ArrayCache_[key] = h.idx;
+    return h.idx;
+#else
+    (void)name; (void)num; return bgfx::kInvalidHandle;
 #endif
 }
 
@@ -1194,8 +1313,27 @@ bool GraphicsBgfx::DrawQuads(const void* qvertices, int numVertices, Texture2D* 
     bgfx::setTexture(0, stex1, texh, (uint32_t)sflags);
     bgfx::setTexture(1, stex2, texh, (uint32_t)sflags);
 
-    // 提交
-    bgfx::ProgramHandle ph; ph.idx = ui_.programDiff;
+    // 提交：根据灯光开关选择 2D 程序并设置灯光 uniforms（如可用）
+    bgfx::ProgramHandle ph;
+    bool hasLit = (u2d_.programLit != bgfx::kInvalidHandle);
+    bool hasUnlit = (u2d_.programUnlit != bgfx::kInvalidHandle);
+    if (u2d_count_ > 0 && hasLit)
+    {
+        if (u2d_.u_lightCountAmbient != bgfx::kInvalidHandle)
+        {
+            const float cntAmb[4] = { (float)u2d_count_, u2d_ambient_, 0.0f, 0.0f };
+            bgfx::setUniform(bgfx::UniformHandle{u2d_.u_lightCountAmbient}, cntAmb);
+        }
+        if (u2d_.u_lightsPosRange != bgfx::kInvalidHandle && u2d_count_ > 0)
+            bgfx::setUniform(bgfx::UniformHandle{u2d_.u_lightsPosRange}, &u2d_posRange_[0].x_, (uint16_t)u2d_count_);
+        if (u2d_.u_lightsColorInt != bgfx::kInvalidHandle && u2d_count_ > 0)
+            bgfx::setUniform(bgfx::UniformHandle{u2d_.u_lightsColorInt}, &u2d_colorInt_[0].x_, (uint16_t)u2d_count_);
+        ph.idx = u2d_.programLit;
+    }
+    else if (hasUnlit)
+        ph.idx = u2d_.programUnlit;
+    else
+        ph.idx = ui_.programDiff;
     bgfx::setState((state_ | BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A));
     bgfx::setVertexBuffer(0, &tvb);
     bgfx::setIndexBuffer(&tib);
@@ -1494,7 +1632,9 @@ bool GraphicsBgfx::DrawColored(PrimitiveType prim, const float* vertices, int nu
 
     // 程序与常量
     bgfx::ProgramHandle ph; ph.idx = ui_.programDiff;
-    bgfx::UniformHandle umvp; umvp.idx = ui_.u_mvp;
+    // 尝试使用 Urho2D 程序的 u_mvp，否则回落到 UI 程序的 u_mvp
+    bgfx::UniformHandle umvp;
+    umvp.idx = (u2d_.u_mvp != bgfx::kInvalidHandle ? u2d_.u_mvp : ui_.u_mvp);
     bgfx::UniformHandle stex1; stex1.idx = ui_.s_tex;
     bgfx::UniformHandle stex2; stex2.idx = ui_.s_texAlt;
     bgfx::TextureHandle texw; texw.idx = ui_.whiteTex;
@@ -1580,6 +1720,8 @@ bool GraphicsBgfx::DrawUIWithMaterial(const float* vertices, int numVertices, Ma
         return false;
     if (!LoadUIPrograms(cache))
         return false;
+    // 尝试加载 Urho2D（lit/unlit）程序
+    LoadUrho2DPrograms(cache);
     if (numVertices <= 0 || vertices == nullptr)
         return true;
 

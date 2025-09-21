@@ -14,6 +14,7 @@
 #include "../Graphics/OctreeQuery.h"
 #include "../Graphics/Technique.h"
 #include "../Graphics/View.h"
+#include "../Math/Vector4.h"
 #include "../GraphicsAPI/IndexBuffer.h"
 #include "../GraphicsAPI/Texture2D.h"
 #include "../GraphicsAPI/VertexBuffer.h"
@@ -400,6 +401,34 @@ void Renderer2D::HandleBeginViewUpdate(StringHash eventType, VariantMap& eventDa
                 stack.Push(ch.Get());
         }
     }
+
+    // BGFX 后端：将本帧 2D 光源写入 uniforms（便于 lit 技术使用）
+#ifdef URHO3D_BGFX
+    if (auto* graphics = GetSubsystem<Graphics>())
+    {
+        if (graphics->IsBgfxActive())
+        {
+            const int maxLights = 8;
+            Vector<Vector4> posRange;
+            Vector<Vector4> colorInt;
+            int n = Min((int)frameLights_.Size(), maxLights);
+            posRange.Resize(n);
+            colorInt.Resize(n);
+            for (int i = 0; i < n; ++i)
+            {
+                Light2D* l = frameLights_[i];
+                if (!l) { posRange[i] = Vector4::ZERO; colorInt[i] = Vector4::ZERO; continue; }
+                const Vector3 lp3 = l->GetNode()->GetWorldPosition();
+                const float typeVal = (l->GetLightType() == Light2D::POINT) ? 1.0f : 0.0f;
+                posRange[i] = Vector4(lp3.x_, lp3.y_, l->GetRadius(), typeVal);
+                const Color c = l->GetColor();
+                colorInt[i] = Vector4(c.r_, c.g_, c.b_, l->GetIntensity());
+            }
+            const float ambient = 0.0f; // 暂不提供环境光控制
+            graphics->BgfxSet2DLights(posRange, colorInt, n, ambient);
+        }
+    }
+#endif
 
     // Check visibility
     {
