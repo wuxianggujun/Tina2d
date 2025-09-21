@@ -22,6 +22,7 @@
 #include "../Scene/Scene.h"
 #include "../Urho2D/Drawable2D.h"
 #include "../Urho2D/Renderer2D.h"
+#include "../Urho2D/Light2D.h"
 
 #include "../DebugNew.h"
 
@@ -194,6 +195,59 @@ void Renderer2D::UpdateGeometry(const FrameInfo& frame)
                         // 2.5D: y→z 映射，利用深度测试实现层级遮挡
                         // 经验系数：0.001f，可按项目世界坐标范围调节
                         dest[i].position_.z_ = -dest[i].position_.y_ * 0.001f;
+
+                        // Light2D 顶点色调制（简版）
+                        if (!frameLights_.Empty())
+                        {
+                            auto decode = [](u32 c){
+                                float r = (float)(c & 0xFF) / 255.f;
+                                float g = (float)((c >> 8) & 0xFF) / 255.f;
+                                float b = (float)((c >> 16) & 0xFF) / 255.f;
+                                float a = (float)((c >> 24) & 0xFF) / 255.f;
+                                return Color(r,g,b,a);
+                            };
+                            auto encode = [](const Color& col){
+                                u32 r = (u32)Clamp((int)(col.r_ * 255.f), 0, 255);
+                                u32 g = (u32)Clamp((int)(col.g_ * 255.f), 0, 255);
+                                u32 b = (u32)Clamp((int)(col.b_ * 255.f), 0, 255);
+                                u32 a = (u32)Clamp((int)(col.a_ * 255.f), 0, 255);
+                                return (a<<24) | (b<<16) | (g<<8) | r;
+                            };
+
+                            Color base = decode(dest[i].color_);
+                            Vector3 rgb(base.r_, base.g_, base.b_);
+                            Vector3 add(0,0,0);
+
+                            Vector3 wp = dest[i].position_;
+                            for (Light2D* l : frameLights_)
+                            {
+                                if (!l) continue;
+                                if (l->GetLightType() == Light2D::POINT)
+                                {
+                                    Vector3 lp = l->GetNode()->GetWorldPosition();
+                                    float dx = wp.x_ - lp.x_;
+                                    float dy = wp.y_ - lp.y_;
+                                    float dist = Sqrt(dx*dx + dy*dy);
+                                    float r = Max(l->GetRadius(), 0.0001f);
+                                    float att = 1.0f - (dist / r);
+                                    if (att > 0.f)
+                                    {
+                                        float k = l->GetIntensity() * att;
+                                        add += Vector3(l->GetColor().r_, l->GetColor().g_, l->GetColor().b_) * k;
+                                    }
+                                }
+                                else
+                                {
+                                    add += Vector3(l->GetColor().r_, l->GetColor().g_, l->GetColor().b_) * (0.1f * l->GetIntensity());
+                                }
+                            }
+                            add = Vector3(Clamp(add.x_, 0.f, 1.f), Clamp(add.y_, 0.f, 1.f), Clamp(add.z_, 0.f, 1.f));
+                            rgb = rgb + add * (Vector3::ONE - rgb);
+                            base.r_ = Clamp(rgb.x_, 0.f, 1.f);
+                            base.g_ = Clamp(rgb.y_, 0.f, 1.f);
+                            base.b_ = Clamp(rgb.z_, 0.f, 1.f);
+                            dest[i].color_ = encode(base);
+                        }
                     }
                     dest += vertices.Size();
                 }
@@ -280,7 +334,9 @@ SharedPtr<Material> Renderer2D::CreateMaterial(Texture2D* texture, BlendMode ble
         Pass* pass = tech->CreatePass("alpha");
         pass->SetVertexShader("Urho2D");
         pass->SetPixelShader("Urho2D");
-        pass->SetDepthWrite(false);
+        // 2.5D: 对 2D 精灵启用深度写入与深度测试（简单演示，透明边缘可能存在轻微伪影）
+        pass->SetDepthWrite(true);
+        pass->SetDepthTestMode(CMP_LESSEQUAL);
         pass->SetBlendMode(blendMode);
         techIt = cachedTechniques_.Insert(MakePair((int)blendMode, tech));
     }
@@ -322,16 +378,39 @@ void Renderer2D::HandleBeginViewUpdate(StringHash eventType, VariantMap& eventDa
     frustum_ = camera->GetFrustum();
     viewMask_ = camera->GetViewMask();
 
+    // 收集本帧 2D 光源（非持有，仅遍历）
+    frameLights_.Clear();
+    if (Scene* scene = GetScene())
+    {
+        Vector<Node*> stack;
+        stack.Push(scene);
+        while (!stack.Empty())
+        {
+            Node* n = stack.Back();
+            stack.Pop();
+            const Vector<SharedPtr<Component>>& comps = n->GetComponents();
+            for (const SharedPtr<Component>& c : comps)
+            {
+                if (auto* l = dynamic_cast<Light2D*>(c.Get()))
+                    if (l->IsEnabledEffective())
+                        frameLights_.Push(l);
+            }
+            const Vector<SharedPtr<Node>>& children = n->GetChildren();
+            for (const SharedPtr<Node>& ch : children)
+                stack.Push(ch.Get());
+        }
+    }
+
     // Check visibility
     {
         URHO3D_PROFILE(CheckDrawableVisibility);
 
         auto* queue = GetSubsystem<WorkQueue>();
-        int numWorkItems = queue->GetNumThreads() + 1; // Worker threads + main thread
-        int drawablesPerItem = drawables_.Size() / numWorkItems;
+        unsigned numWorkItems = (unsigned)queue->GetNumThreads() + 1; // Worker threads + main thread
+        unsigned drawablesPerItem = drawables_.Size() / Max(numWorkItems, 1u);
 
         Vector<Drawable2D*>::Iterator start = drawables_.Begin();
-        for (int i = 0; i < numWorkItems; ++i)
+        for (unsigned i = 0; i < numWorkItems; ++i)
         {
             SharedPtr<WorkItem> item = queue->GetFreeItem();
             item->priority_ = WI_MAX_PRIORITY;
@@ -339,7 +418,7 @@ void Renderer2D::HandleBeginViewUpdate(StringHash eventType, VariantMap& eventDa
             item->aux_ = this;
 
             Vector<Drawable2D*>::Iterator end = drawables_.End();
-            if (i < numWorkItems - 1 && end - start > drawablesPerItem)
+            if (i < numWorkItems - 1 && (unsigned)(end - start) > drawablesPerItem)
                 end = start + drawablesPerItem;
 
             item->start_ = &(*start);

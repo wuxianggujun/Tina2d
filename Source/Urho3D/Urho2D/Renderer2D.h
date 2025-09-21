@@ -15,6 +15,7 @@ class Material;
 class Technique;
 class Texture2D;
 class VertexBuffer;
+class Light2D;
 struct FrameInfo;
 struct SourceBatch2D;
 
@@ -115,6 +116,8 @@ private:
     HashMap<Texture2D*, HashMap<int, SharedPtr<Material>>> cachedMaterials_;
     /// Cached techniques per blend mode.
     HashMap<int, SharedPtr<Technique>> cachedTechniques_;
+    /// Lights collected for current frame (2D-only).
+    Vector<Light2D*> frameLights_;
 };
 
 }
