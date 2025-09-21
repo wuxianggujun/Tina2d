@@ -1793,62 +1793,20 @@ void Graphics::SetViewport(const IntRect& rect)
 
 void Graphics::SetBlendMode(BlendMode mode, bool alphaToCoverage)
 {
-    GAPI gapi = Graphics::GetGAPI();
-
-#ifdef URHO3D_BGFX
     if (bgfx_ && bgfx_->IsInitialized())
-        return bgfx_->SetBlendMode(mode, alphaToCoverage);
-#endif
-
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return SetBlendMode_OGL(mode, alphaToCoverage);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return SetBlendMode_D3D11(mode, alphaToCoverage);
-#endif
+        bgfx_->SetBlendMode(mode, alphaToCoverage);
 }
 
 void Graphics::SetColorWrite(bool enable)
 {
-    GAPI gapi = Graphics::GetGAPI();
-
-#ifdef URHO3D_BGFX
     if (bgfx_ && bgfx_->IsInitialized())
-        return bgfx_->SetColorWrite(enable);
-#endif
-
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return SetColorWrite_OGL(enable);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return SetColorWrite_D3D11(enable);
-#endif
+        bgfx_->SetColorWrite(enable);
 }
 
 void Graphics::SetCullMode(CullMode mode)
 {
-    GAPI gapi = Graphics::GetGAPI();
-
-#ifdef URHO3D_BGFX
     if (bgfx_ && bgfx_->IsInitialized())
-        return bgfx_->SetCullMode(mode);
-#endif
-
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return SetCullMode_OGL(mode);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return SetCullMode_D3D11(mode);
-#endif
+        bgfx_->SetCullMode(mode);
 }
 
 void Graphics::SetDepthBias(float constantBias, float slopeScaledBias)
@@ -1873,173 +1831,58 @@ void Graphics::SetDepthBias(float constantBias, float slopeScaledBias)
 
 void Graphics::SetDepthTest(CompareMode mode)
 {
-    GAPI gapi = Graphics::GetGAPI();
-
-#ifdef URHO3D_BGFX
     if (bgfx_ && bgfx_->IsInitialized())
-        return bgfx_->SetDepthTest(mode);
-#endif
-
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return SetDepthTest_OGL(mode);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return SetDepthTest_D3D11(mode);
-#endif
+        bgfx_->SetDepthTest(mode);
 }
 
 void Graphics::SetDepthWrite(bool enable)
 {
-    GAPI gapi = Graphics::GetGAPI();
-
-#ifdef URHO3D_BGFX
     if (bgfx_ && bgfx_->IsInitialized())
-        return bgfx_->SetDepthWrite(enable);
-#endif
-
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return SetDepthWrite_OGL(enable);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return SetDepthWrite_D3D11(enable);
-#endif
+        bgfx_->SetDepthWrite(enable);
 }
 
 void Graphics::SetFillMode(FillMode mode)
 {
-    GAPI gapi = Graphics::GetGAPI();
-
-#ifdef URHO3D_BGFX
     if (bgfx_ && bgfx_->IsInitialized())
-        return bgfx_->SetFillMode(mode);
-#endif
-
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return SetFillMode_OGL(mode);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return SetFillMode_D3D11(mode);
-#endif
+        bgfx_->SetFillMode(mode);
 }
 
 void Graphics::SetLineAntiAlias(bool enable)
 {
-    GAPI gapi = Graphics::GetGAPI();
-
-#ifdef URHO3D_BGFX
     if (bgfx_ && bgfx_->IsInitialized())
-        return bgfx_->SetLineAntiAlias(enable);
-#endif
-
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return SetLineAntiAlias_OGL(enable);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return SetLineAntiAlias_D3D11(enable);
-#endif
+        bgfx_->SetLineAntiAlias(enable);
 }
 
 void Graphics::SetScissorTest(bool enable, const Rect& rect, bool borderInclusive)
 {
-    GAPI gapi = Graphics::GetGAPI();
-
-#ifdef URHO3D_BGFX
     if (bgfx_ && bgfx_->IsInitialized())
     {
         IntRect ir(IntVector2((int)rect.min_.x_, (int)rect.min_.y_), IntVector2((int)rect.max_.x_, (int)rect.max_.y_));
         bgfx_->SetScissor(enable, ir);
-        return;
     }
-#endif
-
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return SetScissorTest_OGL(enable, rect, borderInclusive);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return SetScissorTest_D3D11(enable, rect, borderInclusive);
-#endif
 }
 
 void Graphics::SetScissorTest(bool enable, const IntRect& rect)
 {
-    GAPI gapi = Graphics::GetGAPI();
-
-#ifdef URHO3D_BGFX
     if (bgfx_ && bgfx_->IsInitialized())
-        return bgfx_->SetScissor(enable, rect);
-#endif
-
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return SetScissorTest_OGL(enable, rect);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return SetScissorTest_D3D11(enable, rect);
-#endif
+        bgfx_->SetScissor(enable, rect);
 }
 
 void Graphics::SetClipPlane(bool enable, const Plane& clipPlane, const Matrix3x4& view, const Matrix4& projection)
 {
-    GAPI gapi = Graphics::GetGAPI();
-
-#ifdef URHO3D_BGFX
     if (bgfx_ && bgfx_->IsInitialized())
     {
-        // 将平面从世界/视空间转换到后续使用空间由上层处理；2D-only 暂记录为无效果。
         (void)view; (void)projection;
         Vector4 p(clipPlane.normal_.x_, clipPlane.normal_.y_, clipPlane.normal_.z_, clipPlane.d_);
         bgfx_->SetClipPlane(enable, p);
-        return;
     }
-#endif
-
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return SetClipPlane_OGL(enable, clipPlane, view, projection);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return SetClipPlane_D3D11(enable, clipPlane, view, projection);
-#endif
 }
 
 void Graphics::SetStencilTest(bool enable, CompareMode mode, StencilOp pass, StencilOp fail, StencilOp zFail, u32 stencilRef,
     u32 compareMask, u32 writeMask)
 {
-    GAPI gapi = Graphics::GetGAPI();
-
-#ifdef URHO3D_BGFX
     if (bgfx_ && bgfx_->IsInitialized())
-        return bgfx_->SetStencilTest(enable, mode, pass, fail, zFail, stencilRef, compareMask, writeMask);
-#endif
-
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return SetStencilTest_OGL(enable, mode, pass, fail, zFail, stencilRef, compareMask, writeMask);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return SetStencilTest_D3D11(enable, mode, pass, fail, zFail, stencilRef, compareMask, writeMask);
-#endif
+        bgfx_->SetStencilTest(enable, mode, pass, fail, zFail, stencilRef, compareMask, writeMask);
 }
 
 bool Graphics::IsInitialized() const
