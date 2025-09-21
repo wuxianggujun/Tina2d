@@ -403,7 +403,6 @@ void Renderer2D::HandleBeginViewUpdate(StringHash eventType, VariantMap& eventDa
     }
 
     // BGFX 后端：将本帧 2D 光源写入 uniforms（便于 lit 技术使用）
-#ifdef URHO3D_BGFX
     if (auto* graphics = GetSubsystem<Graphics>())
     {
         if (graphics->IsBgfxActive())
@@ -428,7 +427,6 @@ void Renderer2D::HandleBeginViewUpdate(StringHash eventType, VariantMap& eventDa
             graphics->BgfxSet2DLights(posRange, colorInt, n, ambient);
         }
     }
-#endif
 
     // Check visibility
     {
@@ -468,7 +466,6 @@ void Renderer2D::HandleBeginViewUpdate(StringHash eventType, VariantMap& eventDa
 
     UpdateViewBatchInfo(viewBatchInfo, camera);
 
-#ifdef URHO3D_BGFX
     // 在 BGFX 后端下，直接用 bgfx 提交 2D 批次并阻止老管线重复绘制
     if (auto* graphics = GetSubsystem<Graphics>())
     {
@@ -504,7 +501,6 @@ void Renderer2D::HandleBeginViewUpdate(StringHash eventType, VariantMap& eventDa
             return;
         }
     }
-#endif
 
     // Go through the drawables to form geometries & batches and calculate the total vertex / index count,
     // but upload the actual vertex data later. The idea is that the View class copies our batch vector to

@@ -202,7 +202,6 @@ void SpriteBatchBase::Flush()
 {
     if (tNumVertices_ > 0)
     {
-#ifdef URHO3D_BGFX
         if (graphics_ && graphics_->IsBgfxActive())
         {
             graphics_->ResetRenderTargets();
@@ -224,7 +223,6 @@ void SpriteBatchBase::Flush()
             tNumVertices_ = 0;
             return;
         }
-#endif
         graphics_->ResetRenderTargets();
         graphics_->ClearParameterSources();
         graphics_->SetCullMode(CULL_NONE);
@@ -259,7 +257,6 @@ void SpriteBatchBase::Flush()
 
     else if (qNumVertices_ > 0)
     {
-#ifdef URHO3D_BGFX
         if (graphics_ && graphics_->IsBgfxActive())
         {
             graphics_->ResetRenderTargets();
@@ -278,7 +275,6 @@ void SpriteBatchBase::Flush()
             qNumVertices_ = 0;
             return;
         }
-#endif
         graphics_->ResetRenderTargets();
         graphics_->ClearParameterSources();
         graphics_->SetCullMode(CULL_NONE);
