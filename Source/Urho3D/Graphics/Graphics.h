@@ -40,25 +40,7 @@ class VertexBuffer;
 
 class GraphicsBgfx; // bgfx 封装前置声明
 
-#ifdef URHO3D_OPENGL
-class GraphicsImpl_OGL;
-#endif
-
-#ifdef URHO3D_D3D11
-class GraphicsImpl_D3D11;
-#endif
-
 struct ShaderParameter;
-
-#ifdef URHO3D_OPENGL
-// Note: ShaderProgram_OGL class is purposefully API-specific. It should not be used by Urho3D client applications.
-class ShaderProgram_OGL;
-#endif
-
-#ifdef URHO3D_D3D11
-// Note: ShaderProgram_D3D11 class is purposefully API-specific. It should not be used by Urho3D client applications.
-class ShaderProgram_D3D11;
-#endif
 
 
 /// CPU-side scratch buffer for vertex data updates.
@@ -328,23 +310,7 @@ public:
     /// @property
     bool IsInitialized() const;
 
-#ifdef URHO3D_OPENGL
-    /// Return graphics implementation, which holds the actual API-specific resources.
-    GraphicsImpl_OGL* GetImpl_OGL() const
-    {
-        assert(Graphics::GetGAPI() == GAPI_OPENGL);
-        return static_cast<GraphicsImpl_OGL*>(impl_);
-    }
-#endif
-
-#ifdef URHO3D_D3D11
-    /// Return graphics implementation, which holds the actual API-specific resources.
-    GraphicsImpl_D3D11* GetImpl_D3D11() const
-    {
-        assert(Graphics::GetGAPI() == GAPI_D3D11);
-        return static_cast<GraphicsImpl_D3D11*>(impl_);
-    }
-#endif
+    // 仅 BGFX 后端：移除 OpenGL/D3D11 Impl 访问器
 
     /// Return OS-specific external window handle. Null if not in use.
     void* GetExternalWindow() const { return externalWindow_; }

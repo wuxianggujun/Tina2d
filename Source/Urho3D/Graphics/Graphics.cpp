@@ -2044,25 +2044,7 @@ void Graphics::SetStencilTest(bool enable, CompareMode mode, StencilOp pass, Ste
 
 bool Graphics::IsInitialized() const
 {
-    GAPI gapi = Graphics::GetGAPI();
-
-#ifdef URHO3D_BGFX
-    // 若 bgfx 已初始化，则认为图形系统可用（以便 Renderer 不再依赖旧后端的状态）。
-    if (bgfx_ && bgfx_->IsInitialized())
-        return true;
-#endif
-
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return IsInitialized_OGL();
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return IsInitialized_D3D11();
-#endif
-
-    return {}; // Prevent warning
+    return bgfx_ && bgfx_->IsInitialized();
 }
 
 bool Graphics::IsBgfxActive() const
@@ -2232,189 +2214,62 @@ bool Graphics::SubmitUIBatch(const float* vertices, int numVertices, Texture2D* 
 
 bool Graphics::GetDither() const
 {
-    GAPI gapi = Graphics::GetGAPI();
-
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return GetDither_OGL();
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return GetDither_D3D11();
-#endif
-
-    return {}; // Prevent warning
+    // BGFX-only：统一返回 false（未启用抖动）
+    return false;
 }
 
 bool Graphics::IsDeviceLost() const
 {
-    GAPI gapi = Graphics::GetGAPI();
-
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return IsDeviceLost_OGL();
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return IsDeviceLost_D3D11();
-#endif
-
-    return {}; // Prevent warning
+    // BGFX-only：由 bgfx 自身管理设备状态，这里统一返回 false
+    return false;
 }
 
 Vector<int> Graphics::GetMultiSampleLevels() const
 {
-    GAPI gapi = Graphics::GetGAPI();
-
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return GetMultiSampleLevels_OGL();
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return GetMultiSampleLevels_D3D11();
-#endif
-
-    return {}; // Prevent warning
+    // BGFX-only：返回空（由全局设置控制采样）
+    return {};
 }
 
-unsigned Graphics::GetFormat(CompressedFormat format) const
+unsigned Graphics::GetFormat(CompressedFormat /*format*/) const
 {
-    GAPI gapi = Graphics::GetGAPI();
-
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return GetFormat_OGL(format);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return GetFormat_D3D11(format);
-#endif
-
-    return {}; // Prevent warning
+    // BGFX-only：未使用压缩格式查询，返回 0
+    return 0;
 }
 
-ShaderVariation* Graphics::GetShader(ShaderType type, const String& name, const String& defines) const
+ShaderVariation* Graphics::GetShader(ShaderType /*type*/, const String& /*name*/, const String& /*defines*/) const
 {
-    GAPI gapi = Graphics::GetGAPI();
-
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return GetShader_OGL(type, name, defines);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return GetShader_D3D11(type, name, defines);
-#endif
-
-    return {}; // Prevent warning
+    // BGFX-only：引擎不再通过老式 ShaderVariation 取得着色器
+    return nullptr;
 }
 
-ShaderVariation* Graphics::GetShader(ShaderType type, const char* name, const char* defines) const
+ShaderVariation* Graphics::GetShader(ShaderType /*type*/, const char* /*name*/, const char* /*defines*/) const
 {
-    GAPI gapi = Graphics::GetGAPI();
-
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return GetShader_OGL(type, name, defines);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return GetShader_D3D11(type, name, defines);
-#endif
-
-    return {}; // Prevent warning
+    return nullptr;
 }
 
-VertexBuffer* Graphics::GetVertexBuffer(unsigned index) const
+VertexBuffer* Graphics::GetVertexBuffer(unsigned /*index*/) const
 {
-    GAPI gapi = Graphics::GetGAPI();
-
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return GetVertexBuffer_OGL(index);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return GetVertexBuffer_D3D11(index);
-#endif
-
-    return {}; // Prevent warning
+    return nullptr;
 }
 
-TextureUnit Graphics::GetTextureUnit(const String& name)
+TextureUnit Graphics::GetTextureUnit(const String& /*name*/)
 {
-    GAPI gapi = Graphics::GetGAPI();
-
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return GetTextureUnit_OGL(name);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return GetTextureUnit_D3D11(name);
-#endif
-
-    return {}; // Prevent warning
+    return TU_DIFFUSE;
 }
 
-const String& Graphics::GetTextureUnitName(TextureUnit unit)
+const String& Graphics::GetTextureUnitName(TextureUnit /*unit*/)
 {
-    GAPI gapi = Graphics::GetGAPI();
-
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return GetTextureUnitName_OGL(unit);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return GetTextureUnitName_D3D11(unit);
-#endif
-
-    return String::EMPTY; // Prevent warning
+    return String::EMPTY;
 }
 
-Texture* Graphics::GetTexture(unsigned index) const
+Texture* Graphics::GetTexture(unsigned /*index*/) const
 {
-    GAPI gapi = Graphics::GetGAPI();
-
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return GetTexture_OGL(index);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return GetTexture_D3D11(index);
-#endif
-
-    return {}; // Prevent warning
+    return nullptr;
 }
 
-RenderSurface* Graphics::GetRenderTarget(unsigned index) const
+RenderSurface* Graphics::GetRenderTarget(unsigned /*index*/) const
 {
-    GAPI gapi = Graphics::GetGAPI();
-
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return GetRenderTarget_OGL(index);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return GetRenderTarget_D3D11(index);
-#endif
-
-    return {}; // Prevent warning
+    return nullptr;
 }
 
 IntVector2 Graphics::GetRenderTargetDimensions() const
@@ -2517,311 +2372,87 @@ bool Graphics::GetGL3Support()
 
 unsigned Graphics::GetAlphaFormat()
 {
-    GAPI gapi = Graphics::GetGAPI();
-
-#ifdef URHO3D_BGFX
-    if (gapi == GAPI_BGFX)
-        return BGFX_FMT_ALPHA8;
-#endif
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return GetAlphaFormat_OGL();
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return GetAlphaFormat_D3D11();
-#endif
-
-    return {}; // Prevent warning
+    return BGFX_FMT_ALPHA8;
 }
 
 unsigned Graphics::GetLuminanceFormat()
 {
-    GAPI gapi = Graphics::GetGAPI();
-
-#ifdef URHO3D_BGFX
-    if (gapi == GAPI_BGFX)
-        return BGFX_FMT_ALPHA8; // 作为占位，2D-only 不使用此格式
-#endif
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return GetLuminanceFormat_OGL();
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return GetLuminanceFormat_D3D11();
-#endif
-
-    return {}; // Prevent warning
+    return BGFX_FMT_ALPHA8; // 2D-only 暂用占位
 }
 
 unsigned Graphics::GetLuminanceAlphaFormat()
 {
-    GAPI gapi = Graphics::GetGAPI();
-
-#ifdef URHO3D_BGFX
-    if (gapi == GAPI_BGFX)
-        return BGFX_FMT_RGB8; // 占位
-#endif
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return GetLuminanceAlphaFormat_OGL();
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return GetLuminanceAlphaFormat_D3D11();
-#endif
-
-    return {}; // Prevent warning
+    return BGFX_FMT_RGBA8;
 }
 
 unsigned Graphics::GetRGBFormat()
 {
-    GAPI gapi = Graphics::GetGAPI();
-
-#ifdef URHO3D_BGFX
-    if (gapi == GAPI_BGFX)
-        return BGFX_FMT_RGB8;
-#endif
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return GetRGBFormat_OGL();
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return GetRGBFormat_D3D11();
-#endif
-
-    return {}; // Prevent warning
+    return BGFX_FMT_RGB8;
 }
 
 unsigned Graphics::GetRGBAFormat()
 {
-    GAPI gapi = Graphics::GetGAPI();
-
-#ifdef URHO3D_BGFX
-    if (gapi == GAPI_BGFX)
-        return BGFX_FMT_RGBA8;
-#endif
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return GetRGBAFormat_OGL();
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return GetRGBAFormat_D3D11();
-#endif
-
-    return {}; // Prevent warning
+    return BGFX_FMT_RGBA8;
 }
 
 unsigned Graphics::GetRGBA16Format()
 {
-    GAPI gapi = Graphics::GetGAPI();
-
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return GetRGBA16Format_OGL();
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return GetRGBA16Format_D3D11();
-#endif
-
-    return {}; // Prevent warning
+    return BGFX_FMT_RGBA8;
 }
 
 unsigned Graphics::GetRGBAFloat16Format()
 {
-    GAPI gapi = Graphics::GetGAPI();
-
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return GetRGBAFloat16Format_OGL();
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return GetRGBAFloat16Format_D3D11();
-#endif
-
-    return {}; // Prevent warning
+    return BGFX_FMT_RGBA8;
 }
 
 unsigned Graphics::GetRGBAFloat32Format()
 {
-    GAPI gapi = Graphics::GetGAPI();
-
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return GetRGBAFloat32Format_OGL();
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return GetRGBAFloat32Format_D3D11();
-#endif
-
-    return {}; // Prevent warning
+    return BGFX_FMT_RGBA8;
 }
 
 unsigned Graphics::GetRG16Format()
 {
-    GAPI gapi = Graphics::GetGAPI();
-
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return GetRG16Format_OGL();
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return GetRG16Format_D3D11();
-#endif
-
-    return {}; // Prevent warning
+    return BGFX_FMT_RGBA8;
 }
 
 unsigned Graphics::GetRGFloat16Format()
 {
-    GAPI gapi = Graphics::GetGAPI();
-
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return GetRGFloat16Format_OGL();
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return GetRGFloat16Format_D3D11();
-#endif
-
-    return {}; // Prevent warning
+    return BGFX_FMT_RGBA8;
 }
 
 unsigned Graphics::GetRGFloat32Format()
 {
-    GAPI gapi = Graphics::GetGAPI();
-
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return GetRGFloat32Format_OGL();
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return GetRGFloat32Format_D3D11();
-#endif
-
-    return {}; // Prevent warning
+    return BGFX_FMT_RGBA8;
 }
 
 unsigned Graphics::GetFloat16Format()
 {
-    GAPI gapi = Graphics::GetGAPI();
-
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return GetFloat16Format_OGL();
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return GetFloat16Format_D3D11();
-#endif
-
-    return {}; // Prevent warning
+    return BGFX_FMT_RGBA8;
 }
 
 unsigned Graphics::GetFloat32Format()
 {
-    GAPI gapi = Graphics::GetGAPI();
-
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return GetFloat32Format_OGL();
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return GetFloat32Format_D3D11();
-#endif
-
-    return {}; // Prevent warning
+    return BGFX_FMT_RGBA8;
 }
 
 unsigned Graphics::GetLinearDepthFormat()
 {
-    GAPI gapi = Graphics::GetGAPI();
-
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return GetLinearDepthFormat_OGL();
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return GetLinearDepthFormat_D3D11();
-#endif
-
-    return {}; // Prevent warning
+    return 0;
 }
 
 unsigned Graphics::GetDepthStencilFormat()
 {
-    GAPI gapi = Graphics::GetGAPI();
-
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return GetDepthStencilFormat_OGL();
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return GetDepthStencilFormat_D3D11();
-#endif
-
-    return {}; // Prevent warning
+    return 0;
 }
 
 unsigned Graphics::GetReadableDepthFormat()
 {
-    GAPI gapi = Graphics::GetGAPI();
-
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return GetReadableDepthFormat_OGL();
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return GetReadableDepthFormat_D3D11();
-#endif
-
-    return {}; // Prevent warning
+    return 0;
 }
 
-unsigned Graphics::GetFormat(const String& formatName)
+unsigned Graphics::GetFormat(const String& /*formatName*/)
 {
-    GAPI gapi = Graphics::GetGAPI();
-
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return GetFormat_OGL(formatName);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return GetFormat_D3D11(formatName);
-#endif
-
-    return {}; // Prevent warning
+    return 0;
 }
 
 void RegisterGraphicsLibrary(Context* context)
