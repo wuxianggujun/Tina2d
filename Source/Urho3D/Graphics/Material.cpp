@@ -1197,7 +1197,7 @@ void Material::ResetToDefaults()
     SetNumTechniques(1);
     auto* renderer = GetSubsystem<Renderer>();
     SetTechnique(0, renderer ? renderer->GetDefaultTechnique() :
-        GetSubsystem<ResourceCache>()->GetResource<Technique>("Techniques/NoTexture.xml"));
+        GetSubsystem<ResourceCache>()->GetResource<Technique>("Techniques/NoTextureUnlit.xml"));
 
     textures_.Clear();
 
@@ -1208,7 +1208,6 @@ void Material::ResetToDefaults()
     SetShaderParameter("VOffset", Vector4(0.0f, 1.0f, 0.0f, 0.0f));
     SetShaderParameter("MatDiffColor", Vector4::ONE);
     SetShaderParameter("MatEmissiveColor", Vector3::ZERO);
-    SetShaderParameter("MatEnvMapColor", Vector3::ONE);
     SetShaderParameter("MatSpecColor", Vector4(0.0f, 0.0f, 0.0f, 1.0f));
     SetShaderParameter("Roughness", 0.5f);
     SetShaderParameter("Metallic", 0.0f);

@@ -18,12 +18,7 @@ Texture2D tNormalBuffer : register(t1);
 Texture2D tSpecMap : register(t2);
 Texture2D tRoughMetalFresnel : register(t2); //R: Roughness, G: Metal
 Texture2D tEmissiveMap : register(t3);
-Texture2D tEnvMap : register(t4);
-Texture3D tVolumeMap : register(t5);
-TextureCube tEnvCubeMap : register(t4);
-Texture2D tLightRampMap : register(t8);
-Texture2D tLightSpotMap : register(t9);
-TextureCube tLightCubeMap : register(t9);
+// 2D-only：移除环境/体积/灯光贴图
 Texture2D tShadowMap : register(t10);
 TextureCube tFaceSelectCubeMap : register(t11);
 TextureCube tIndirectionCubeMap : register(t12);
@@ -40,23 +35,16 @@ SamplerState sNormalBuffer : register(s1);
 SamplerState sSpecMap : register(s2);
 SamplerState sRoughMetalFresnel : register(s2); //R: Roughness, G: Metal
 SamplerState sEmissiveMap : register(s3);
-SamplerState sEnvMap : register(s4);
-SamplerState sVolumeMap : register(s5);
-SamplerState sEnvCubeMap : register(s4);
-SamplerState sLightRampMap : register(s8);
-SamplerState sLightSpotMap : register(s9);
-SamplerState sLightCubeMap : register(s9);
+// 2D-only：移除环境/体积/灯光采样器
 #ifdef VSM_SHADOW
     SamplerState sShadowMap : register(s10);
 #else
     SamplerComparisonState sShadowMap : register(s10);
 #endif
-SamplerState sFaceSelectCubeMap : register(s11);
-SamplerState sIndirectionCubeMap : register(s12);
+// 2D-only：移除 cubemap 选择/重定向采样器
 SamplerState sDepthBuffer : register(s13);
 SamplerState sLightBuffer : register(s14);
-SamplerState sZoneCubeMap : register(s15);
-SamplerState sZoneVolumeMap : register(s15);
+// 2D-only：移除 Zone 采样器
 
 float3 DecodeNormal(float4 normalInput)
 {

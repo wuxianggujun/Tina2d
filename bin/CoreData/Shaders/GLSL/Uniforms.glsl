@@ -67,7 +67,6 @@ uniform vec3 cLightDirPS;
 uniform vec4 cNormalOffsetScalePS;
 uniform vec4 cMatDiffColor;
 uniform vec3 cMatEmissiveColor;
-uniform vec3 cMatEnvMapColor;
 uniform vec4 cMatSpecColor;
 #ifdef PBR
     uniform float cRoughness;
@@ -215,7 +214,6 @@ uniform MaterialPS
 {
     vec4 cMatDiffColor;
     vec3 cMatEmissiveColor;
-    vec3 cMatEnvMapColor;
     vec4 cMatSpecColor;
 #ifdef PBR
     float cRoughness;

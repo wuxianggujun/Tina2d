@@ -113,7 +113,7 @@ cbuffer MaterialPS : register(b4)
 {
     float4 cMatDiffColor;
     float3 cMatEmissiveColor;
-    float3 cMatEnvMapColor;
+    // 2D-only：移除环境贴图颜色
     float4 cMatSpecColor;
     #ifdef PBR
         float cRoughness;
