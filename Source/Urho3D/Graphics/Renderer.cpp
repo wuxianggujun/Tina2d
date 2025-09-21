@@ -11,8 +11,6 @@
 #include "../Graphics/Graphics.h"
 #include "../Graphics/GraphicsEvents.h"
 #include "../Graphics/Material.h"
-// 2D-only：不再使用遮挡缓冲，保留前向声明以满足成员声明
-#include "../Graphics/OcclusionBuffer.h"
 #include "../Graphics/Octree.h"
 #include "../Graphics/Renderer.h"
 #include "../Graphics/RenderPath.h"
@@ -361,16 +359,9 @@ void Renderer::SetMaxSortedInstances(int instances)
     maxSortedInstances_ = Max(instances, 0);
 }
 
-void Renderer::SetMaxOccluderTriangles(int triangles)
-{
-    maxOccluderTriangles_ = Max(triangles, 0);
-}
-
-void Renderer::SetOcclusionBufferSize(int size)
-{
-    occlusionBufferSize_ = Max(size, 1);
-    occlusionBuffers_.Clear();
-}
+// 2D-only：移除遮挡缓冲相关设置接口（保留占位以便于链接旧调用时无效化）
+// void Renderer::SetMaxOccluderTriangles(int) {}
+// void Renderer::SetOcclusionBufferSize(int) {}
 
 void Renderer::SetMobileShadowBiasMul(float mul)
 {
@@ -387,19 +378,8 @@ void Renderer::SetMobileNormalOffsetMul(float mul)
     mobileNormalOffsetMul_ = mul;
 }
 
-void Renderer::SetOccluderSizeThreshold(float screenSize)
-{
-    occluderSizeThreshold_ = Max(screenSize, 0.0f);
-}
-
-void Renderer::SetThreadedOcclusion(bool enable)
-{
-    if (enable != threadedOcclusion_)
-    {
-        threadedOcclusion_ = enable;
-        occlusionBuffers_.Clear();
-    }
-}
+// void Renderer::SetOccluderSizeThreshold(float) {}
+// void Renderer::SetThreadedOcclusion(bool) {}
 
 void Renderer::ReloadShaders()
 {
@@ -519,7 +499,6 @@ void Renderer::Update(float timeStep)
     frame_.timeStep_ = timeStep;
     frame_.camera_ = nullptr;
     numShadowCameras_ = 0;
-    numOcclusionBuffers_ = 0;
     updatedOctrees_.Clear();
 
     // Reload shaders now if needed
@@ -540,7 +519,7 @@ void Renderer::Update(float timeStep)
     SendEvent(E_RENDERSURFACEUPDATE);
 
     // Update viewports that were added as result of the event above
-    for (unsigned i = numMainViewports; i < queuedViewports_.Size(); ++i)
+    for (unsigned i = numMainViewports; i < static_cast<unsigned>(queuedViewports_.Size()); ++i)
         UpdateQueuedViewport(i);
 
     queuedViewports_.Clear();
@@ -622,7 +601,7 @@ void Renderer::DrawDebugGeometry(bool depthTest)
     /// \todo Because debug geometry is per-scene, if two cameras show views of the same area, occlusion is not shown correctly
     HashSet<Drawable*> processedGeometries;
 
-    for (unsigned i = 0; i < views_.Size(); ++i)
+    for (unsigned i = 0; i < static_cast<unsigned>(views_.Size()); ++i)
     {
         View* view = views_[i];
         if (!view || !view->GetDrawDebug())
@@ -714,12 +693,7 @@ RenderSurface* Renderer::GetDepthStencil(int width, int height, int multiSample,
     }
 }
 
-OcclusionBuffer* Renderer::GetOcclusionBuffer(Camera* camera)
-{
-    // 2D-only：禁用遮挡缓冲，直接返回空指针，避免链接到 OcclusionBuffer 实现
-    (void)camera;
-    return nullptr;
-}
+// 2D-only：移除遮挡缓冲获取接口
 
 Camera* Renderer::GetShadowCamera(){    // 2D-only：移除点光阴影重定向纹理恢复逻辑
     return nullptr;}
@@ -922,7 +896,7 @@ Viewport* Renderer::GetViewportForScene(Scene* scene, i32 index) const
 {
     assert(index >= 0);
 
-    for (unsigned i = 0; i < viewports_.Size(); ++i)
+    for (unsigned i = 0; i < static_cast<unsigned>(viewports_.Size()); ++i)
     {
         Viewport* viewport = viewports_[i];
         if (viewport && viewport->GetScene() == scene)
@@ -977,7 +951,7 @@ Texture* Renderer::GetScreenBuffer(int width, int height, unsigned format, int m
     if (!depthStencil || persistentKey)
         ++screenBufferAllocations_[searchKey];
 
-    if (allocations >= screenBuffers_[searchKey].Size())
+    if (allocations >= static_cast<unsigned>(screenBuffers_[searchKey].Size()))
     {
         SharedPtr<Texture> newBuffer;
 
@@ -1098,8 +1072,7 @@ void Renderer::PrepareViewRender()
 
 void Renderer::RemoveUnusedBuffers()
 {
-    // 2D-only：不维护遮挡缓冲，直接确保容器为空
-    occlusionBuffers_.Clear();
+    // 2D-only：不维护遮挡缓冲
 
     for (HashMap<hash64, Vector<SharedPtr<Texture>>>::Iterator i = screenBuffers_.Begin(); i != screenBuffers_.End();)
     {
@@ -1373,7 +1346,6 @@ void Renderer::ResetShadowMaps()
 
 void Renderer::ResetBuffers()
 {
-    occlusionBuffers_.Clear();
     screenBuffers_.Clear();
     screenBufferAllocations_.Clear();
 }

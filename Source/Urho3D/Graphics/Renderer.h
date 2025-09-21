@@ -27,7 +27,6 @@ class RenderPath;
 class RenderSurface;
 class ResourceCache;
 class Scene;
-class OcclusionBuffer;
 class Technique;
 class Texture;
 class Texture2D;
@@ -218,18 +217,6 @@ public:
     /// Set maximum number of sorted instances per batch group. If exceeded, instances are rendered unsorted.
     /// @property
     void SetMaxSortedInstances(int instances);
-    /// Set maximum number of occluder triangles.
-    /// @property
-    void SetMaxOccluderTriangles(int triangles);
-    /// Set occluder buffer width.
-    /// @property
-    void SetOcclusionBufferSize(int size);
-    /// Set required screen size (1.0 = full screen) for occluders.
-    /// @property
-    void SetOccluderSizeThreshold(float screenSize);
-    /// Set whether to thread occluder rendering. Default false.
-    /// @property
-    void SetThreadedOcclusion(bool enable);
     /// Set shadow depth bias multiplier for mobile platforms to counteract possible worse shadow map precision. Default 1.0 (no effect).
     /// @property
     void SetMobileShadowBiasMul(float mul);
@@ -333,21 +320,21 @@ public:
     /// @property
     int GetMaxSortedInstances() const { return maxSortedInstances_; }
 
-    /// Return maximum number of occluder triangles.
+    /// Return maximum number of occluder triangles. (2D-only: no occlusion, return 0)
     /// @property
-    int GetMaxOccluderTriangles() const { return maxOccluderTriangles_; }
+    int GetMaxOccluderTriangles() const { return 0; }
 
-    /// Return occlusion buffer width.
+    /// Return occlusion buffer width. (2D-only: no occlusion, return 0)
     /// @property
-    int GetOcclusionBufferSize() const { return occlusionBufferSize_; }
+    int GetOcclusionBufferSize() const { return 0; }
 
-    /// Return occluder screen size threshold.
+    /// Return occluder screen size threshold. (2D-only: no occlusion, return 0)
     /// @property
-    float GetOccluderSizeThreshold() const { return occluderSizeThreshold_; }
+    float GetOccluderSizeThreshold() const { return 0.0f; }
 
-    /// Return whether occlusion rendering is threaded.
+    /// Return whether occlusion rendering is threaded. (2D-only: no)
     /// @property
-    bool GetThreadedOcclusion() const { return threadedOcclusion_; }
+    bool GetThreadedOcclusion() const { return false; }
 
     /// Return shadow depth bias multiplier for mobile platforms.
     /// @property
@@ -431,8 +418,6 @@ public:
         (int width, int height, unsigned format, int multiSample, bool autoResolve, bool cubemap, bool filtered, bool srgb, hash32 persistentKey = 0);
     /// Allocate a depth-stencil surface that does not need to be readable. Should only be called during actual rendering, not before.
     RenderSurface* GetDepthStencil(int width, int height, int multiSample, bool autoResolve);
-    /// Allocate an occlusion buffer.
-    OcclusionBuffer* GetOcclusionBuffer(Camera* camera);
     /// Allocate a temporary shadow camera and a scene node for it. Is thread-safe.
     Camera* GetShadowCamera();
     /// Mark a view as prepared by the specified culling camera.
@@ -516,8 +501,7 @@ private:
     SharedPtr<Texture2D> defaultLightSpot_;
     /// Reusable scene nodes with shadow camera components.
     Vector<SharedPtr<Node>> shadowCameraNodes_;
-    /// Reusable occlusion buffers.
-    Vector<SharedPtr<OcclusionBuffer>> occlusionBuffers_;
+    /// (2D-only) 不再维护遮挡缓冲。
     /// Shadow maps by resolution.
     HashMap<int, Vector<SharedPtr<Texture2D>>> shadowMaps_;
     /// Shadow map dummy color buffers by resolution.
@@ -576,20 +560,14 @@ private:
     int minInstances_{2};
     /// Maximum sorted instances per batch group.
     int maxSortedInstances_{1000};
-    /// Maximum occluder triangles.
-    int maxOccluderTriangles_{5000};
-    /// Occlusion buffer width.
-    int occlusionBufferSize_{256};
-    /// Occluder screen size threshold.
-    float occluderSizeThreshold_{0.025f};
+    /// (2D-only) 移除遮挡缓冲相关设置。
     /// Mobile platform shadow depth bias multiplier.
     float mobileShadowBiasMul_{1.0f};
     /// Mobile platform shadow depth bias addition.
     float mobileShadowBiasAdd_{};
     /// Mobile platform shadow normal offset multiplier.
     float mobileNormalOffsetMul_{1.0f};
-    /// Number of occlusion buffers in use.
-    i32 numOcclusionBuffers_{};
+    /// (2D-only) 无遮挡缓冲计数。
     /// Number of temporary shadow cameras in use.
     i32 numShadowCameras_{};
     /// Number of primitives (3D geometry only).
@@ -612,8 +590,7 @@ private:
     bool dynamicInstancing_{true};
     /// Number of extra instancing data elements.
     int numExtraInstancingBufferElements_{};
-    /// Threaded occlusion rendering flag.
-    bool threadedOcclusion_{};
+    /// (2D-only) 无遮挡缓冲线程标志。
     /// Shaders need reloading flag.
     bool shadersDirty_{true};
     /// Initialized flag.

@@ -869,9 +869,7 @@ void View::GetBatches()
 
     nonThreadedGeometries_.Clear();
     threadedGeometries_.Clear();
-
-    ProcessLights();
-    GetLightBatches();
+    // 2D-only：不处理任何光照相关批次
     GetBaseBatches();
 }
 
@@ -1989,7 +1987,7 @@ Technique* View::GetTechnique(Drawable* drawable, Material* material)
         {
             Technique* tech = entry.technique_;
 
-            if (!tech || (!tech->IsSupported()) || materialQuality_ < entry.qualityLevel_)
+            if (!tech || (!tech->IsSupported()) || static_cast<int>(materialQuality_) < entry.qualityLevel_)
                 continue;
             if (lodDistance >= entry.lodDistance_)
                 return tech;
