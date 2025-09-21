@@ -47,109 +47,7 @@ static const unsigned short dirLightIndexData[] =
     2, 3, 0,
 };
 
-static const float pointLightVertexData[] =
-{
-    -0.423169f, -1.000000f, 0.423169f,
-    -0.423169f, -1.000000f, -0.423169f,
-    0.423169f, -1.000000f, -0.423169f,
-    0.423169f, -1.000000f, 0.423169f,
-    0.423169f, 1.000000f, -0.423169f,
-    -0.423169f, 1.000000f, -0.423169f,
-    -0.423169f, 1.000000f, 0.423169f,
-    0.423169f, 1.000000f, 0.423169f,
-    -1.000000f, 0.423169f, -0.423169f,
-    -1.000000f, -0.423169f, -0.423169f,
-    -1.000000f, -0.423169f, 0.423169f,
-    -1.000000f, 0.423169f, 0.423169f,
-    0.423169f, 0.423169f, -1.000000f,
-    0.423169f, -0.423169f, -1.000000f,
-    -0.423169f, -0.423169f, -1.000000f,
-    -0.423169f, 0.423169f, -1.000000f,
-    1.000000f, 0.423169f, 0.423169f,
-    1.000000f, -0.423169f, 0.423169f,
-    1.000000f, -0.423169f, -0.423169f,
-    1.000000f, 0.423169f, -0.423169f,
-    0.423169f, -0.423169f, 1.000000f,
-    0.423169f, 0.423169f, 1.000000f,
-    -0.423169f, 0.423169f, 1.000000f,
-    -0.423169f, -0.423169f, 1.000000f
-};
-
-static const unsigned short pointLightIndexData[] =
-{
-    0, 1, 2,
-    0, 2, 3,
-    4, 5, 6,
-    4, 6, 7,
-    8, 9, 10,
-    8, 10, 11,
-    12, 13, 14,
-    12, 14, 15,
-    16, 17, 18,
-    16, 18, 19,
-    20, 21, 22,
-    20, 22, 23,
-    0, 10, 9,
-    0, 9, 1,
-    13, 2, 1,
-    13, 1, 14,
-    23, 0, 3,
-    23, 3, 20,
-    17, 3, 2,
-    17, 2, 18,
-    21, 7, 6,
-    21, 6, 22,
-    7, 16, 19,
-    7, 19, 4,
-    5, 8, 11,
-    5, 11, 6,
-    4, 12, 15,
-    4, 15, 5,
-    22, 11, 10,
-    22, 10, 23,
-    8, 15, 14,
-    8, 14, 9,
-    12, 19, 18,
-    12, 18, 13,
-    16, 21, 20,
-    16, 20, 17,
-    0, 23, 10,
-    1, 9, 14,
-    2, 13, 18,
-    3, 17, 20,
-    6, 11, 22,
-    5, 15, 8,
-    4, 19, 12,
-    7, 21, 16
-};
-
-static const float spotLightVertexData[] =
-{
-    0.00001f, 0.00001f, 0.00001f,
-    0.00001f, -0.00001f, 0.00001f,
-    -0.00001f, -0.00001f, 0.00001f,
-    -0.00001f, 0.00001f, 0.00001f,
-    1.00000f, 1.00000f, 0.99999f,
-    1.00000f, -1.00000f, 0.99999f,
-    -1.00000f, -1.00000f, 0.99999f,
-    -1.00000f, 1.00000f, 0.99999f,
-};
-
-static const unsigned short spotLightIndexData[] =
-{
-    3, 0, 1,
-    3, 1, 2,
-    0, 4, 5,
-    0, 5, 1,
-    3, 7, 4,
-    3, 4, 0,
-    7, 3, 2,
-    7, 2, 6,
-    6, 2, 1,
-    6, 1, 5,
-    7, 5, 4,
-    7, 6, 5
-};
+// 2D-only：移除点光/聚光体积网格数据
 
 static const char* geometryVSVariations[] =
 {
@@ -1563,38 +1461,7 @@ void Renderer::CreateGeometries()
     dirLightGeometry_->SetIndexBuffer(dlib);
     dirLightGeometry_->SetDrawRange(TRIANGLE_LIST, 0, dlib->GetIndexCount());
 
-    SharedPtr<VertexBuffer> slvb(new VertexBuffer(context_));
-    slvb->SetShadowed(true);
-    slvb->SetSize(8, VertexElements::Position);
-    slvb->SetData(spotLightVertexData);
-
-    SharedPtr<IndexBuffer> slib(new IndexBuffer(context_));
-    slib->SetShadowed(true);
-    slib->SetSize(36, false);
-    slib->SetData(spotLightIndexData);
-
-    spotLightGeometry_ = new Geometry(context_);
-    spotLightGeometry_->SetVertexBuffer(0, slvb);
-    spotLightGeometry_->SetIndexBuffer(slib);
-    spotLightGeometry_->SetDrawRange(TRIANGLE_LIST, 0, slib->GetIndexCount());
-
-    SharedPtr<VertexBuffer> plvb(new VertexBuffer(context_));
-    plvb->SetShadowed(true);
-    plvb->SetSize(24, VertexElements::Position);
-    plvb->SetData(pointLightVertexData);
-
-    SharedPtr<IndexBuffer> plib(new IndexBuffer(context_));
-    plib->SetShadowed(true);
-    plib->SetSize(132, false);
-    plib->SetData(pointLightIndexData);
-
-    pointLightGeometry_ = new Geometry(context_);
-    pointLightGeometry_->SetVertexBuffer(0, plvb);
-    pointLightGeometry_->SetIndexBuffer(plib);
-    pointLightGeometry_->SetDrawRange(TRIANGLE_LIST, 0, plib->GetIndexCount());
-
-#if !defined(URHO3D_GLES2)
-#endif
+    // 2D-only：不创建聚光/点光体积几何
 }
 
 // 2D-only：移除点光阴影的立方体重定向贴图生成逻辑

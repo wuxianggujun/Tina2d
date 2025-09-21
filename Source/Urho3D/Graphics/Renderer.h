@@ -506,10 +506,6 @@ private:
     SharedPtr<Zone> defaultZone_;
     /// Directional light quad geometry.
     SharedPtr<Geometry> dirLightGeometry_;
-    /// Spot light volume geometry.
-    SharedPtr<Geometry> spotLightGeometry_;
-    /// Point light volume geometry.
-    SharedPtr<Geometry> pointLightGeometry_;
     /// Instance stream vertex buffer.
     SharedPtr<VertexBuffer> instancingBuffer_;
     /// Default material.
