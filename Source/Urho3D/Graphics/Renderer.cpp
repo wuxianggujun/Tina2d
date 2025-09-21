@@ -1152,8 +1152,9 @@ void Renderer::Initialize()
     // Validate the shadow quality level
     SetShadowQuality(shadowQuality_);
 
-    defaultLightRamp_ = cache->GetResource<Texture2D>("Textures/Ramp.png");
-    defaultLightSpot_ = cache->GetResource<Texture2D>("Textures/Spot.png");
+    // 2D-only：不再加载 3D 灯光相关默认纹理（Ramp/Spot）
+    defaultLightRamp_.Reset();
+    defaultLightSpot_.Reset();
     defaultMaterial_ = new Material(context_);
 
     defaultRenderPath_ = new RenderPath();
