@@ -38,9 +38,7 @@ class Vector4;
 class Matrix4;
 class VertexBuffer;
 
-#ifdef URHO3D_BGFX
 class GraphicsBgfx; // bgfx 封装前置声明
-#endif
 
 #ifdef URHO3D_OPENGL
 class GraphicsImpl_OGL;
@@ -362,7 +360,6 @@ public:
     /// @property
     const String& GetApiName() const { return apiName_; }
 
-#ifdef URHO3D_BGFX
     /// 返回是否正在使用并已初始化 bgfx 后端。
     bool IsBgfxActive() const;
     /// 使用 bgfx 绘制最小示例（用于验证渲染/着色器链路）。
@@ -390,7 +387,6 @@ public:
     // posRange[i] = (x,y,radius,type[0=Directional,1=Point])
     // colorInt[i] = (r,g,b,intensity)
     void BgfxSet2DLights(const Vector<Vector4>& posRange, const Vector<Vector4>& colorInt, int count, float ambient);
-#endif
 
     /// 开始一次 UI 提交（统一设置渲染目标与视口）。返回 true 表示由后端处理，UI 层可跳过旧管线路径。
     bool BeginUIDraw(RenderSurface* surface, int targetWidth, int targetHeight);
@@ -1227,7 +1223,6 @@ private:
     String orientations_;
     /// Graphics API name.
     String apiName_;
-#ifdef URHO3D_BGFX
     /// bgfx 渲染后端句柄（实验性，用于宏切换对比）。
     GraphicsBgfx* bgfx_{};
     /// 当前 BGFX 渲染目标（简单 2D：仅一个颜色+深度）
@@ -1237,7 +1232,6 @@ private:
     SharedPtr<Texture2D> offscreenColor_;
     bool useOffscreen_{false};
     void EnsureOffscreenRT();
-#endif
 #ifdef URHO3D_OPENGL
     /// Renderer name (usually GPU name)
     String rendererName_;

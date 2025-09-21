@@ -20,9 +20,7 @@
 // 2D-only：不需要 TextureCube
 // #include "../GraphicsAPI/TextureCube.h"
 #include "../GraphicsAPI/RenderSurface.h"
-#ifdef URHO3D_BGFX
 #include "../Graphics/GraphicsBgfx.h"
-#endif
 #include "../IO/FileSystem.h"
 #include "../Resource/ResourceCache.h"
 #include "../IO/Log.h"
@@ -2067,7 +2065,6 @@ bool Graphics::IsInitialized() const
     return {}; // Prevent warning
 }
 
-#ifdef URHO3D_BGFX
 bool Graphics::IsBgfxActive() const
 {
     return bgfx_ && bgfx_->IsInitialized();
@@ -2108,31 +2105,22 @@ bool Graphics::BgfxDrawUITriangles(const float* vertices, int numVertices, Textu
 
 bool Graphics::BgfxDrawColored(PrimitiveType prim, const float* vertices, int numVertices, const Matrix4& mvp)
 {
-#ifdef URHO3D_BGFX
     if (!bgfx_)
         return false;
     // 确保 UI 程序已加载（使用 ResourceCache）
     if (auto* cache = GetSubsystem<ResourceCache>())
         bgfx_->LoadUIPrograms(cache);
     return bgfx_->DrawColored(prim, vertices, numVertices, mvp);
-#else
-    (void)prim; (void)vertices; (void)numVertices; (void)mvp; return false;
-#endif
 }
 
 bool Graphics::BgfxDrawUIWithMaterial(const float* vertices, int numVertices, Material* material, const Matrix4& mvp)
 {
-#ifdef URHO3D_BGFX
     if (!bgfx_)
         return false;
     auto* cache = GetSubsystem<ResourceCache>();
     return bgfx_->DrawUIWithMaterial(vertices, numVertices, material, cache, mvp);
-#else
-    (void)vertices; (void)numVertices; (void)material; (void)mvp; return false;
-#endif
 }
 
-#ifdef URHO3D_BGFX
 void Graphics::BgfxSet2DLights(const Vector<Vector4>& posRange, const Vector<Vector4>& colorInt, int count, float ambient)
 {
     if (!bgfx_)
@@ -2162,7 +2150,6 @@ void Graphics::EnsureOffscreenRT()
         offscreenColor_->SetAnisotropy(defaultTextureAnisotropy_);
     }
 }
-#endif
 
 bool Graphics::BgfxCreateTextureFromImage(Texture2D* texture, Image* image, bool useAlpha)
 {
@@ -2172,11 +2159,9 @@ bool Graphics::BgfxCreateTextureFromImage(Texture2D* texture, Image* image, bool
     // 注意：Texture2D 的采样参数将被用于 BGFX sampler flags（寻址/过滤/各向异性/sRGB）
     return bgfx_->CreateTextureFromImage(texture, image, useAlpha);
 }
-#endif
 
 bool Graphics::BeginUIDraw(RenderSurface* surface, int targetWidth, int targetHeight)
 {
-#ifdef URHO3D_BGFX
     if (IsBgfxActive())
     {
         if (surface)
@@ -2186,35 +2171,23 @@ bool Graphics::BeginUIDraw(RenderSurface* surface, int targetWidth, int targetHe
         SetViewport(IntRect(0, 0, targetWidth, targetHeight));
         return true;
     }
-#else
-    (void)surface; (void)targetWidth; (void)targetHeight;
-#endif
     return false;
 }
 
 void Graphics::BgfxReleaseTexture(Texture2D* texture)
 {
-#ifdef URHO3D_BGFX
     if (!bgfx_)
         return;
     bgfx_->ReleaseTexture(texture);
-#else
-    (void)texture;
-#endif
 }
 
 bool Graphics::BgfxUpdateTextureRegion(Texture2D* texture, int x, int y, int width, int height, const void* data, unsigned level)
 {
-#ifdef URHO3D_BGFX
     if (!bgfx_)
         return false;
     return bgfx_->UpdateTextureRegion(texture, x, y, width, height, data, level);
-#else
-    (void)texture; (void)x; (void)y; (void)width; (void)height; (void)data; (void)level; return false;
-#endif
 }
 
-#ifdef URHO3D_BGFX
 void Graphics::SetUseOffscreen(bool enable)
 {
     if (useOffscreen_ == enable)
@@ -2236,33 +2209,24 @@ void Graphics::SetUseOffscreen(bool enable)
         }
     }
 }
-#endif
 void Graphics::EndUIDraw(RenderSurface* surface)
 {
-#ifdef URHO3D_BGFX
     if (IsBgfxActive())
     {
         if (surface)
             ResetRenderTargets();
     }
-#else
-    (void)surface;
-#endif
 }
 
 bool Graphics::SubmitUIBatch(const float* vertices, int numVertices, Texture2D* texture,
                              const IntRect& scissor, BlendMode blend, const Matrix4& projection)
 {
-#ifdef URHO3D_BGFX
     if (IsBgfxActive())
     {
         SetBlendMode(blend);
         SetScissorTest(true, scissor);
         return BgfxDrawUITriangles(vertices, numVertices, texture, projection);
     }
-#else
-    (void)vertices; (void)numVertices; (void)texture; (void)scissor; (void)blend; (void)projection;
-#endif
     return false;
 }
 
