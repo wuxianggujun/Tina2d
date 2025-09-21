@@ -30,15 +30,7 @@ static const char* qualityTexts[] =
     "High+"
 };
 
-static const char* shadowQualityTexts[] =
-{
-    "16bit Simple",
-    "24bit Simple",
-    "16bit PCF",
-    "24bit PCF",
-    "VSM",
-    "Blurred VSM"
-};
+// 2D-only：移除阴影质量文本（无阴影路径）
 
 DebugHud::DebugHud(Context* context) :
     Object(context),
@@ -124,13 +116,11 @@ void DebugHud::Update()
         }
 
         String stats;
-        stats.AppendWithFormat("Triangles %u\nBatches %u\nViews %u\nLights %u\nShadowmaps %u\nOccluders %u",
+        stats.AppendWithFormat("Triangles %u\nBatches %u\nViews %u\nLights %u",
             primitives,
             batches,
             renderer->GetNumViews(),
-            renderer->GetNumLights(true),
-            renderer->GetNumShadowMaps(true),
-            renderer->GetNumOccluders(true));
+            renderer->GetNumLights(true));
 
         if (!appStats_.Empty())
         {
@@ -145,14 +135,10 @@ void DebugHud::Update()
     if (modeText_->IsVisible())
     {
         String mode;
-        mode.AppendWithFormat("Tex:%s Mat:%s Spec:%s Shadows:%s Size:%i Quality:%s Occlusion:%s Instancing:%s API:%s",
+        mode.AppendWithFormat("Tex:%s Mat:%s Spec:%s Instancing:%s API:%s",
             qualityTexts[renderer->GetTextureQuality()],
             qualityTexts[Min((i32)renderer->GetMaterialQuality(), 3)],
             renderer->GetSpecularLighting() ? "On" : "Off",
-            renderer->GetDrawShadows() ? "On" : "Off",
-            renderer->GetShadowMapSize(),
-            shadowQualityTexts[renderer->GetShadowQuality()],
-            renderer->GetMaxOccluderTriangles() > 0 ? "On" : "Off",
             renderer->GetDynamicInstancing() ? "On" : "Off",
             graphics->GetApiName().CString());
     #ifdef URHO3D_OPENGL

@@ -174,6 +174,7 @@ set (EXCLUDE_3D_PATTERNS
     "Graphics/Skeleton\\.[^;]+"
     "Graphics/Skybox\\.[^;]+"
     "Graphics/Particle(Effect|Emitter)\\.[^;]+"
+    "Graphics/OcclusionBuffer\\.[^;]+"
     "GraphicsAPI/TextureCube\\.[^;]+"
     "UI/Text3D\\.[^;]+"
     "UI/View3D\\.[^;]+"

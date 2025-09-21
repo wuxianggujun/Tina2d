@@ -11,6 +11,7 @@
 #include "../Graphics/Graphics.h"
 #include "../Graphics/GraphicsEvents.h"
 #include "../Graphics/Material.h"
+// 2D-only：不再使用遮挡缓冲，保留前向声明以满足成员声明
 #include "../Graphics/OcclusionBuffer.h"
 #include "../Graphics/Octree.h"
 #include "../Graphics/Renderer.h"
@@ -715,22 +716,9 @@ RenderSurface* Renderer::GetDepthStencil(int width, int height, int multiSample,
 
 OcclusionBuffer* Renderer::GetOcclusionBuffer(Camera* camera)
 {
-    assert(numOcclusionBuffers_ <= occlusionBuffers_.Size());
-    if (numOcclusionBuffers_ == occlusionBuffers_.Size())
-    {
-        SharedPtr<OcclusionBuffer> newBuffer(new OcclusionBuffer(context_));
-        occlusionBuffers_.Push(newBuffer);
-    }
-
-    int width = occlusionBufferSize_;
-    auto height = RoundToInt(occlusionBufferSize_ / camera->GetAspectRatio());
-
-    OcclusionBuffer* buffer = occlusionBuffers_[numOcclusionBuffers_++];
-    buffer->SetSize(width, height, threadedOcclusion_);
-    buffer->SetView(camera);
-    buffer->ResetUseTimer();
-
-    return buffer;
+    // 2D-only：禁用遮挡缓冲，直接返回空指针，避免链接到 OcclusionBuffer 实现
+    (void)camera;
+    return nullptr;
 }
 
 Camera* Renderer::GetShadowCamera(){    // 2D-only：移除点光阴影重定向纹理恢复逻辑
@@ -1110,14 +1098,8 @@ void Renderer::PrepareViewRender()
 
 void Renderer::RemoveUnusedBuffers()
 {
-    for (i32 i = occlusionBuffers_.Size() - 1; i >= 0; --i)
-    {
-        if (occlusionBuffers_[i]->GetUseTimer() > MAX_BUFFER_AGE)
-        {
-            URHO3D_LOGDEBUG("Removed unused occlusion buffer");
-            occlusionBuffers_.Erase(i);
-        }
-    }
+    // 2D-only：不维护遮挡缓冲，直接确保容器为空
+    occlusionBuffers_.Clear();
 
     for (HashMap<hash64, Vector<SharedPtr<Texture>>>::Iterator i = screenBuffers_.Begin(); i != screenBuffers_.End();)
     {

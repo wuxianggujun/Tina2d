@@ -272,9 +272,7 @@ bool Engine::Initialize(const VariantMap& parameters)
         if (HasParameter(parameters, EP_RENDER_PATH))
             renderer->SetDefaultRenderPath(cache->GetResource<XMLFile>(GetParameter(parameters, EP_RENDER_PATH).GetString()));
 
-        renderer->SetDrawShadows(GetParameter(parameters, EP_SHADOWS, true).GetBool());
-        if (renderer->GetDrawShadows() && GetParameter(parameters, EP_LOW_QUALITY_SHADOWS, false).GetBool())
-            renderer->SetShadowQuality(SHADOWQUALITY_SIMPLE_16BIT);
+        // 2D-only：无阴影设置
         renderer->SetMaterialQuality((MaterialQuality)GetParameter(parameters, EP_MATERIAL_QUALITY, QUALITY_HIGH).GetI32());
         renderer->SetTextureQuality((MaterialQuality)GetParameter(parameters, EP_TEXTURE_QUALITY, QUALITY_HIGH).GetI32());
         renderer->SetTextureFilterMode((TextureFilterMode)GetParameter(parameters, EP_TEXTURE_FILTER_MODE, FILTER_TRILINEAR).GetI32());
@@ -839,19 +837,13 @@ VariantMap Engine::ParseParameters(const Vector<String>& arguments)
                 ret[EP_SOUND_INTERPOLATION] = false;
             else if (argument == "mono")
                 ret[EP_SOUND_STEREO] = false;
-            else if (argument == "prepass")
-                ret[EP_RENDER_PATH] = "RenderPaths/Prepass.xml";
-            else if (argument == "deferred")
-                ret[EP_RENDER_PATH] = "RenderPaths/Deferred.xml";
+            // 2D-only：移除对 Prepass/Deferred 渲染路径的选择
             else if (argument == "renderpath" && !value.Empty())
             {
                 ret[EP_RENDER_PATH] = value;
                 ++i;
             }
-            else if (argument == "noshadows")
-                ret[EP_SHADOWS] = false;
-            else if (argument == "lqshadows")
-                ret[EP_LOW_QUALITY_SHADOWS] = true;
+            // 2D-only：无阴影相关参数
             else if (argument == "nothreads")
                 ret[EP_WORKER_THREADS] = false;
             else if (argument == "v")
