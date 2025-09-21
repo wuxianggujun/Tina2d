@@ -11,7 +11,6 @@
 #include "../Graphics/Light.h"
 #include "../Graphics/OctreeQuery.h"
 #include "../GraphicsAPI/Texture2D.h"
-#include "../GraphicsAPI/TextureCube.h"
 #include "../IO/Log.h"
 #include "../Resource/ResourceCache.h"
 #include "../Scene/Node.h"

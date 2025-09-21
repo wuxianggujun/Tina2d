@@ -18,7 +18,6 @@ class Scene;
 class Technique;
 class Texture;
 class Texture2D;
-class TextureCube;
 class ValueAnimationInfo;
 class JSONFile;
 

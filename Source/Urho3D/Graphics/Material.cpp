@@ -12,7 +12,6 @@
 #include "../Graphics/Technique.h"
 #include "../GraphicsAPI/Texture2D.h"
 #include "../GraphicsAPI/Texture2DArray.h"
-#include "../GraphicsAPI/TextureCube.h"
 #include "../IO/FileSystem.h"
 #include "../IO/Log.h"
 #include "../IO/VectorBuffer.h"
@@ -103,7 +102,7 @@ StringHash ParseTextureTypeName(const String& name)
     if (lowerCaseName == "texture")
         return Texture2D::GetTypeStatic();
     else if (lowerCaseName == "cubemap")
-        return TextureCube::GetTypeStatic();
+        return Texture2D::GetTypeStatic(); // 2D-only：将 cubemap 视作 2D 纹理
     // 2D-only：忽略 3D 纹理类型
     else if (lowerCaseName == "texturearray")
         return Texture2DArray::GetTypeStatic();
@@ -274,7 +273,7 @@ bool Material::BeginLoadXML(Deserializer& source)
                         handled = true;
                     }
                     if (!handled)
-                        cache->BackgroundLoadResource<TextureCube>(name, true, this);
+                        cache->BackgroundLoadResource<Texture2D>(name, true, this);
                 }
                 else
                     cache->BackgroundLoadResource<Texture2D>(name, true, this);
@@ -318,7 +317,7 @@ bool Material::BeginLoadJSON(Deserializer& source)
                         handled = true;
                     }
                     if (!handled)
-                        cache->BackgroundLoadResource<TextureCube>(name, true, this);
+                        cache->BackgroundLoadResource<Texture2D>(name, true, this);
                 }
                 else
                     cache->BackgroundLoadResource<Texture2D>(name, true, this);
@@ -400,7 +399,7 @@ bool Material::Load(const XMLElement& source)
                     handled = true;
                 }
                 if (!handled)
-                    SetTexture(unit, cache->GetResource<TextureCube>(name));
+                    SetTexture(unit, cache->GetResource<Texture2D>(name));
             }
             else
                 SetTexture(unit, cache->GetResource<Texture2D>(name));
@@ -563,7 +562,7 @@ bool Material::Load(const JSONValue& source)
                     handled = true;
                 }
                 if (!handled)
-                    SetTexture(unit, cache->GetResource<TextureCube>(textureName));
+                    SetTexture(unit, cache->GetResource<Texture2D>(textureName));
             }
             else
                 SetTexture(unit, cache->GetResource<Texture2D>(textureName));
