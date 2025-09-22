@@ -5,6 +5,7 @@
 #include <Urho3D/Core/ProcessUtils.h>
 #include <Urho3D/Graphics/RenderPath.h>
 #include <Urho3D/Graphics/Zone.h>
+#include <Urho3D/Graphics/Renderer.h>
 #include <Urho3D/Input/Input.h>
 #include <Urho3D/UI/CheckBox.h>
 #include <Urho3D/UI/DropDownList.h>
