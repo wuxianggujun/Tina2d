@@ -56,19 +56,14 @@ using namespace pp;
 //SocketLayerOverride *SocketLayer::slo=0;
 
 #ifdef _WIN32
-
-#include "slikenet/WSAStartupSingleton.h"
-#include "slikenet/WindowsIncludes.h"
-
 #else
-
 #include <string.h> // memcpy
 #include <unistd.h>
 #include <fcntl.h>
 #include <arpa/inet.h>
 #include <errno.h>  // error numbers
 #include <stdio.h> // RAKNET_DEBUG_PRINTF
-#if !defined(__ANDROID__)
+#if !defined(ANDROID)
 #include <ifaddrs.h>
 #endif
 #include <netinet/in.h>
@@ -77,6 +72,26 @@ using namespace pp;
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 
+#endif
+
+
+
+
+
+
+
+
+
+
+
+
+
+#if   defined(_WIN32)
+#include "slikenet/WSAStartupSingleton.h"
+#include "slikenet/WindowsIncludes.h"
+
+#else
+#include <unistd.h>
 #endif
 
 #include "slikenet/sleep.h"
@@ -88,6 +103,12 @@ namespace SLNet
 	extern void ProcessNetworkPacket( const SystemAddress systemAddress, const char *data, const int length, RakPeer *rakPeer, SLNet::TimeUS timeRead );
 	//extern void ProcessNetworkPacket( const SystemAddress systemAddress, const char *data, const int length, RakPeer *rakPeer, RakNetSocket* rakNetSocket, SLNet::TimeUS timeRead );
 }
+
+#ifdef _DEBUG
+#include <stdio.h>
+#endif
+
+ 
 
 // http://beej.us/guide/bgnet/output/html/singlepage/bgnet.html#ip4to6
 // http://beej.us/guide/bgnet/output/html/singlepage/bgnet.html#getaddrinfo

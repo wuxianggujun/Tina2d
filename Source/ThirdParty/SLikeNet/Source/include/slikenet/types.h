@@ -16,8 +16,14 @@
 /// \file
 /// \brief Types used by RakNet, most of which involve user code.
 ///
+
+
 #ifndef __NETWORK_TYPES_H
 #define __NETWORK_TYPES_H
+
+
+
+
 
 #include "defines.h"
 #include "NativeTypes.h"
@@ -26,6 +32,10 @@
 #include "WindowsIncludes.h"
 #include "XBox360Includes.h"
 #include "SocketIncludes.h"
+
+
+
+
 
 namespace SLNet {
 /// Forward declarations
@@ -155,6 +165,14 @@ struct RAK_DLL_EXPORT SocketDescriptor
 	/// \pre RAKNET_SUPPORT_IPV6 must be set to 1 in RakNetDefines.h for AF_INET6
 	short socketFamily;
 
+
+
+
+
+
+
+
+
 	unsigned short remotePortRakNetWasStartedOn_PS3_PSP2;
 
 	// Required for Google chrome
@@ -181,6 +199,15 @@ struct RAK_DLL_EXPORT SystemAddress
 	SystemAddress(const char *str);
 	SystemAddress(const char *str, unsigned short port);
 
+
+
+
+
+
+
+
+
+
 	/// SystemAddress, with RAKNET_SUPPORT_IPV6 defined, holds both an sockaddr_in6 and a sockaddr_in
 	union// In6OrIn4
 	{
@@ -199,7 +226,7 @@ struct RAK_DLL_EXPORT SystemAddress
 	static int size(void);
 
 	/// Hash the system address
-	static unsigned long ToInteger(const SystemAddress &sa);
+	static unsigned long ToInteger( const SystemAddress &sa );
 
 	/// Return the IP version, either IPV4 or IPV6
 	/// \return Either 4 or 6
@@ -399,13 +426,6 @@ struct RAK_DLL_EXPORT AddressOrGUID
 	}
 
 	inline bool operator==( const AddressOrGUID& right ) const {return (rakNetGuid!=UNASSIGNED_RAKNET_GUID && rakNetGuid==right.rakNetGuid) || (systemAddress!=UNASSIGNED_SYSTEM_ADDRESS && systemAddress==right.systemAddress);}
-
-	// Urho3D: addition of ToHash to deal with template specialization conflicting in the case of Reference types
-    unsigned ToHash() const
-    {
-        return ((unsigned)(size_t)(ToInteger(*this) >> 9));
-    }
-
 };
 
 typedef uint64_t NetworkID;

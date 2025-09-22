@@ -7,7 +7,7 @@
  *  of patent rights can be found in the RakNet Patents.txt file in the same directory.
  *
  *
- *  Modified work: Copyright (c) 2016-2018, SLikeSoft UG (haftungsbeschränkt)
+ *  Modified work: Copyright (c) 2016-2019, SLikeSoft UG (haftungsbeschränkt)
  *
  *  This source code was modified by SLikeSoft. Modifications are licensed under the MIT-style
  *  license found in the license.txt file in the root directory of this source tree.
@@ -1120,6 +1120,7 @@ void RakPeer::Shutdown( unsigned int blockDuration, unsigned char orderingChanne
 
 	while ( isMainLoopThreadActive )
 	{
+		endThreads = true;
 		RakSleep(15);
 	}
 
@@ -2573,22 +2574,17 @@ int RakPeer::GetMTUSize( const SystemAddress target ) const
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 unsigned int RakPeer::GetNumberOfAddresses( void )
 {
-
-	if (IsActive()==false)
-	{
+	if (IsActive() == false) {
 		FillIPList();
 	}
 
-	unsigned int i = 0;
+	for (int i = 0; i < MAXIMUM_NUMBER_OF_INTERNAL_IDS && ipList[i] != UNASSIGNED_SYSTEM_ADDRESS; i++) {
+		if (ipList[i] == UNASSIGNED_SYSTEM_ADDRESS) {
+			return i; // first unassigned address entry found -> end of address list reached
+		}
+	}
 
-	while ( ipList[ i ]!=UNASSIGNED_SYSTEM_ADDRESS )
-		i++;
-
-	return i;
-
-
-
-
+	return MAXIMUM_NUMBER_OF_INTERNAL_IDS;
 }
 
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -2929,13 +2925,6 @@ void RakPeer::ReleaseSockets( DataStructures::List<RakNetSocket2* > &sockets )
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 void RakPeer::ApplyNetworkSimulator( float packetloss, unsigned short minExtraPing, unsigned short extraPingVariance)
 {
-#ifndef _DEBUG
-	// unused parameters
-	(void)packetloss;
-	(void)minExtraPing;
-	(void)extraPingVariance;
-#endif
-
 #ifdef _DEBUG
 	if (remoteSystemList)
 	{
@@ -5852,11 +5841,7 @@ bool RakPeer::RunUpdateCycle(BitStream &updateBitStream )
 				}
 			}
 
-			if (endThreads)
-				// for the final call, make sure we send out any outstanding ACKs
-				remoteSystem->reliabilityLayer.UpdateAndForceACKs( remoteSystem->rakNetSocket, systemAddress, remoteSystem->MTUSize, timeNS, maxOutgoingBPS, pluginListNTS, &rnr, updateBitStream ); // systemAddress only used for the internet simulator test
-			else
-				remoteSystem->reliabilityLayer.Update( remoteSystem->rakNetSocket, systemAddress, remoteSystem->MTUSize, timeNS, maxOutgoingBPS, pluginListNTS, &rnr, updateBitStream ); // systemAddress only used for the internet simulator test
+			remoteSystem->reliabilityLayer.Update( remoteSystem->rakNetSocket, systemAddress, remoteSystem->MTUSize, timeNS, maxOutgoingBPS, pluginListNTS, &rnr, updateBitStream ); // systemAddress only used for the internet simulator test
 
 			// Check for failure conditions
 			if ( remoteSystem->reliabilityLayer.IsDeadConnection() ||
@@ -5904,10 +5889,6 @@ bool RakPeer::RunUpdateCycle(BitStream &updateBitStream )
 #ifdef _DO_PRINTF
 				RAKNET_DEBUG_PRINTF("Connection dropped for player %i:%i\n", systemAddress);
 #endif
-				// we are about to close the connection to the remote system, we'd still make sure to send any outstanding ACKs, so for the remote system not unnecessarily waiting for these until its timeout
-				// (and trying to resend them unnecessarily)
-				remoteSystem->reliabilityLayer.UpdateAndForceACKs(remoteSystem->rakNetSocket, systemAddress, remoteSystem->MTUSize, timeNS, maxOutgoingBPS, pluginListNTS, &rnr, updateBitStream);
-
 				CloseConnectionInternal( systemAddress, false, true, 0, LOW_PRIORITY );
 				continue;
 			}

@@ -16,6 +16,9 @@
 #include "../Network/Network.h"
 #include "../Network/NetworkEvents.h"
 #include "../Network/NetworkPriority.h"
+
+// 引入 SLikeNet 基本类型定义，供哈希特化使用
+#include <slikenet/types.h>
 #include "../Network/Protocol.h"
 #include "../Scene/Scene.h"
 
@@ -32,6 +35,12 @@
 
 namespace Urho3D
 {
+
+// 为 SLNet::AddressOrGUID 提供 Hash 特化，避免要求类型提供 ToHash 成员
+template<> inline hash32 MakeHash(const SLNet::AddressOrGUID& value)
+{
+    return static_cast<hash32>(SLNet::AddressOrGUID::ToInteger(value));
+}
 
 static const char* RAKNET_MESSAGEID_STRINGS[] = {
     "ID_CONNECTED_PING",
@@ -326,7 +335,7 @@ void Network::SetDiscoveryBeacon(const VariantMap& data)
     buffer.WriteVariantMap(data);
     if (buffer.GetSize() > 400)
         URHO3D_LOGERROR("Discovery beacon of size: " + String(buffer.GetSize()) + " bytes is too large, modify MAX_OFFLINE_DATA_LENGTH in RakNet or reduce size");
-    rakPeer_->SetOfflinePingResponse((const char*)buffer.GetData(), buffer.GetSize());
+    rakPeer_->SetOfflinePingResponse((const char*)buffer.GetData(), static_cast<unsigned int>(buffer.GetSize()));
 }
 
 void Network::DiscoverHosts(unsigned port)
@@ -493,7 +502,7 @@ void Network::AttemptNATPunchtrough(const String& guid, Scene* scene, const Vari
 
 void Network::BroadcastMessage(int msgID, bool reliable, bool inOrder, const VectorBuffer& msg, unsigned contentID)
 {
-    BroadcastMessage(msgID, reliable, inOrder, msg.GetData(), msg.GetSize(), contentID);
+    BroadcastMessage(msgID, reliable, inOrder, msg.GetData(), static_cast<unsigned>(msg.GetSize()), contentID);
 }
 
 void Network::BroadcastMessage(int msgID, bool reliable, bool inOrder, const byte* data, unsigned numBytes,
