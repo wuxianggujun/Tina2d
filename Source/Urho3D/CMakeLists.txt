@@ -54,10 +54,7 @@ if ($ENV{COVERITY_SCAN_BRANCH})
     # TODO: The Coverity-Scan modelling is not yet working properly (anyone interested in static analyzer is welcome to give it another try)
     add_definitions (-DCOVERITY_SCAN_MODEL)
 endif ()
-if (TARGET GLEW)
-    # These macros are required because Urho3D (OpenGL) headers are exposed to GLEW headers
-    add_definitions (-DGLEW_STATIC -DGLEW_NO_GLU)
-endif ()
+# Tina2D: 不再依赖 GLEW（OpenGL 后端已停用）
 
 # 启用 bgfx 后端的编译宏
 if (URHO3D_BGFX)

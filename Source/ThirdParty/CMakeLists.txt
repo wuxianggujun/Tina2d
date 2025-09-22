@@ -73,9 +73,8 @@ if (URHO3D_TRACY_PROFILING)
 endif ()
 
 if (NOT ANDROID AND NOT ARM AND NOT WEB)
-    if (URHO3D_OPENGL)
-        add_subdirectory (GLEW)
-    endif()
+    # Tina2D: 不再使用传统 OpenGL 渲染路径，彻底移除 GLEW 依赖
+    # 如果未来需要恢复 OpenGL 支持，可在此处重新引入 GLEW。
 
     if (NOT CMAKE_SYSTEM_NAME STREQUAL Linux)
         add_subdirectory (LibCpuId)
