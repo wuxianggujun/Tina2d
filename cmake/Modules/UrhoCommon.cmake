@@ -961,6 +961,11 @@ macro (define_dependency_libs TARGET)
             endif ()
         endif ()
 
+        # 文字渲染：显式链接 FreeType，确保静态库场景下新模块（SDF/SVG 渲染器类）符号可解析
+        if (TARGET FreeType)
+            list (APPEND LIBS FreeType)
+        endif ()
+
         # Database
         if (URHO3D_DATABASE_ODBC)
             list (APPEND LIBS ${ODBC_LIBRARIES})
