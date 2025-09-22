@@ -126,7 +126,9 @@ void Typography::CreateText()
     uielement_->AddChild(container);
 
     auto* cache = GetSubsystem<ResourceCache>();
-    auto* font = cache->GetResource<Font>("Fonts/BlueHighway.ttf");
+    // 使用 SDF 字体以展示高质量抗锯齿文本渲染效果
+    // SDF (Signed Distance Field) 字体在小尺寸和缩放时提供更好的清晰度
+    auto* font = cache->GetResource<Font>("Fonts/BlueHighway.sdf");
 
     for (auto size2x = 2; size2x <= 36; ++size2x)
     {
