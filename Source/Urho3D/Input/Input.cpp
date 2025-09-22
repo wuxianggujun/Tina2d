@@ -2373,8 +2373,10 @@ void Input::HandleSDLEvent(void* sdlEvent)
     case SDL_EVENT_WINDOW_MAXIMIZED:
     case SDL_EVENT_WINDOW_RESTORED:
 #if defined(IOS) || defined(TVOS) || defined (__ANDROID__)
-        // iOS/Android：GL 上下文处理
+#ifdef URHO3D_OPENGL
+        // iOS/Android：仅在启用 OpenGL 后端时才进行 GL 上下文恢复
         graphics_->Restore_OGL();
+#endif
 #endif
         minimized_ = false;
         SendInputFocusEvent();
