@@ -653,22 +653,6 @@ Graphics::Graphics(Context* context, GAPI gapi)
 #ifdef URHO3D_BGFX
     bgfx_ = new GraphicsBgfx();
 #endif
-
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-    {
-        Constructor_OGL();
-        return;
-    }
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-    {
-        Constructor_D3D11();
-        return;
-    }
-#endif
 }
 
 Graphics::~Graphics()
@@ -678,22 +662,6 @@ Graphics::~Graphics()
 #ifdef URHO3D_BGFX
     delete bgfx_;
     bgfx_ = nullptr;
-#endif
-
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-    {
-        Destructor_OGL();
-        return;
-    }
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-    {
-        Destructor_D3D11();
-        return;
-    }
 #endif
 }
 
@@ -793,75 +761,31 @@ void Graphics::SetSRGB(bool enable)
         return;
     }
 #endif
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return SetSRGB_OGL(enable);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return SetSRGB_D3D11(enable);
-#endif
+    (void)enable; (void)gapi;
 }
 
 void Graphics::SetDither(bool enable)
 {
     GAPI gapi = Graphics::GetGAPI();
-
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return SetDither_OGL(enable);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return SetDither_D3D11(enable);
-#endif
+    (void)enable; (void)gapi;
 }
 
 void Graphics::SetFlushGPU(bool enable)
 {
     GAPI gapi = Graphics::GetGAPI();
-
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return SetFlushGPU_OGL(enable);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return SetFlushGPU_D3D11(enable);;
-#endif
+    (void)enable; (void)gapi;
 }
 
 void Graphics::SetForceGL2(bool enable)
 {
     GAPI gapi = Graphics::GetGAPI();
-
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return SetForceGL2_OGL(enable);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return SetForceGL2_D3D11(enable);
-#endif
+    (void)enable; (void)gapi;
 }
 
 void Graphics::Close()
 {
     GAPI gapi = Graphics::GetGAPI();
-
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return Close_OGL();
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return Close_D3D11();
-#endif
+    (void)gapi;
 }
 
 bool Graphics::TakeScreenShot(Image& destImage)
@@ -882,17 +806,7 @@ bool Graphics::TakeScreenShot(Image& destImage)
         return false;
     }
 #endif
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return TakeScreenShot_OGL(destImage);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return TakeScreenShot_D3D11(destImage);
-#endif
-
-    return {}; // Prevent warning
+    (void)gapi; (void)destImage; return false;
 }
 
 bool Graphics::BeginFrame()
@@ -919,17 +833,7 @@ bool Graphics::BeginFrame()
     }
 #endif
 
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return BeginFrame_OGL();
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return BeginFrame_D3D11();
-#endif
-
-    return {}; // Prevent warning
+    (void)gapi; return false;
 }
 
 void Graphics::EndFrame()
@@ -967,15 +871,7 @@ void Graphics::EndFrame()
     }
 #endif
 
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return EndFrame_OGL();
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return EndFrame_D3D11();
-#endif
+    (void)gapi;
 }
 
 void Graphics::Clear(ClearTargetFlags flags, const Color& color, float depth, unsigned stencil)
@@ -987,15 +883,7 @@ void Graphics::Clear(ClearTargetFlags flags, const Color& color, float depth, un
         return bgfx_->Clear(flags, color, depth, stencil);
 #endif
 
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return Clear_OGL(flags, color, depth, stencil);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return Clear_D3D11(flags, color, depth, stencil);
-#endif
+    (void)gapi; (void)flags; (void)color; (void)depth; (void)stencil;
 }
 
 bool Graphics::ResolveToTexture(Texture2D* destination, const IntRect& viewport)
@@ -1017,34 +905,13 @@ bool Graphics::ResolveToTexture(Texture2D* destination, const IntRect& viewport)
         return false;
     }
 #endif
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return ResolveToTexture_OGL(destination, viewport);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return ResolveToTexture_D3D11(destination, viewport);
-#endif
-
-    return {}; // Prevent warning
+    (void)gapi; (void)destination; (void)viewport; return false;
 }
 
 bool Graphics::ResolveToTexture(Texture2D* texture)
 {
     GAPI gapi = Graphics::GetGAPI();
-
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return ResolveToTexture_OGL(texture);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return ResolveToTexture_D3D11(texture);
-#endif
-
-    return {}; // Prevent warning
+    (void)gapi; (void)texture; return false;
 }
 
 // 2D-only：移除对立方体纹理解析的支持
@@ -2118,47 +1985,46 @@ RenderSurface* Graphics::GetRenderTarget(unsigned /*index*/) const
 IntVector2 Graphics::GetRenderTargetDimensions() const
 {
     GAPI gapi = Graphics::GetGAPI();
-
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return GetRenderTargetDimensions_OGL();
+#ifdef URHO3D_BGFX
+    if (bgfx_ && gapi == GAPI_BGFX)
+    {
+        if (bgfxColorRT_)
+            return IntVector2(bgfxColorRT_->GetWidth(), bgfxColorRT_->GetHeight());
+        return IntVector2(width_, height_);
+    }
 #endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return GetRenderTargetDimensions_D3D11();
-#endif
-
-    return {}; // Prevent warning
+    return IntVector2(width_, height_);
 }
 
 void Graphics::OnWindowResized()
 {
     GAPI gapi = Graphics::GetGAPI();
-
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return OnWindowResized_OGL();
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return OnWindowResized_D3D11();
+#ifdef URHO3D_BGFX
+    if (bgfx_ && gapi == GAPI_BGFX)
+    {
+        // 读取窗口新尺寸并重置 bgfx backbuffer
+        int w = 0, h = 0;
+        if (window_)
+            SDL_GetWindowSize(window_, &w, &h);
+        if (w > 0 && h > 0)
+        {
+            width_ = w; height_ = h;
+            bgfx_->Reset((unsigned)width_, (unsigned)height_);
+        }
+        return;
+    }
 #endif
 }
 
 void Graphics::OnWindowMoved()
 {
     GAPI gapi = Graphics::GetGAPI();
-
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return OnWindowMoved_OGL();
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return OnWindowMoved_D3D11();
+#ifdef URHO3D_BGFX
+    if (bgfx_ && gapi == GAPI_BGFX)
+    {
+        // 无需特殊处理，保留占位
+        return;
+    }
 #endif
 }
 
