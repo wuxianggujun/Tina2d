@@ -29,22 +29,55 @@
 
 /* Determine Compiler: */
 #if defined(_MSC_VER)
+#if !defined(COMPILER_MICROSOFT)
 #	define COMPILER_MICROSOFT
+#endif
 #elif defined(__GNUC__)
+#if !defined(COMPILER_GCC)
 #	define COMPILER_GCC
+#endif
+#elif defined(__clang__)
+#if !defined(COMPILER_CLANG)
+#	define COMPILER_CLANG
+#endif
 #endif
 
 /* Determine Platform */
 #if defined(__x86_64__) || defined(_M_AMD64)
+#if !defined(PLATFORM_X64)
 #	define PLATFORM_X64
+#endif
 #elif defined(__i386__) || defined(_M_IX86)
+#if !defined(PLATFORM_X86)
 #	define PLATFORM_X86
+#endif
+#elif defined(__arm__)
+#if !defined(PLATFORM_ARM)
+#	define PLATFORM_ARM
+#endif
+#elif defined(__aarch64__)
+#if !defined(PLATFORM_AARCH64)
+#	define PLATFORM_AARCH64
+#endif
 #endif
 
 /* Under Windows/AMD64 with MSVC, inline assembly isn't supported */
-#if (defined(COMPILER_GCC) && defined(PLATFORM_X64)) || defined(PLATFORM_X86)
+#if (defined(COMPILER_GCC) || defined(COMPILER_CLANG)) || \
+	(defined(COMPILER_MICROSOFT) && defined(PLATFORM_X86))
 #	define INLINE_ASM_SUPPORTED
 #endif
+
+#ifdef INLINE_ASM_SUPPORTED
+#  if defined(COMPILER_GCC) || defined(COMPILER_CLANG)
+#    define cpu_exec_mrs(reg_name, reg_value) __asm __volatile("mrs %0, " reg_name : "=r" (reg_value))
+#  elif defined(COMPILER_MICROSOFT)
+#    define cpu_exec_mrs(reg_name, reg_value) __asm { mrs reg_value, reg_name }
+#  else
+#    error "Unsupported compiler"
+#  endif /* COMPILER */
+# else
+#    define cpu_exec_mrs(reg_name, reg_value) /* no-op */
+#endif /* INLINE_ASM_SUPPORTED */
 
 int cpuid_exists_by_eflags(void);
 void exec_cpuid(uint32_t *regs);

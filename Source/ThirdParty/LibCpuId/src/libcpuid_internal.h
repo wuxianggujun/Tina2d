@@ -30,77 +30,69 @@
  * for the workings of the internal library infrastructure.
  */
 
-enum _common_codes_t {
-	NA = 0,
-	NC, /* No code */
-};
+#define EXTRACTS_BIT(reg, bit)              ((reg >> bit)    & 0x1)
+#define EXTRACTS_BITS(reg, highbit, lowbit) ((reg >> lowbit) & ((1ULL << (highbit - lowbit + 1)) - 1))
 
-#define CODE(x) x
-#define CODE2(x, y) x = y
-enum _amd_code_t {
-	#include "amd_code_t.h"
+enum _cache_type_t {
+	L1I,
+	L1D,
+	L2,
+	L3,
+	L4,
+	NUM_CACHE_TYPES
 };
-typedef enum _amd_code_t amd_code_t;
-
-enum _intel_code_t {
-	#include "intel_code_t.h"
-};
-typedef enum _intel_code_t intel_code_t;
-#undef CODE
-#undef CODE2
+typedef enum _cache_type_t cache_type_t;
 
 struct internal_id_info_t {
-	union {
-		amd_code_t   amd;
-		intel_code_t intel;
-	} code;
-	uint64_t bits;
 	int score; // detection (matchtable) score
+	int32_t cache_mask[NUM_CACHE_TYPES];
 };
 
-#define LBIT(x) (((long long) 1) << x)
-
-enum _common_bits_t {
-	_M_                     = LBIT(  0 ),
-	MOBILE_                 = LBIT(  1 ),
-	_MP_                    = LBIT(  2 ),
+struct internal_topology_t {
+	int32_t apic_id;
+	int32_t package_id;
+	int32_t core_id;
+	int32_t smt_id;
+	int32_t cache_id[NUM_CACHE_TYPES];
+	logical_cpu_t logical_cpu;
 };
 
-// additional detection bits for Intel CPUs:
-enum _intel_bits_t {
-	PENTIUM_                = LBIT( 10 ),
-	CELERON_                = LBIT( 11 ),
-	CORE_                   = LBIT( 12 ),
-	_I_                     = LBIT( 13 ),
-	_3                      = LBIT( 14 ),
-	_5                      = LBIT( 15 ),
-	_7                      = LBIT( 16 ),
-	XEON_                   = LBIT( 17 ),
-	ATOM_                   = LBIT( 18 ),
+struct internal_core_id_t {
+	logical_cpu_t num_logical_cpu;
+	int32_t core_id;
 };
-typedef enum _intel_bits_t intel_bits_t;
 
-enum _amd_bits_t {
-	ATHLON_      = LBIT( 10 ),
-	_XP_         = LBIT( 11 ),
-	DURON_       = LBIT( 12 ),
-	SEMPRON_     = LBIT( 13 ),
-	OPTERON_     = LBIT( 14 ),
-	TURION_      = LBIT( 15 ),
-	_LV_         = LBIT( 16 ),
-	_64_         = LBIT( 17 ),
-	_X2          = LBIT( 18 ),
-	_X3          = LBIT( 19 ),
-	_X4          = LBIT( 20 ),
-	_X6          = LBIT( 21 ),
-	_FX          = LBIT( 22 ),
-	_APU_        = LBIT( 23 ),
+struct internal_cache_id_t {
+	logical_cpu_t num_logical_cpu;
+	int32_t cache_id;
 };
-typedef enum _amd_bits_t amd_bits_t;
 
+#define CORES_HTABLE_SIZE 256
+struct internal_core_instances_t {
+	uint8_t instances;
+	struct internal_core_id_t htable[CORES_HTABLE_SIZE];
+};
 
+#define CACHES_HTABLE_SIZE 256
+struct internal_cache_instances_t {
+	uint8_t instances[NUM_CACHE_TYPES];
+	struct internal_cache_id_t htable[NUM_CACHE_TYPES][CACHES_HTABLE_SIZE];
+};
 
-int cpu_ident_internal(struct cpu_raw_data_t* raw, struct cpu_id_t* data, 
+struct internal_type_info_t {
+	cpu_purpose_t purpose;
+	int32_t package_id;
+	struct internal_id_info_t id_info;
+	struct internal_core_instances_t core_instances;
+	struct internal_cache_instances_t cache_instances;
+};
+
+struct internal_type_info_array_t {
+	uint8_t num;
+	struct internal_type_info_t* data;
+};
+
+int cpu_ident_internal(struct cpu_raw_data_t* raw, struct cpu_id_t* data,
 		       struct internal_id_info_t* internal);
 
 #endif /* __LIBCPUID_INTERNAL_H__ */
