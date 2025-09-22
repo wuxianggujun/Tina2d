@@ -87,6 +87,8 @@ public:
     bool DrawColored(PrimitiveType prim, const float* vertices, int numVertices, const Matrix4& mvp);
     // UI: 使用自定义材质（贴图+uniform），仍然复用 UI 顶点布局与通用 UI 程序集
     bool DrawUIWithMaterial(const float* vertices, int numVertices, Material* material, ResourceCache* cache, const Matrix4& mvp);
+    // 使用 CopyFramebuffer 程序将纹理绘制为全屏三角形（若不可用则回退到 Basic_Diff_VC）
+    bool DrawFullscreenTexture(Texture2D* texture, ResourceCache* cache);
 
     // 从 Image 创建 BGFX 纹理并保存到映射（供 UI 字体等路径使用）
     bool CreateTextureFromImage(Texture2D* tex, class Image* image, bool useAlpha);
@@ -134,6 +136,8 @@ private:
         unsigned short programDiff{0xFFFF};   // Basic+DIFFMAP+VERTEXCOLOR
         unsigned short programAlpha{0xFFFF};  // Basic+ALPHAMAP+VERTEXCOLOR（字体）
         unsigned short programMask{0xFFFF};   // Basic+DIFFMAP+ALPHAMASK+VERTEXCOLOR
+        unsigned short programTextSDF{0xFFFF};   // Text_SDF_VC（SDF 文本）
+        unsigned short programCopy{0xFFFF};      // CopyFramebuffer（全屏拷贝/呈现）
         unsigned short u_mvp{0xFFFF};
         // s_tex 约定为 s_texColor（主采样器），s_texAlt 兼容 Basic2D 等使用 s_tex 的着色器
         unsigned short s_tex{0xFFFF};      // "s_texColor"

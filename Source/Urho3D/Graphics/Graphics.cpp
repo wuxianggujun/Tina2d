@@ -837,25 +837,11 @@ void Graphics::EndFrame()
         // 若启用内置离屏渲染，将其呈现到 backbuffer
         if (useOffscreen_ && offscreenColor_.NotNull())
         {
-            // 切换到 backbuffer
+            // 切换到 backbuffer 并使用 CopyFramebuffer 程序绘制全屏
             bgfx_->ResetFrameBuffer();
-            // 将 UI 程序绘制一个全屏四边形到 backbuffer
-            // 注意：GraphicsBgfx::PresentOffscreen 使用 ui_ 程序，并在内部切换到 backbuffer
-            // 这里不需要更改当前 RT 状态
-            // 为防止之前视口影响，Present 将覆盖 view0 的 viewport
             bgfx_->SetViewport(IntRect(0, 0, width_, height_));
-            // 使用 UI 提交一组全屏三角形：复用 BgfxDrawUITriangles（提供2个三角的6顶点）
-            float verts[6 * 6] = {
-                // x, y, z, color(abgr), u, v
-                -1.f,-1.f,0.f, 1, 0.f,1.f,
-                 1.f,-1.f,0.f, 1, 1.f,1.f,
-                 1.f, 1.f,0.f, 1, 1.f,0.f,
-                -1.f,-1.f,0.f, 1, 0.f,1.f,
-                 1.f, 1.f,0.f, 1, 1.f,0.f,
-                -1.f, 1.f,0.f, 1, 0.f,0.f,
-            };
-            Matrix4 id(Matrix4::IDENTITY);
-            BgfxDrawUITriangles(verts, 6, offscreenColor_.Get(), id);
+            auto* cache = GetSubsystem<ResourceCache>();
+            bgfx_->DrawFullscreenTexture(offscreenColor_.Get(), cache);
         }
         bgfx_->EndFrame();
         return;

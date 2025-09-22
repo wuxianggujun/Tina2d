@@ -12,6 +12,7 @@
 #include "../Resource/ResourceEvents.h"
 #include "../UI/Font.h"
 #include "../UI/FontFace.h"
+#include "../Graphics/Material.h"
 #include "../UI/Text.h"
 
 #include "../DebugNew.h"
@@ -162,6 +163,17 @@ void Text::GetBatches(Vector<UIBatch>& batches, Vector<float>& vertexData, const
     {
         // One batch per texture/page
         UIBatch pageBatch(this, BLEND_ALPHA, currentScissor, textures[n], &vertexData);
+        // SDF 字体：改用自定义材质以触发 BGFX Text_SDF 程序
+        if (font_ && font_->IsSDFFont())
+        {
+            if (sdfMaterials_.Size() <= n)
+                sdfMaterials_.Resize(n + 1);
+            if (!sdfMaterials_[n])
+                sdfMaterials_[n] = new Material(context_);
+            sdfMaterials_[n]->SetShaderParameter("u_isTextSDF", true);
+            sdfMaterials_[n]->SetTexture(TU_DIFFUSE, textures[n]);
+            pageBatch.customMaterial_ = sdfMaterials_[n];
+        }
 
         const Vector<GlyphLocation>& pageGlyphLocation = pageGlyphLocations_[n];
 
@@ -800,3 +812,4 @@ void Text::ConstructBatch(UIBatch& pageBatch, const Vector<GlyphLocation>& pageG
 }
 
 }
+

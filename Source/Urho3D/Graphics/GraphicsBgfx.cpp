@@ -619,6 +619,9 @@ bool GraphicsBgfx::LoadUIPrograms(ResourceCache* cache)
     auto [sv_diff, sf_diff] = findPair("Basic_Diff_VC");
     auto [sv_alpha, sf_alpha] = findPair("Basic_Alpha_VC");
     auto [sv_mask, sf_mask] = findPair("Basic_DiffAlphaMask_VC");
+    // 可选：Text SDF 与 CopyFramebuffer
+    auto [sv_text, sf_text] = findPair("Text_SDF_VC");
+    auto [sv_copy, sf_copy] = findPair("CopyFramebuffer");
     // 至少需要 Diff 版本
     if (!sv_diff || !sf_diff)
         return false;
@@ -645,6 +648,24 @@ bool GraphicsBgfx::LoadUIPrograms(ResourceCache* cache)
         auto fsh_mask = loadShader(sf_mask);
         if (bgfx::isValid(vsh_mask) && bgfx::isValid(fsh_mask))
             ui_.programMask = bgfx::createProgram(vsh_mask, fsh_mask, true).idx;
+    }
+
+    // Text SDF（可选）
+    if (sv_text && sf_text)
+    {
+        auto vsh_text = loadShader(sv_text);
+        auto fsh_text = loadShader(sf_text);
+        if (bgfx::isValid(vsh_text) && bgfx::isValid(fsh_text))
+            ui_.programTextSDF = bgfx::createProgram(vsh_text, fsh_text, true).idx;
+    }
+
+    // CopyFramebuffer（可选）
+    if (sv_copy && sf_copy)
+    {
+        auto vsh_copy = loadShader(sv_copy);
+        auto fsh_copy = loadShader(sf_copy);
+        if (bgfx::isValid(vsh_copy) && bgfx::isValid(fsh_copy))
+            ui_.programCopy = bgfx::createProgram(vsh_copy, fsh_copy, true).idx;
     }
 
     // uniforms（通用）
@@ -1713,6 +1734,73 @@ bool GraphicsBgfx::DrawColored(PrimitiveType prim, const float* vertices, int nu
 #endif
 }
 
+bool GraphicsBgfx::DrawFullscreenTexture(Texture2D* texture, ResourceCache* cache)
+{
+#ifdef URHO3D_BGFX
+    if (!initialized_)
+        return false;
+    if (!LoadUIPrograms(cache))
+        return false;
+
+    // 全屏覆盖的两个三角形（NDC）
+    float verts[6 * 6] = {
+        -1.f,-1.f,0.f, 1, 0.f,1.f,
+         1.f,-1.f,0.f, 1, 1.f,1.f,
+         1.f, 1.f,0.f, 1, 1.f,0.f,
+        -1.f,-1.f,0.f, 1, 0.f,1.f,
+         1.f, 1.f,0.f, 1, 1.f,0.f,
+        -1.f, 1.f,0.f, 1, 0.f,0.f,
+    };
+
+    Matrix4 id(Matrix4::IDENTITY);
+    // 准备提交
+    bgfx::VertexLayout layout;
+    layout.begin()
+        .add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float)
+        .add(bgfx::Attrib::Color0,   4, bgfx::AttribType::Uint8, true)
+        .add(bgfx::Attrib::TexCoord0,2, bgfx::AttribType::Float)
+        .end();
+
+    bgfx::TransientVertexBuffer tvb;
+    if (bgfx::getAvailTransientVertexBuffer(6, layout) < 6)
+        return false;
+    bgfx::allocTransientVertexBuffer(&tvb, 6, layout);
+    memcpy(tvb.data, verts, sizeof(verts));
+
+    bgfx::TransientIndexBuffer tib;
+    if (bgfx::getAvailTransientIndexBuffer(6) < 6)
+        return false;
+    bgfx::allocTransientIndexBuffer(&tib, 6);
+    uint16_t* idst = reinterpret_cast<uint16_t*>(tib.data);
+    for (int i = 0; i < 6; ++i) idst[i] = (uint16_t)i;
+
+    float mvpArr[16] = {
+        id.m00_, id.m10_, id.m20_, id.m30_,
+        id.m01_, id.m11_, id.m21_, id.m31_,
+        id.m02_, id.m12_, id.m22_, id.m32_,
+        id.m03_, id.m13_, id.m23_, id.m33_,
+    };
+    bgfx::UniformHandle umvp; umvp.idx = ui_.u_mvp;
+    bgfx::UniformHandle stex1; stex1.idx = ui_.s_tex;
+    bgfx::UniformHandle stex2; stex2.idx = ui_.s_texAlt;
+    bgfx::TextureHandle th; th.idx = GetOrCreateTexture(texture, cache);
+    bgfx::setUniform(umvp, mvpArr);
+    uint64_t sflags = texture ? GetBgfxSamplerFlagsFromTexture(texture) : 0;
+    bgfx::setTexture(0, stex1, th, (uint32_t)sflags);
+    bgfx::setTexture(1, stex2, th, (uint32_t)sflags);
+
+    bgfx::ProgramHandle ph;
+    ph.idx = (ui_.programCopy != bgfx::kInvalidHandle) ? ui_.programCopy : ui_.programDiff;
+    bgfx::setState((state_ | BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A));
+    bgfx::setVertexBuffer(0, &tvb);
+    bgfx::setIndexBuffer(&tib);
+    bgfx::submit(0, ph);
+    return true;
+#else
+    (void)texture; (void)cache; return false;
+#endif
+}
+
 bool GraphicsBgfx::DrawUIWithMaterial(const float* vertices, int numVertices, Material* material, ResourceCache* cache, const Matrix4& mvp)
 {
 #ifdef URHO3D_BGFX
@@ -1828,12 +1916,24 @@ bool GraphicsBgfx::DrawUIWithMaterial(const float* vertices, int numVertices, Ma
             SetUniformByVariant(it->second_.name_.CString(), it->second_.value_);
     }
 
-    // 程序选择（与 UI 路径一致）
+    // 程序选择
     unsigned short programIdx = ui_.programDiff;
+    // 优先：若材质声明为 Text SDF，则使用 Text_SDF 程序（需要材质中设置参数 u_isTextSDF=true）
+    if (material)
+    {
+        const Variant& v = material->GetShaderParameter("u_isTextSDF");
+        if (v.GetType() != VAR_NONE)
+        {
+            const bool isSdf = (v.GetType()==VAR_BOOL ? v.GetBool() : (v.GetType()==VAR_INT ? (v.GetI32()!=0) : false));
+            if (isSdf && ui_.programTextSDF != bgfx::kInvalidHandle)
+                programIdx = ui_.programTextSDF;
+        }
+    }
+    // 其次：按纹理格式与混合模式选择像素程序
     if (primaryTex)
     {
         const bool isAlphaTex = primaryTex->GetFormat() == Graphics::GetAlphaFormat();
-        if (isAlphaTex && ui_.programAlpha != bgfx::kInvalidHandle)
+        if (programIdx == ui_.programDiff && isAlphaTex && ui_.programAlpha != bgfx::kInvalidHandle)
             programIdx = ui_.programAlpha;
         else
         {

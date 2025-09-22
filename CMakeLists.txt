@@ -236,7 +236,10 @@ if (URHO3D_BGFX)
         Urho2D_VC
         Urho2D_Diff_VC
         Urho2D_Lit2D_Diff_VC
-    )
+        # 新增：高质量文本/后处理/无光照材质
+        Text_SDF_VC
+        CopyFramebuffer
+            )
         # 让占位目标依赖实际的 shaders 目标，这样示例中的依赖会按需触发编译
         if (TARGET tina2d_bgfx_shaders AND TARGET shaders)
             add_dependencies(tina2d_bgfx_shaders shaders)
@@ -245,3 +248,4 @@ endif()
 
 # Urho3D documentation
 add_subdirectory (Docs)
+
