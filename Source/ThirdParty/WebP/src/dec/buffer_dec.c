@@ -11,32 +11,35 @@
 //
 // Author: Skal (pascal.massimino@gmail.com)
 
+#include <assert.h>
 #include <stdlib.h>
+#include <string.h>
 
-#include "./vp8i_dec.h"
-#include "./webpi_dec.h"
-#include "../utils/utils.h"
+#include "src/dec/vp8i_dec.h"
+#include "src/dec/webpi_dec.h"
+#include "src/utils/rescaler_utils.h"
+#include "src/utils/utils.h"
+#include "src/webp/decode.h"
+#include "src/webp/types.h"
 
 //------------------------------------------------------------------------------
 // WebPDecBuffer
 
 // Number of bytes per pixel for the different color-spaces.
-static const int kModeBpp[MODE_LAST] = {
-  3, 4, 3, 4, 4, 2, 2,
-  4, 4, 4, 2,    // pre-multiplied modes
-  1, 1 };
+static const uint8_t kModeBpp[MODE_LAST] = {3, 4, 3, 4, 4, 2, 2,  //
+                                            4, 4, 4, 2,  // pre-multiplied modes
+                                            1, 1};
 
-// Check that webp_csp_mode is within the bounds of WEBP_CSP_MODE.
 // Convert to an integer to handle both the unsigned/signed enum cases
 // without the need for casting to remove type limit warnings.
-static int IsValidColorspace(int webp_csp_mode) {
+int IsValidColorspace(int webp_csp_mode) {
   return (webp_csp_mode >= MODE_RGB && webp_csp_mode < MODE_LAST);
 }
 
 // strictly speaking, the very last (or first, if flipped) row
 // doesn't require padding.
-#define MIN_BUFFER_SIZE(WIDTH, HEIGHT, STRIDE)       \
-    (uint64_t)(STRIDE) * ((HEIGHT) - 1) + (WIDTH)
+#define MIN_BUFFER_SIZE(WIDTH, HEIGHT, STRIDE) \
+  ((uint64_t)(STRIDE) * ((HEIGHT) - 1) + (WIDTH))
 
 static VP8StatusCode CheckDecBuffer(const WebPDecBuffer* const buffer) {
   int ok = 1;
@@ -45,9 +48,9 @@ static VP8StatusCode CheckDecBuffer(const WebPDecBuffer* const buffer) {
   const int height = buffer->height;
   if (!IsValidColorspace(mode)) {
     ok = 0;
-  } else if (!WebPIsRGBMode(mode)) {   // YUV checks
+  } else if (!WebPIsRGBMode(mode)) {  // YUV checks
     const WebPYUVABuffer* const buf = &buffer->u.YUVA;
-    const int uv_width  = (width  + 1) / 2;
+    const int uv_width = (width + 1) / 2;
     const int uv_height = (height + 1) / 2;
     const int y_stride = abs(buf->y_stride);
     const int u_stride = abs(buf->u_stride);
@@ -71,10 +74,11 @@ static VP8StatusCode CheckDecBuffer(const WebPDecBuffer* const buffer) {
       ok &= (a_size <= buf->a_size);
       ok &= (buf->a != NULL);
     }
-  } else {    // RGB checks
+  } else {  // RGB checks
     const WebPRGBABuffer* const buf = &buffer->u.RGBA;
     const int stride = abs(buf->stride);
-    const uint64_t size = MIN_BUFFER_SIZE(width, height, stride);
+    const uint64_t size =
+        MIN_BUFFER_SIZE((uint64_t)width * kModeBpp[mode], height, stride);
     ok &= (size <= buf->size);
     ok &= (stride >= width * kModeBpp[mode]);
     ok &= (buf->rgba != NULL);
@@ -98,9 +102,14 @@ static VP8StatusCode AllocateBuffer(WebPDecBuffer* const buffer) {
     uint64_t uv_size = 0, a_size = 0, total_size;
     // We need memory and it hasn't been allocated yet.
     // => initialize output buffer, now that dimensions are known.
-    const int stride = w * kModeBpp[mode];
-    const uint64_t size = (uint64_t)stride * h;
+    int stride;
+    uint64_t size;
 
+    if ((uint64_t)w * kModeBpp[mode] >= (1ull << 31)) {
+      return VP8_STATUS_INVALID_PARAM;
+    }
+    stride = w * kModeBpp[mode];
+    size = (uint64_t)stride * h;
     if (!WebPIsRGBMode(mode)) {
       uv_stride = (w + 1) / 2;
       uv_size = (uint64_t)uv_stride * ((h + 1) / 2);
@@ -111,14 +120,13 @@ static VP8StatusCode AllocateBuffer(WebPDecBuffer* const buffer) {
     }
     total_size = size + 2 * uv_size + a_size;
 
-    // Security/sanity checks
     output = (uint8_t*)WebPSafeMalloc(total_size, sizeof(*output));
     if (output == NULL) {
       return VP8_STATUS_OUT_OF_MEMORY;
     }
     buffer->private_memory = output;
 
-    if (!WebPIsRGBMode(mode)) {   // YUVA initialization
+    if (!WebPIsRGBMode(mode)) {  // YUVA initialization
       WebPYUVABuffer* const buf = &buffer->u.YUVA;
       buf->y = output;
       buf->y_stride = stride;
@@ -150,11 +158,11 @@ VP8StatusCode WebPFlipBuffer(WebPDecBuffer* const buffer) {
   }
   if (WebPIsRGBMode(buffer->colorspace)) {
     WebPRGBABuffer* const buf = &buffer->u.RGBA;
-    buf->rgba += (buffer->height - 1) * buf->stride;
+    buf->rgba += (int64_t)(buffer->height - 1) * buf->stride;
     buf->stride = -buf->stride;
   } else {
     WebPYUVABuffer* const buf = &buffer->u.YUVA;
-    const int H = buffer->height;
+    const int64_t H = buffer->height;
     buf->y += (H - 1) * buf->y_stride;
     buf->y_stride = -buf->y_stride;
     buf->u += ((H - 1) >> 1) * buf->u_stride;
@@ -169,46 +177,51 @@ VP8StatusCode WebPFlipBuffer(WebPDecBuffer* const buffer) {
   return VP8_STATUS_OK;
 }
 
-VP8StatusCode WebPAllocateDecBuffer(int w, int h,
+VP8StatusCode WebPAllocateDecBuffer(int width, int height,
                                     const WebPDecoderOptions* const options,
-                                    WebPDecBuffer* const out) {
+                                    WebPDecBuffer* const buffer) {
   VP8StatusCode status;
-  if (out == NULL || w <= 0 || h <= 0) {
+  if (buffer == NULL || width <= 0 || height <= 0) {
     return VP8_STATUS_INVALID_PARAM;
   }
-  if (options != NULL) {    // First, apply options if there is any.
+  if (options != NULL) {  // First, apply options if there is any.
     if (options->use_cropping) {
       const int cw = options->crop_width;
       const int ch = options->crop_height;
       const int x = options->crop_left & ~1;
       const int y = options->crop_top & ~1;
-      if (x < 0 || y < 0 || cw <= 0 || ch <= 0 || x + cw > w || y + ch > h) {
-        return VP8_STATUS_INVALID_PARAM;   // out of frame boundary.
+      if (!WebPCheckCropDimensions(width, height, x, y, cw, ch)) {
+        return VP8_STATUS_INVALID_PARAM;  // out of frame boundary.
       }
-      w = cw;
-      h = ch;
+      width = cw;
+      height = ch;
     }
+
     if (options->use_scaling) {
+#if !defined(WEBP_REDUCE_SIZE)
       int scaled_width = options->scaled_width;
       int scaled_height = options->scaled_height;
-      if (!WebPRescalerGetScaledDimensions(
-              w, h, &scaled_width, &scaled_height)) {
+      if (!WebPRescalerGetScaledDimensions(width, height, &scaled_width,
+                                           &scaled_height)) {
         return VP8_STATUS_INVALID_PARAM;
       }
-      w = scaled_width;
-      h = scaled_height;
+      width = scaled_width;
+      height = scaled_height;
+#else
+      return VP8_STATUS_INVALID_PARAM;  // rescaling not supported
+#endif
     }
   }
-  out->width = w;
-  out->height = h;
+  buffer->width = width;
+  buffer->height = height;
 
   // Then, allocate buffer for real.
-  status = AllocateBuffer(out);
+  status = AllocateBuffer(buffer);
   if (status != VP8_STATUS_OK) return status;
 
   // Use the stride trick if vertical flip is needed.
   if (options != NULL && options->flip) {
-    status = WebPFlipBuffer(out);
+    status = WebPFlipBuffer(buffer);
   }
   return status;
 }
@@ -239,7 +252,7 @@ void WebPCopyDecBuffer(const WebPDecBuffer* const src,
   if (src != NULL && dst != NULL) {
     *dst = *src;
     if (src->private_memory != NULL) {
-      dst->is_external_memory = 1;   // dst buffer doesn't own the memory.
+      dst->is_external_memory = 1;  // dst buffer doesn't own the memory.
       dst->private_memory = NULL;
     }
   }
@@ -250,7 +263,7 @@ void WebPGrabDecBuffer(WebPDecBuffer* const src, WebPDecBuffer* const dst) {
   if (src != NULL && dst != NULL) {
     *dst = *src;
     if (src->private_memory != NULL) {
-      src->is_external_memory = 1;   // src relinquishes ownership
+      src->is_external_memory = 1;  // src relinquishes ownership
       src->private_memory = NULL;
     }
   }
@@ -275,8 +288,8 @@ VP8StatusCode WebPCopyDecBufferPixels(const WebPDecBuffer* const src_buf,
   } else {
     const WebPYUVABuffer* const src = &src_buf->u.YUVA;
     const WebPYUVABuffer* const dst = &dst_buf->u.YUVA;
-    WebPCopyPlane(src->y, src->y_stride, dst->y, dst->y_stride,
-                  src_buf->width, src_buf->height);
+    WebPCopyPlane(src->y, src->y_stride, dst->y, dst->y_stride, src_buf->width,
+                  src_buf->height);
     WebPCopyPlane(src->u, src->u_stride, dst->u, dst->u_stride,
                   (src_buf->width + 1) / 2, (src_buf->height + 1) / 2);
     WebPCopyPlane(src->v, src->v_stride, dst->v, dst->v_stride,
