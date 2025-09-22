@@ -6,7 +6,7 @@
 #include "../Audio/Audio.h"
 #include "../Audio/Sound.h"
 #include "../Audio/SoundListener.h"
-#include "../Audio/SoundSource3D.h"
+#include "../Audio/SoundSource.h" // 使用 SoundSource 成员与静态注册需要完整类型
 #include "../Core/Context.h"
 #include "../Core/CoreEvents.h"
 #include "../Core/ProcessUtils.h"
@@ -341,7 +341,6 @@ void RegisterAudioLibrary(Context* context)
 {
     Sound::RegisterObject(context);
     SoundSource::RegisterObject(context);
-    SoundSource3D::RegisterObject(context);
     SoundListener::RegisterObject(context);
 }
 

@@ -914,6 +914,8 @@ void FileListTransfer::OnReferencePush(Packet *packet, bool isTheFullFile)
 			}
 		}
 	}
+
+	return;
 }
 namespace SLNet
 {

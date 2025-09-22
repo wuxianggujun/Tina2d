@@ -55,6 +55,19 @@ public:
     /// Get image data from zero mip level. Only RGB and RGBA textures are supported.
     SharedPtr<Image> GetImage() const;
 
+#ifdef URHO3D_BGFX
+    /// BGFX-only: 设置逻辑尺寸与格式（不创建底层 OGL/D3D 资源）。
+    /// 仅用于 BGFX 路径在加载时记录宽高/格式，供上层布局与判断使用。
+    void SetSizeForBgfx_NoCreate(int width, int height, unsigned format)
+    {
+        width_ = width;
+        height_ = height;
+        depth_ = 1;
+        format_ = format;
+        levels_ = 1;
+    }
+#endif
+
     /// Return render surface.
     /// @property
     RenderSurface* GetRenderSurface() const { return renderSurface_; }

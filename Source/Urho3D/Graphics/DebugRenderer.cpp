@@ -319,8 +319,8 @@ void DebugRenderer::AddCylinder(const Vector3& position, float radius, float hei
     Vector3 offsetZVec(0, 0, radius);
     for (auto i = 0; i < 360; i += 45)
     {
-        Vector3 p1 = sphere.GetPoint(i, 90);
-        Vector3 p2 = sphere.GetPoint(i + 45, 90);
+        Vector3 p1 = sphere.GetPoint(static_cast<float>(i), 90.0f);
+        Vector3 p2 = sphere.GetPoint(static_cast<float>(i + 45), 90.0f);
         AddLine(p1, p2, color, depthTest);
         AddLine(p1 + heightVec, p2 + heightVec, color, depthTest);
     }
@@ -542,36 +542,92 @@ void DebugRenderer::Render()
 
     unsigned start = 0;
     unsigned count = 0;
-    if (lines_.Size())
-    {
-        count = lines_.Size() * 2;
-        graphics->SetDepthTest(CMP_LESSEQUAL);
-        graphics->Draw(LINE_LIST, start, count);
-        start += count;
-    }
-    if (noDepthLines_.Size())
-    {
-        count = noDepthLines_.Size() * 2;
-        graphics->SetDepthTest(CMP_ALWAYS);
-        graphics->Draw(LINE_LIST, start, count);
-        start += count;
-    }
 
-    graphics->SetBlendMode(BLEND_ALPHA);
-    graphics->SetDepthWrite(false);
+#ifdef URHO3D_BGFX
+    if (graphics->IsBgfxActive())
+    {
+        // 组装 pos3+abgr 的打包数组（float[4]）以供 BGFX 提交
+        Vector<float> packed;
+        packed.Reserve(numVertices * 4);
+        auto pushV = [&](const Vector3& p, unsigned c)
+        {
+            packed.Push(p.x_); packed.Push(p.y_); packed.Push(p.z_);
+            float cf; memcpy(&cf, &c, sizeof(c)); packed.Push(cf);
+        };
+        for (const DebugLine& line : lines_) { pushV(line.start_, line.color_); pushV(line.end_, line.color_); }
+        for (const DebugLine& line : noDepthLines_) { pushV(line.start_, line.color_); pushV(line.end_, line.color_); }
+        for (const DebugTriangle& t : triangles_) { pushV(t.v1_, t.color_); pushV(t.v2_, t.color_); pushV(t.v3_, t.color_); }
+        for (const DebugTriangle& t : noDepthTriangles_) { pushV(t.v1_, t.color_); pushV(t.v2_, t.color_); pushV(t.v3_, t.color_); }
 
-    if (triangles_.Size())
-    {
-        count = triangles_.Size() * 3;
-        graphics->SetDepthTest(CMP_LESSEQUAL);
-        graphics->Draw(TRIANGLE_LIST, start, count);
-        start += count;
+        Matrix4 mvp(gpuProjection_ * view_);
+
+        if (lines_.Size())
+        {
+            count = lines_.Size() * 2;
+            graphics->SetDepthTest(CMP_LESSEQUAL);
+            // 使用底层缓冲指针，避免被推断为迭代器类型
+            graphics->BgfxDrawColored(LINE_LIST, packed.Buffer() + start * 4, count, mvp);
+            start += count;
+        }
+        if (noDepthLines_.Size())
+        {
+            count = noDepthLines_.Size() * 2;
+            graphics->SetDepthTest(CMP_ALWAYS);
+            graphics->BgfxDrawColored(LINE_LIST, packed.Buffer() + start * 4, count, mvp);
+            start += count;
+        }
+
+        graphics->SetBlendMode(BLEND_ALPHA);
+        graphics->SetDepthWrite(false);
+
+        if (triangles_.Size())
+        {
+            count = triangles_.Size() * 3;
+            graphics->SetDepthTest(CMP_LESSEQUAL);
+            graphics->BgfxDrawColored(TRIANGLE_LIST, packed.Buffer() + start * 4, count, mvp);
+            start += count;
+        }
+        if (noDepthTriangles_.Size())
+        {
+            count = noDepthTriangles_.Size() * 3;
+            graphics->SetDepthTest(CMP_ALWAYS);
+            graphics->BgfxDrawColored(TRIANGLE_LIST, packed.Buffer() + start * 4, count, mvp);
+        }
     }
-    if (noDepthTriangles_.Size())
+    else
+#endif
     {
-        count = noDepthTriangles_.Size() * 3;
-        graphics->SetDepthTest(CMP_ALWAYS);
-        graphics->Draw(TRIANGLE_LIST, start, count);
+        if (lines_.Size())
+        {
+            count = lines_.Size() * 2;
+            graphics->SetDepthTest(CMP_LESSEQUAL);
+            graphics->Draw(LINE_LIST, start, count);
+            start += count;
+        }
+        if (noDepthLines_.Size())
+        {
+            count = noDepthLines_.Size() * 2;
+            graphics->SetDepthTest(CMP_ALWAYS);
+            graphics->Draw(LINE_LIST, start, count);
+            start += count;
+        }
+
+        graphics->SetBlendMode(BLEND_ALPHA);
+        graphics->SetDepthWrite(false);
+
+        if (triangles_.Size())
+        {
+            count = triangles_.Size() * 3;
+            graphics->SetDepthTest(CMP_LESSEQUAL);
+            graphics->Draw(TRIANGLE_LIST, start, count);
+            start += count;
+        }
+        if (noDepthTriangles_.Size())
+        {
+            count = noDepthTriangles_.Size() * 3;
+            graphics->SetDepthTest(CMP_ALWAYS);
+            graphics->Draw(TRIANGLE_LIST, start, count);
+        }
     }
 
     graphics->SetLineAntiAlias(false);

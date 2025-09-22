@@ -2,6 +2,14 @@
 
 **TINA2D** 是一个基于 [Urho3D](https://github.com/urho3d/Urho3D) 的轻量级2D游戏引擎。
 
+## 2.5D（核心能力）
+
+Tina2D 将“2.5D”作为核心能力进行演进：在保持 2D 管线高性能的基础上，引入基于深度的遮挡（Depth Test/Write）、轻量 2D 光照（Light2D）与可选的低成本阴影。设计与路线图见文档：
+
+- `Docs/2_5D_Design.md`
+
+示例：新增 `52_2_5DCore`（初版为占位，后续迭代增强）。
+
 [English](README.md) | 中文
 
 ## 项目概述
@@ -47,6 +55,17 @@ mkdir build && cd build
 cmake ..
 cmake --build .
 ```
+
+### 2D-only 宏开关（屏蔽 3D 代码）
+
+- 通过 `TINA2D_DISABLE_3D`（默认 ON）在编译期屏蔽 3D 相关代码路径，便于渐进式清理：
+
+```bash
+cmake -DTINA2D_DISABLE_3D=ON ..  # 屏蔽 3D 代码（默认）
+cmake -DTINA2D_DISABLE_3D=OFF .. # 恢复 3D 相关代码（若仍保留）
+```
+
+- 当前已以宏包裹 3D 音频类（SoundSource3D），并在 `Audio` 子系统注册时按开关决定是否注册；后续可对更多 3D 渲染路径做同样处理，完成迁移后再物理删除源码。
 
 ## 示例项目
 

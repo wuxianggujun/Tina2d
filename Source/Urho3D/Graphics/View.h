@@ -18,7 +18,6 @@ class DebugRenderer;
 class Light;
 class Drawable;
 class Graphics;
-class OcclusionBuffer;
 class Octree;
 class Renderer;
 class RenderPath;
@@ -152,7 +151,6 @@ public:
     const Vector<LightBatchQueue>& GetLightQueues() const { return lightQueues_; }
 
     /// Return the last used software occlusion buffer.
-    OcclusionBuffer* GetOcclusionBuffer() const { return occlusionBuffer_; }
 
     /// Return number of occluders that were actually rendered. Occluders may be rejected if running out of triangles or if behind other occluders.
     i32 GetNumActiveOccluders() const { return activeOccluders_; }
@@ -213,26 +211,10 @@ private:
     /// Query for occluders as seen from a camera.
     void UpdateOccluders(Vector<Drawable*>& occluders, Camera* camera);
     /// Draw occluders to occlusion buffer.
-    void DrawOccluders(OcclusionBuffer* buffer, const Vector<Drawable*>& occluders);
     /// Query for lit geometries and shadow casters for a light.
     void ProcessLight(LightQueryResult& query, i32 threadIndex);
     /// Process shadow casters' visibilities and build their combined view- or projection-space bounding box.
     void ProcessShadowCasters(LightQueryResult& query, const Vector<Drawable*>& drawables, i32 splitIndex);
-    /// Set up initial shadow camera view(s).
-    void SetupShadowCameras(LightQueryResult& query);
-    /// Set up a directional light shadow camera.
-    void SetupDirLightShadowCamera(Camera* shadowCamera, Light* light, float nearSplit, float farSplit);
-    /// Finalize shadow camera view after shadow casters and the shadow map are known.
-    void
-        FinalizeShadowCamera(Camera* shadowCamera, Light* light, const IntRect& shadowViewport, const BoundingBox& shadowCasterBox);
-    /// Quantize a directional light shadow camera view to eliminate swimming.
-    void
-        QuantizeDirLightShadowCamera(Camera* shadowCamera, Light* light, const IntRect& shadowViewport, const BoundingBox& viewBox);
-    /// Check visibility of one shadow caster.
-    bool IsShadowCasterVisible(Drawable* drawable, BoundingBox lightViewBox, Camera* shadowCamera, const Matrix3x4& lightView,
-        const Frustum& lightViewFrustum, const BoundingBox& lightViewFrustumBox);
-    /// Return the viewport for a shadow map split.
-    IntRect GetShadowMapViewport(Light* light, int splitIndex, Texture2D* shadowMap);
     /// Find and set a new zone for a drawable when it has moved.
     void FindZone(Drawable* drawable);
     /// Return material technique, considering the drawable's LOD distance.
@@ -245,12 +227,6 @@ private:
     void AddBatchToQueue(BatchQueue& queue, Batch& batch, Technique* tech, bool allowInstancing = true, bool allowShadows = true);
     /// Prepare instancing buffer by filling it with all instance transforms.
     void PrepareInstancingBuffer();
-    /// Set up a light volume rendering batch.
-    void SetupLightVolumeBatch(Batch& batch);
-    /// Check whether a light queue needs shadow rendering.
-    bool NeedRenderShadowMap(const LightBatchQueue& queue);
-    /// Render a shadow map.
-    void RenderShadowMap(const LightBatchQueue& queue);
     /// Return the proper depth-stencil surface to use for a rendertarget.
     RenderSurface* GetDepthStencil(RenderSurface* renderTarget);
     /// Helper function to get the render surface from a texture. 2D textures will always return the first face only.
@@ -306,8 +282,6 @@ private:
     Zone* cameraZone_{};
     /// Zone at far clip plane.
     Zone* farClipZone_{};
-    /// Occlusion buffer for the main camera.
-    OcclusionBuffer* occlusionBuffer_{};
     /// Destination color rendertarget.
     RenderSurface* renderTarget_{};
     /// Substitute rendertarget for deferred rendering. Allocated if necessary.
@@ -407,10 +381,7 @@ private:
     i32 litBasePassIndex_{};
     /// Index of the litalpha pass.
     i32 litAlphaPassIndex_{};
-    /// Pointer to the light volume command if any.
-    const RenderPathCommand* lightVolumeCommand_{};
-    /// Pointer to the forwardlights command if any.
-    const RenderPathCommand* forwardLightsCommand_{};
+    // 2D-only：移除阴影/体积光/延迟渲染相关接口
     /// Pointer to the current commmand if it contains shader parameters to be set for a render pass.
     const RenderPathCommand* passCommand_{};
     /// Flag for scene being resolved from the backbuffer.

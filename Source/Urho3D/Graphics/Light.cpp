@@ -11,7 +11,6 @@
 #include "../Graphics/Light.h"
 #include "../Graphics/OctreeQuery.h"
 #include "../GraphicsAPI/Texture2D.h"
-#include "../GraphicsAPI/TextureCube.h"
 #include "../IO/Log.h"
 #include "../Resource/ResourceCache.h"
 #include "../Scene/Node.h"
@@ -23,7 +22,7 @@ namespace Urho3D
 
 extern const char* SCENE_CATEGORY;
 
-static const LightType DEFAULT_LIGHTTYPE = LIGHT_POINT;
+static const LightType DEFAULT_LIGHTTYPE = LIGHT_DIRECTIONAL; // 2D-only: 改为方向光
 static const float DEFAULT_RANGE = 10.0f;
 static const float DEFAULT_LIGHT_FOV = 30.0f;
 static const float DEFAULT_SPECULARINTENSITY = 1.0f;
@@ -45,8 +44,6 @@ static const float DEFAULT_LENGTH = 0.0f;
 static const char* typeNames[] =
 {
     "Directional",
-    "Spot",
-    "Point",
     nullptr
 };
 
@@ -169,18 +166,10 @@ void Light::ProcessRayQuery(const RayOctreeQuery& query, Vector<RayQueryResult>&
         break;
 
     case RAY_TRIANGLE:
-        if (lightType_ == LIGHT_SPOT)
-        {
-            distance = query.ray_.HitDistance(GetFrustum());
-            if (distance >= query.maxDistance_)
-                return;
-        }
-        else
-        {
-            distance = query.ray_.HitDistance(Sphere(node_->GetWorldPosition(), range_));
-            if (distance >= query.maxDistance_)
-                return;
-        }
+        // 2D-only：不处理聚光体，沿用包围球检测（对定向光无效，上方已提前返回）
+        distance = query.ray_.HitDistance(Sphere(node_->GetWorldPosition(), range_));
+        if (distance >= query.maxDistance_)
+            return;
         break;
 
     case RAY_TRIANGLE_UV:
@@ -238,13 +227,9 @@ void Light::DrawDebugGeometry(DebugRenderer* debug, bool depthTest)
             }
             break;
 
-        case LIGHT_SPOT:
-            debug->AddFrustum(GetFrustum(), color, depthTest);
-            break;
-
-        case LIGHT_POINT:
-            debug->AddSphere(Sphere(node_->GetWorldPosition(), range_), color, depthTest);
-            break;
+        // 2D-only: 移除 LIGHT_SPOT 和 LIGHT_POINT case
+        // case LIGHT_SPOT: ... break;
+        // case LIGHT_POINT: ... break;
         }
     }
 }
@@ -484,17 +469,9 @@ const Matrix3x4& Light::GetVolumeTransform(Camera* camera)
         volumeTransform_ = GetFullscreenQuadTransform(camera);
         break;
 
-    case LIGHT_SPOT:
-        {
-            float yScale = tanf(fov_ * M_DEGTORAD * 0.5f) * range_;
-            float xScale = aspectRatio_ * yScale;
-            volumeTransform_ = Matrix3x4(node_->GetWorldPosition(), node_->GetWorldRotation(), Vector3(xScale, yScale, range_));
-        }
-        break;
-
-    case LIGHT_POINT:
-        volumeTransform_ = Matrix3x4(node_->GetWorldPosition(), Quaternion::IDENTITY, range_);
-        break;
+    // 2D-only: 移除 LIGHT_SPOT 和 LIGHT_POINT case
+    // case LIGHT_SPOT: ... break;
+    // case LIGHT_POINT: ... break;
     }
 
     return volumeTransform_;
@@ -519,7 +496,8 @@ ResourceRef Light::GetRampTextureAttr() const
 
 ResourceRef Light::GetShapeTextureAttr() const
 {
-    return GetResourceRef(shapeTexture_, lightType_ == LIGHT_POINT ? TextureCube::GetTypeStatic() : Texture2D::GetTypeStatic());
+    // 2D-only: 移除TextureCube，统一使用Texture2D
+    return GetResourceRef(shapeTexture_, Texture2D::GetTypeStatic()); // lightType_ == LIGHT_POINT ? TextureCube::GetTypeStatic() : Texture2D::GetTypeStatic()
 }
 
 void Light::OnWorldBoundingBoxUpdate()
@@ -531,18 +509,9 @@ void Light::OnWorldBoundingBoxUpdate()
         worldBoundingBox_.Define(-M_LARGE_VALUE, M_LARGE_VALUE);
         break;
 
-    case LIGHT_SPOT:
-        // Frustum is already transformed into world space
-        worldBoundingBox_.Define(GetFrustum());
-        break;
-
-    case LIGHT_POINT:
-        {
-            const Vector3& center = node_->GetWorldPosition();
-            Vector3 edge(range_, range_, range_);
-            worldBoundingBox_.Define(center - edge, center + edge);
-        }
-        break;
+    // 2D-only: 移除 LIGHT_SPOT 和 LIGHT_POINT case
+    // case LIGHT_SPOT: ... break;
+    // case LIGHT_POINT: ... break;
     }
 }
 
@@ -576,46 +545,9 @@ void Light::SetIntensitySortValue(const BoundingBox& box)
         sortValue_ = 1.0f / GetIntensityDivisor();
         break;
 
-    case LIGHT_SPOT:
-        {
-            Vector3 centerPos = box.Center();
-            Vector3 lightPos = node_->GetWorldPosition();
-            Vector3 lightDir = node_->GetWorldDirection();
-            Ray lightRay(lightPos, lightDir);
-
-            Vector3 centerProj = lightRay.Project(centerPos);
-            float centerDistance = (centerProj - lightPos).Length();
-            Ray centerRay(centerProj, centerPos - centerProj);
-            float centerAngle = centerRay.HitDistance(box) / centerDistance;
-
-            // Check if a corner of the bounding box is closer to the light ray than the center, use its angle in that case
-            Vector3 cornerPos = centerPos + box.HalfSize() * Vector3(centerPos.x_ < centerProj.x_ ? 1.0f : -1.0f,
-                centerPos.y_ < centerProj.y_ ? 1.0f : -1.0f, centerPos.z_ < centerProj.z_ ? 1.0f : -1.0f);
-            Vector3 cornerProj = lightRay.Project(cornerPos);
-            float cornerDistance = (cornerProj - lightPos).Length();
-            float cornerAngle = (cornerPos - cornerProj).Length() / cornerDistance;
-
-            float spotAngle = Min(centerAngle, cornerAngle);
-            float maxAngle = tanf(fov_ * M_DEGTORAD * 0.5f);
-            float spotFactor = Min(spotAngle / maxAngle, 1.0f);
-            // We do not know the actual range attenuation ramp, so take only spot attenuation into account
-            float att = Max(1.0f - spotFactor * spotFactor, M_EPSILON);
-            sortValue_ = 1.0f / GetIntensityDivisor(att);
-        }
-        break;
-
-    case LIGHT_POINT:
-        {
-            Vector3 centerPos = box.Center();
-            Vector3 lightPos = node_->GetWorldPosition();
-            Vector3 lightDir = (centerPos - lightPos).Normalized();
-            Ray lightRay(lightPos, lightDir);
-            float distance = lightRay.HitDistance(box);
-            float normDistance = distance / range_;
-            float att = Max(1.0f - normDistance * normDistance, M_EPSILON);
-            sortValue_ = 1.0f / GetIntensityDivisor(att);
-        }
-        break;
+    // 2D-only: 移除最后一组 LIGHT_SPOT 和 LIGHT_POINT case
+    // case LIGHT_SPOT: ... break;
+    // case LIGHT_POINT: ... break;
     }
 }
 

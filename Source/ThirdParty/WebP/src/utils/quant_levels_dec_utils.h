@@ -11,10 +11,13 @@
 //
 // Author:  Vikas Arora (vikasa@google.com)
 
-#ifndef WEBP_UTILS_QUANT_LEVELS_DEC_H_
-#define WEBP_UTILS_QUANT_LEVELS_DEC_H_
+#ifndef WEBP_UTILS_QUANT_LEVELS_DEC_UTILS_H_
+#define WEBP_UTILS_QUANT_LEVELS_DEC_UTILS_H_
 
-#include "../webp/types.h"
+#include "src/utils/bounds_safety.h"
+#include "src/webp/types.h"
+
+WEBP_ASSUME_UNSAFE_INDEXABLE_ABI
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,7 +32,7 @@ int WebPDequantizeLevels(uint8_t* const data, int width, int height, int stride,
                          int strength);
 
 #ifdef __cplusplus
-}    // extern "C"
+}  // extern "C"
 #endif
 
-#endif  /* WEBP_UTILS_QUANT_LEVELS_DEC_H_ */
+#endif  // WEBP_UTILS_QUANT_LEVELS_DEC_UTILS_H_

@@ -4,6 +4,8 @@
 #pragma once
 
 #include "../Container/ArrayPtr.h"
+#include "../Container/Vector.h"
+#include "../Math/Vector4.h"
 #include "../Container/HashSet.h"
 #include "../Core/Mutex.h"
 #include "../Core/Object.h"
@@ -31,30 +33,14 @@ class ShaderVariation;
 class Texture;
 class Texture2D;
 class Texture2DArray;
-class TextureCube;
 class Vector3;
 class Vector4;
+class Matrix4;
 class VertexBuffer;
 
-#ifdef URHO3D_OPENGL
-class GraphicsImpl_OGL;
-#endif
-
-#ifdef URHO3D_D3D11
-class GraphicsImpl_D3D11;
-#endif
+class GraphicsBgfx; // bgfx 封装前置声明
 
 struct ShaderParameter;
-
-#ifdef URHO3D_OPENGL
-// Note: ShaderProgram_OGL class is purposefully API-specific. It should not be used by Urho3D client applications.
-class ShaderProgram_OGL;
-#endif
-
-#ifdef URHO3D_D3D11
-// Note: ShaderProgram_D3D11 class is purposefully API-specific. It should not be used by Urho3D client applications.
-class ShaderProgram_D3D11;
-#endif
 
 
 /// CPU-side scratch buffer for vertex data updates.
@@ -202,8 +188,6 @@ public:
     bool ResolveToTexture(Texture2D* destination, const IntRect& viewport);
     /// Resolve a multisampled texture on itself.
     bool ResolveToTexture(Texture2D* texture);
-    /// Resolve a multisampled cube texture on itself.
-    bool ResolveToTexture(TextureCube* texture);
     /// Draw non-indexed geometry.
     void Draw(PrimitiveType type, unsigned vertexStart, unsigned vertexCount);
     /// Draw indexed geometry.
@@ -326,23 +310,7 @@ public:
     /// @property
     bool IsInitialized() const;
 
-#ifdef URHO3D_OPENGL
-    /// Return graphics implementation, which holds the actual API-specific resources.
-    GraphicsImpl_OGL* GetImpl_OGL() const
-    {
-        assert(Graphics::GetGAPI() == GAPI_OPENGL);
-        return static_cast<GraphicsImpl_OGL*>(impl_);
-    }
-#endif
-
-#ifdef URHO3D_D3D11
-    /// Return graphics implementation, which holds the actual API-specific resources.
-    GraphicsImpl_D3D11* GetImpl_D3D11() const
-    {
-        assert(Graphics::GetGAPI() == GAPI_D3D11);
-        return static_cast<GraphicsImpl_D3D11*>(impl_);
-    }
-#endif
+    // 仅 BGFX 后端：移除 OpenGL/D3D11 Impl 访问器
 
     /// Return OS-specific external window handle. Null if not in use.
     void* GetExternalWindow() const { return externalWindow_; }
@@ -357,6 +325,42 @@ public:
     /// Return graphics API name.
     /// @property
     const String& GetApiName() const { return apiName_; }
+
+    /// 返回是否正在使用并已初始化 bgfx 后端。
+    bool IsBgfxActive() const;
+    /// 使用 bgfx 绘制最小示例（用于验证渲染/着色器链路）。
+    void DebugDrawBgfxHello();
+    /// 使用 bgfx 提交四边形批次（SpriteBatch 用）。
+    bool BgfxDrawQuads(const void* qvertices, int numVertices, Texture2D* texture, const Matrix4& mvp);
+    /// 使用 bgfx 提交三角形批次（SpriteBatch 用）。
+    bool BgfxDrawTriangles(const void* tvertices, int numVertices, const Matrix4& mvp);
+    /// 使用 bgfx 提交 UI 顶点（按 UI_VERTEX_SIZE 布局的三角形列表）。
+    bool BgfxDrawUITriangles(const float* vertices, int numVertices, Texture2D* texture, const Matrix4& mvp);
+    bool BgfxDrawColored(PrimitiveType prim, const float* vertices, int numVertices, const Matrix4& mvp);
+    /// 使用 bgfx 提交 UI 顶点并应用自定义材质（绑定贴图与 uniform）。
+    bool BgfxDrawUIWithMaterial(const float* vertices, int numVertices, class Material* material, const Matrix4& mvp);
+    /// 从 Image 直接创建 BGFX 纹理（用于字体/临时纹理），并缓存句柄到内部映射。
+    bool BgfxCreateTextureFromImage(Texture2D* texture, Image* image, bool useAlpha);
+    /// 释放由 BGFX 创建的纹理（若存在）。
+    void BgfxReleaseTexture(Texture2D* texture);
+    /// BGFX：更新纹理子矩形（数据应为 RGBA8；若纹理为 A8 将自动扩展）。
+    bool BgfxUpdateTextureRegion(Texture2D* texture, int x, int y, int width, int height, const void* data, unsigned level = 0);
+    /// 运行时切换“默认离屏渲染 + backbuffer 呈现”方案（默认 false）。
+    void SetUseOffscreen(bool enable);
+    bool GetUseOffscreen() const { return useOffscreen_; }
+
+    // 为 2D 渲染设置灯光参数（BGFX）。count<=8。
+    // posRange[i] = (x,y,radius,type[0=Directional,1=Point])
+    // colorInt[i] = (r,g,b,intensity)
+    void BgfxSet2DLights(const Vector<Vector4>& posRange, const Vector<Vector4>& colorInt, int count, float ambient);
+
+    /// 开始一次 UI 提交（统一设置渲染目标与视口）。返回 true 表示由后端处理，UI 层可跳过旧管线路径。
+    bool BeginUIDraw(RenderSurface* surface, int targetWidth, int targetHeight);
+    /// 结束一次 UI 提交（恢复渲染目标）。
+    void EndUIDraw(RenderSurface* surface);
+    /// 提交一批 UI 三角形。UI 层只需提供顶点、纹理、裁剪、混合与投影矩阵。
+    bool SubmitUIBatch(const float* vertices, int numVertices, Texture2D* texture,
+                       const IntRect& scissor, BlendMode blend, const Matrix4& projection);
 
     /// Return window position.
     /// @property
@@ -837,7 +841,6 @@ private:
     void Clear_OGL(ClearTargetFlags flags, const Color& color = Color(0.0f, 0.0f, 0.0f, 0.0f), float depth = 1.0f, u32 stencil = 0);
     bool ResolveToTexture_OGL(Texture2D* destination, const IntRect& viewport);
     bool ResolveToTexture_OGL(Texture2D* texture);
-    bool ResolveToTexture_OGL(TextureCube* texture);
     void Draw_OGL(PrimitiveType type, unsigned vertexStart, unsigned vertexCount);
     void Draw_OGL(PrimitiveType type, unsigned indexStart, unsigned indexCount, unsigned minVertex, unsigned vertexCount);
     void Draw_OGL(PrimitiveType type, unsigned indexStart, unsigned indexCount, unsigned baseVertexIndex, unsigned minVertex, unsigned vertexCount);
@@ -941,7 +944,6 @@ private:
     void Clear_D3D11(ClearTargetFlags flags, const Color& color = Color(0.0f, 0.0f, 0.0f, 0.0f), float depth = 1.0f, u32 stencil = 0);
     bool ResolveToTexture_D3D11(Texture2D* destination, const IntRect& viewport);
     bool ResolveToTexture_D3D11(Texture2D* texture);
-    bool ResolveToTexture_D3D11(TextureCube* texture);
     void Draw_D3D11(PrimitiveType type, unsigned vertexStart, unsigned vertexCount);
     void Draw_D3D11(PrimitiveType type, unsigned indexStart, unsigned indexCount, unsigned minVertex, unsigned vertexCount);
     void Draw_D3D11(PrimitiveType type, unsigned indexStart, unsigned indexCount, unsigned baseVertexIndex, unsigned minVertex, unsigned vertexCount);
@@ -1187,6 +1189,15 @@ private:
     String orientations_;
     /// Graphics API name.
     String apiName_;
+    /// bgfx 渲染后端句柄（实验性，用于宏切换对比）。
+    GraphicsBgfx* bgfx_{};
+    /// 当前 BGFX 渲染目标（简单 2D：仅一个颜色+深度）
+    Texture2D* bgfxColorRT_{};
+    Texture2D* bgfxDepthRT_{};
+    /// 内置离屏渲染目标（可选，用于特殊需求；默认关闭）
+    SharedPtr<Texture2D> offscreenColor_;
+    bool useOffscreen_{false};
+    void EnsureOffscreenRT();
 #ifdef URHO3D_OPENGL
     /// Renderer name (usually GPU name)
     String rendererName_;
@@ -1204,4 +1215,3 @@ private:
 void URHO3D_API RegisterGraphicsLibrary(Context* context);
 
 } // namespace Urho3D
-

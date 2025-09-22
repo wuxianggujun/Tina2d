@@ -36,18 +36,9 @@
 #include "../UI/Slider.h"
 #include "../UI/Sprite.h"
 #include "../UI/Text.h"
-#if 0
-#include "../UI/Text3D.h"
-#endif
 #include "../UI/ToolTip.h"
 #include "../UI/UI.h"
-#if 0
-#include "../UI/UIComponent.h"
-#endif
 #include "../UI/UIEvents.h"
-#if 0
-#include "../UI/View3D.h"
-#endif
 #include "../UI/Window.h"
 
 #include <cassert>
@@ -1021,6 +1012,80 @@ void UI::Render(VertexBuffer* buffer, const Vector<UIBatch>& batches, unsigned b
     graphics_->SetDepthWrite(false);
     graphics_->SetFillMode(FILL_SOLID);
     graphics_->SetStencilTest(false);
+    // bgfx 路径：使用 UI 顶点数组直接提交
+#ifdef URHO3D_BGFX
+    if (graphics_->IsBgfxActive())
+    {
+        // 计算目标尺寸（支持离屏 RT）并交由后端绑定 RT + 设置视口
+        int tgtW = graphics_->GetWidth();
+        int tgtH = graphics_->GetHeight();
+        if (surface && surface->GetParentTexture())
+        {
+            tgtW = surface->GetParentTexture()->GetWidth();
+            tgtH = surface->GetParentTexture()->GetHeight();
+        }
+        if (!graphics_->BeginUIDraw(surface, tgtW, tgtH))
+            return;
+
+        // 构建 UI 正交投影（像素到 NDC），其它状态由后端在 SubmitUIBatch 内部设置
+        Matrix4 proj2(Matrix4::IDENTITY);
+        const float sx = 2.0f / (float)tgtW;
+        const float sy = -2.0f / (float)tgtH;
+        proj2.m00_ = sx * uiScale_;
+        proj2.m03_ = -1.0f;
+        proj2.m11_ = sy * uiScale_;
+        proj2.m13_ =  1.0f;
+        proj2.m22_ = 1.0f;
+        proj2.m23_ = 0.0f;
+        proj2.m33_ = 1.0f;
+        // 选择对应的顶点数据缓冲区
+        const Vector<float>* vdata = nullptr;
+        if (buffer == vertexBuffer_.Get()) vdata = &vertexData_;
+        else if (buffer == debugVertexBuffer_.Get()) vdata = &debugVertexData_;
+        else
+        {
+            for (auto& item : renderToTexture_)
+            {
+                RenderToTextureData& data = item.second_;
+                if (buffer == data.vertexBuffer_.Get()) { vdata = &data.vertexData_; break; }
+                if (buffer == data.debugVertexBuffer_.Get()) { vdata = &data.debugVertexData_; break; }
+            }
+        }
+
+        if (vdata)
+        {
+            for (unsigned i = batchStart; i < batchEnd; ++i)
+            {
+                const UIBatch& batch = batches[i];
+                if (batch.vertexStart_ == batch.vertexEnd_)
+                    continue;
+
+                IntRect scissor = batch.scissor_;
+                scissor.left_ = (int)(scissor.left_ * uiScale_);
+                scissor.top_ = (int)(scissor.top_ * uiScale_);
+                scissor.right_ = (int)(scissor.right_ * uiScale_);
+                scissor.bottom_ = (int)(scissor.bottom_ * uiScale_);
+
+                const int numVerts = (batch.vertexEnd_ - batch.vertexStart_) / UI_VERTEX_SIZE;
+                const float* src = &vdata->At(batch.vertexStart_);
+                if (batch.customMaterial_)
+                {
+                    graphics_->SetBlendMode(batch.blendMode_);
+                    graphics_->SetScissorTest(true, scissor);
+                    graphics_->BgfxDrawUIWithMaterial(src, numVerts, batch.customMaterial_, proj2);
+                }
+                else
+                {
+                    Texture2D* tex2d = static_cast<Texture2D*>(batch.texture_);
+                    graphics_->SubmitUIBatch(src, numVerts, tex2d, scissor, batch.blendMode_, proj2);
+                }
+            }
+            graphics_->EndUIDraw(surface);
+            return;
+        }
+    }
+#endif
+
     graphics_->SetVertexBuffer(buffer);
 
     ShaderVariation* noTextureVS = graphics_->GetShader(VS, "Basic", "VERTEXCOLOR");

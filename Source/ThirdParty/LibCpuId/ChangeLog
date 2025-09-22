@@ -46,3 +46,218 @@ Version 0.4.0 (2016-09-30):
 	  cpu_id_t are now different.
 	* Better detection of AMD clock multiplier with msrinfo.
 	* Support for Intel SGX detection
+
+Version 0.4.1 (2019-02-05):
+	* Better support for Skylake Core i5 (#76)
+	* Misdiagnosis microarchitecture for i3-3220T (#81)
+	* Ability to dump MSR values to a file (PR #82)
+	* AMD Ryzen support (#86)
+	* Support for Coffee and Kaby Lake (#104)
+	* Support for Raven Ridge and Threadripper (#106)
+	* Support for Pinnacle Ridge (#111)
+	* Fix P-III Celeron misdetection
+	* Support for Skylake-X (#116)
+	* Support for Zen+ Threadripper
+
+Version 0.5.0 (2020-05-23):
+	* A backwards-incompatible change, since the sizeof cpu_raw_data_t and
+	  cpu_id_t are now different.
+	* Support for Hygon Dhyana (#123)
+	* Support for Zen 2 (#125, #137)
+	* Stubs for AArch64 (#127)
+	* Support for Intel AVX512VNNI detection (#129)
+	* Typo fixes (#130)
+	* Support for get_total_cpus on Haiku (#131)
+	* Fix build on PPC (#132)
+	* Support for CMake build system (#138) and vcpkg packaging (#140)
+	* Support for Cannon Lake
+	* Support for Coffee Lake-U and Coffee Lake Refresh
+	* Support for Comet Lake
+	* Support for Ice Lake
+	* Support for Renoir
+	* Fix ThreadSanitizer report (#142)
+	* Better support of L1 intruction cache (--l1i-assoc, --l1i-cacheline)
+	* Support for Ivy Bridge-E (Xeon)
+	* Support up to 4 subleaf entries for CPUID leaf 0x8000001D and
+	  fix detection of L3 cache on Zen 2
+	* Support for RDSEED/ADX/SHA_NI detection (AMD)
+	* Support for ABM/AVX512VBMI/AVX512VBMI2 detection (Intel)
+
+Version 0.5.1 (2021-03-20):
+	* Convert all python scripts to Python 3
+	* Support for Kaby Lake Refresh
+	* Support for Kaby Lake-G
+	* Support for Comet Lake-U
+	* Support for Gemini Lake
+	* Support for Vermeer
+	* Support for Whiskey Lake-U
+	* Support for Cezanne
+	* Support for Milan
+	* Support for Rocket Lake
+
+Version 0.6.0 (2022-09-23):
+	* Support for Intel Tiger Lake
+	* CPU Family/Model is used as Ext.Family/Model
+	* Use popcount64 from libc when available (#152)
+	* Reduce minimum CMake requirement 3.14 to 3.13
+	* Do not link with msrdriver.c on non-Windows platform (#159)
+	* Report memory allocation failures without making a segmentation fault (#160)
+	* Support for AMD Lucienne
+	* Support for AMD Rembrandt
+	* Support for AMD Warhol
+	* Remove Debian package from source tree (#165)
+	* Fix build under Clang 15 (#167)
+	* Support for AMD Athlon Godavari
+	* Support for hybrid CPU like Intel Alder Lake (#166)
+	* Detect presence of hypervisor (#169)
+	* Decode deterministic cache info for AMD CPUs (#168)
+	* Add cache instances field in cpu_id_t and system_id_t (#168)
+	* Support AMD Bald Eagle
+	* Support for more AMD Godavari (Athlon)
+	* Rename AMD Bulldozer to Zambezi
+	* Support for AMD Interlagos
+	* Support for AMD Abu Dhabi
+	* Support for AMD Beema
+	* Support for AMD Steppe Eagle
+	* Support for more AMD Kabini (Sempron + Athlon)
+	* Improve msr_serialize_raw_data()
+	* Support for AMD Zen 2 custom APU for Steam Deck
+
+Version 0.6.1 (2022-10-23):
+	* Support for AMD Raphael
+	* Support for AMD Dali
+	* Support for AMD Van Gogh
+	* Fix stuck cpuid_tool due to set_cpu_affinity() on Windows (#172)
+	* Remove AMD Warhol from DB (Zen3+ cancelled)
+	* Fix physical core count computed by cpu_identify_all() when HT is disabled (#175)
+	* Fix shared library symlinks with CMake (#174)
+	* Support for Intel Raptor Lake-S
+
+Version 0.6.2 (2022-11-11):
+	* Fix segmentation fault in cpu_identify_all() for single-core CPUs
+	* Support for Intel Penryn L
+	* Support for Intel Tremont
+	* Support for AMD Mendocino
+	* Support for Intel Ice Lake (Xeon-D)
+	* Support for AMD Zen 2 Desktop Kit CPUs (4700S + 4800S)
+	* Support for AMD Athlon 64 Sherman
+
+Version 0.6.3 (2023-04-02):
+	* Support for Intel Pentium and Celeron for Alder Lake-S
+	* Support for Intel Alder Lake-HX
+	* Support for Intel Alder Lake-X
+	* Fix detection of Intel Alder Lake-P
+	* Fix infinite loop in set_cpu_affinity() on macOS
+	* Fix a misprint of extended CPUID in cpuid_basic_identify()
+	* Restore previous thread CPU affinity before returning from cpuid_get_all_raw_data() (#184)
+	* Query CPU info at least once even if set_cpu_affinity() fails
+	* Support for AMD 19h family MSRs
+	* Fix detection of Intel Core i5 Lynnfield
+	* Rename set_error() to cpuid_set_error() and get_error() to cpuid_get_error() (#188)
+	* Support for Intel Alder Lake-N
+	* Support for AMD Rembrandt with Radeon Graphics
+	* Support for Intel Raptor Lake-S with "Golden Cove" cores
+	* Support for Intel Raptor Lake-P
+	* Support for Intel Raptor Lake-U
+	* Support for Intel Rocket Lake-E
+
+Version 0.6.4 (2023-10-08):
+	* Support for AMD Genoa
+	* Support for Intel Sapphire Rapids-WS
+	* Support for Intel Skylake (server)
+	* Support for Intel Cascade Lake
+	* Support for Intel Ice-Lake (server)
+	* Support for Intel Sapphire Rapids-SP
+	* Improve support for Intel Arrandale (Pentium and Celeron)
+	* Fix support for Intel Sandy Bridge-E (Core i7)
+	* Support for AMD Phoenix
+	* Support for Intel Raptor Lake-H/HX
+	* Improve support for Intel Alder-Lake and Raptor-Lake P/U
+	* Fix floating point exception in cpu_identify_all() for unsupported CPU vendor
+	* Initial support for Centaur CPUs (VIA and Zhaoxin)
+	* Support for Intel Apollo Lake
+	* Fix build for NetBSD and DragonFly BSD (#190)
+	* Support for AMD Dragon Range
+	* Support for AMD Ryzen Z1
+
+Version 0.6.5 (2024-04-28):
+	* Support for Intel Bay Trail-M
+	* Support for Intel Bay Trail-T
+	* Support for Intel Bay Trail-D
+	* Support for AMD Storm Peak
+	* Support for Intel Raport Lake Refresh
+	* Support heterogeneous RAW dumps in cpu_identify_all()
+	* Support for Intel Meteor Lake, including detection of LP E-Cores
+	* Support for Intel Emerald Rapids-SP
+	* Support for more AMD Van Gogh
+
+Version 0.7.0 (2024-08-26):
+	* Fix handle leaks in rdmsr.c (#199)
+	* Fix cpuid_get_hypervisor when NULL data is provided (#199)
+	* Prevent intel_fn11 array overruns (#199)
+	* Support for AMD Hawk Point
+	* Support for more AMD Phoenix (8000 series)
+	* Add cpu_clock_by_tsc() function to the library (#124)
+	* Check x86 CPUs MSR support (#185)
+	* Add support for ARM CPUs (AArch32 + AArch64) (#200)
+	* Add cpu_feature_level_t enumerated values for x86 CPUs (#177)
+	* Support up to 4 subleaf entries for CPUID leaf 0x80000026 (#189)
+	* Support for Extended CPU topology subleaf in cpuid_identify_purpose_amd() (#189)
+	* Support CPU purpose for AMD x86 CPUs (#189)
+	* Add cpuid Linux and FreeBSD kernel modules for ARM CPUs
+	* Improve errors handling in cpuid_get_all_raw_data() and cpuid_get_raw_data_core() (#202)
+	* Support get_total_cpus() on DragonFly BSD
+	* Improve set_cpu_affinity() on NetBSD
+	* Fix build on OpenBSD
+	* Improve behavior when CPU affinity cannot be set
+	* Fix a regression in cpuid_tool about arguments doing nothing (like --rdmsr or --cpuid)
+	* Fix a segmentation fault when using --quiet in cpuid_tool
+	* Improve error handling in cpu_identify_all()
+	* Add Python bindings (#197)
+	* Support for AMD Granite Ridge
+	* Support for AMD Strix Point
+	* Detect x2APIC and AVX512 features for AMD x86 CPUs
+
+Version 0.7.1 (2024-11-30):
+	* Fix cpuid kernel module build on ARM
+	* Return ERR_NO_CPUID when cpuid kernel module cannot be used on AArch32 state
+	* Refactor the build of the bindings (#203)
+	* Fix build error on AArch64 when HWCAP_CPUID is not defined (#205)
+	* Fix build on Windows ARM with MSVC (206)
+	* Fix detection of Intel Meteor Lake
+	* Support for Intel Arrow Lake
+	* Support for AMD Turin
+
+Version 0.8.0 (2025-05-04):
+	* A backwards-incompatible change, since the sizeof cpu_raw_data_t and
+	  cpu_id_t are now different.
+	* Fix a typo in string (#208)
+	* Support for AMD Turin Dense
+	* Simplify exec_cpuid() to use constraints (#209)
+	* Use HW_NCPUONLINE in get_total_cpus() for OpenBSD/NetBSD (#210)
+	* Implement cpu_clock_by_os() for OpenBSD (#211)
+	* Support Intel Lunar Lake
+	* Support Intel Twin Lake
+	* Support Intel Alder Lake-PS
+	* Support more Intel Raptor Lake ("Intel Processor", "Xeon E")
+	* Support Intel Raptor Lake-U Refresh
+	* Support Intel Raptor Lake-U/H Re-refresh
+	* Support Intel Arrow Lake-U/H
+	* Fix warning during build on OpenBSD about strcpy()
+	* Refactored internal struct match_entry_t for x86 CPUs to fix truncation issues (#212)
+	* Add technology_node field to struct cpu_id_t
+	* Support more ARM CPUs
+	* Support ARMv9.5-A CPUs (new value FEATURE_LEVEL_ARM_V9_5_A for cpu_feature_level_t)
+	* Massive DB updates for almost all Intel and AMD CPUs along with more test data
+	* Return ERR_BADFMT during raw deserialization if cpu_raw_data_t is empty
+	* Support another type of header for raw deserialization
+	* Support Intel Granite Rapids-SP
+
+Version 0.8.1 (2025-08-19):
+	* Fix kernel module name for FreeBSD ARM
+	* Support AMD Krackan Point
+	* Support Intel Skylake-X Core 9th
+	* Support AMD Strix Halo
+	* Build Python bindings without requiring wheel for building (#219)
+	* Support Intel Arrow Lake-HX
+	* Fix warnings about stringop-truncation

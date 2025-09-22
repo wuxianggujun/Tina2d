@@ -9,10 +9,12 @@
 #include "../Graphics/Camera.h"
 #include "../Graphics/Geometry.h"
 #include "../Graphics/GraphicsEvents.h"
+#include "../Graphics/Graphics.h"
 #include "../Graphics/Material.h"
 #include "../Graphics/OctreeQuery.h"
 #include "../Graphics/Technique.h"
 #include "../Graphics/View.h"
+#include "../Math/Vector4.h"
 #include "../GraphicsAPI/IndexBuffer.h"
 #include "../GraphicsAPI/Texture2D.h"
 #include "../GraphicsAPI/VertexBuffer.h"
@@ -21,6 +23,7 @@
 #include "../Scene/Scene.h"
 #include "../Urho2D/Drawable2D.h"
 #include "../Urho2D/Renderer2D.h"
+#include "../Urho2D/Light2D.h"
 
 #include "../DebugNew.h"
 
@@ -52,7 +55,9 @@ Renderer2D::Renderer2D(Context* context) :
     Pass* pass = tech->CreatePass("alpha");
     pass->SetVertexShader("Urho2D");
     pass->SetPixelShader("Urho2D");
-    pass->SetDepthWrite(false);
+    // 2.5D: 启用深度写入与深度测试（前向，减少遮挡过绘）
+    pass->SetDepthWrite(true);
+    pass->SetDepthTestMode(CMP_LESSEQUAL);
     cachedTechniques_[BLEND_REPLACE] = tech;
 
     material_->SetTechnique(0, tech);
@@ -85,8 +90,8 @@ static inline bool CompareRayQueryResults(RayQueryResult& lr, RayQueryResult& rr
 void Renderer2D::ProcessRayQuery(const RayOctreeQuery& query, Vector<RayQueryResult>& results)
 {
     unsigned resultSize = results.Size();
-    for (unsigned i = 0; i < drawables_.Size(); ++i)
-    {
+    for (unsigned i = 0; i < static_cast<unsigned>(drawables_.Size()); ++i)
+        {
         if (drawables_[i]->GetViewMask() & query.viewMask_)
             drawables_[i]->ProcessRayQuery(query, results);
     }
@@ -111,7 +116,7 @@ void Renderer2D::UpdateGeometry(const FrameInfo& frame)
 {
     unsigned indexCount = 0;
     for (HashMap<Camera*, ViewBatchInfo2D>::ConstIterator i = viewBatchInfos_.Begin(); i != viewBatchInfos_.End(); ++i)
-    {
+        {
         if (i->second_.batchUpdatedFrameNumber_ == frame_.frameNumber_)
             indexCount = Max(indexCount, i->second_.indexCount_);
     }
@@ -182,11 +187,69 @@ void Renderer2D::UpdateGeometry(const FrameInfo& frame)
             if (dest)
             {
                 const Vector<const SourceBatch2D*>& sourceBatches = viewBatchInfo.sourceBatches_;
-                for (unsigned b = 0; b < sourceBatches.Size(); ++b)
+                for (unsigned b = 0; b < static_cast<unsigned>(sourceBatches.Size()); ++b)
                 {
                     const Vector<Vertex2D>& vertices = sourceBatches[b]->vertices_;
                     for (unsigned i = 0; i < vertices.Size(); ++i)
+                    {
                         dest[i] = vertices[i];
+                        // 2.5D: y→z 映射，利用深度测试实现层级遮挡
+                        // 经验系数：0.001f，可按项目世界坐标范围调节
+                        dest[i].position_.z_ = -dest[i].position_.y_ * 0.001f;
+
+                        // Light2D 顶点色调制（简版）
+                        if (!frameLights_.Empty())
+                        {
+                            auto decode = [](u32 c){
+                                float r = (float)(c & 0xFF) / 255.f;
+                                float g = (float)((c >> 8) & 0xFF) / 255.f;
+                                float b = (float)((c >> 16) & 0xFF) / 255.f;
+                                float a = (float)((c >> 24) & 0xFF) / 255.f;
+                                return Color(r,g,b,a);
+                            };
+                            auto encode = [](const Color& col){
+                                u32 r = (u32)Clamp((int)(col.r_ * 255.f), 0, 255);
+                                u32 g = (u32)Clamp((int)(col.g_ * 255.f), 0, 255);
+                                u32 b = (u32)Clamp((int)(col.b_ * 255.f), 0, 255);
+                                u32 a = (u32)Clamp((int)(col.a_ * 255.f), 0, 255);
+                                return (a<<24) | (b<<16) | (g<<8) | r;
+                            };
+
+                            Color base = decode(dest[i].color_);
+                            Vector3 rgb(base.r_, base.g_, base.b_);
+                            Vector3 add(0,0,0);
+
+                            Vector3 wp = dest[i].position_;
+                            for (Light2D* l : frameLights_)
+                            {
+                                if (!l) continue;
+                                if (l->GetLightType() == Light2D::POINT)
+                                {
+                                    Vector3 lp = l->GetNode()->GetWorldPosition();
+                                    float dx = wp.x_ - lp.x_;
+                                    float dy = wp.y_ - lp.y_;
+                                    float dist = Sqrt(dx*dx + dy*dy);
+                                    float r = Max(l->GetRadius(), 0.0001f);
+                                    float att = 1.0f - (dist / r);
+                                    if (att > 0.f)
+                                    {
+                                        float k = l->GetIntensity() * att;
+                                        add += Vector3(l->GetColor().r_, l->GetColor().g_, l->GetColor().b_) * k;
+                                    }
+                                }
+                                else
+                                {
+                                    add += Vector3(l->GetColor().r_, l->GetColor().g_, l->GetColor().b_) * (0.1f * l->GetIntensity());
+                                }
+                            }
+                            add = Vector3(Clamp(add.x_, 0.f, 1.f), Clamp(add.y_, 0.f, 1.f), Clamp(add.z_, 0.f, 1.f));
+                            rgb = rgb + add * (Vector3::ONE - rgb);
+                            base.r_ = Clamp(rgb.x_, 0.f, 1.f);
+                            base.g_ = Clamp(rgb.y_, 0.f, 1.f);
+                            base.b_ = Clamp(rgb.z_, 0.f, 1.f);
+                            dest[i].color_ = encode(base);
+                        }
+                    }
                     dest += vertices.Size();
                 }
 
@@ -272,7 +335,9 @@ SharedPtr<Material> Renderer2D::CreateMaterial(Texture2D* texture, BlendMode ble
         Pass* pass = tech->CreatePass("alpha");
         pass->SetVertexShader("Urho2D");
         pass->SetPixelShader("Urho2D");
-        pass->SetDepthWrite(false);
+        // 2.5D: 对 2D 精灵启用深度写入与深度测试（简单演示，透明边缘可能存在轻微伪影）
+        pass->SetDepthWrite(true);
+        pass->SetDepthTestMode(CMP_LESSEQUAL);
         pass->SetBlendMode(blendMode);
         techIt = cachedTechniques_.Insert(MakePair((int)blendMode, tech));
     }
@@ -314,16 +379,65 @@ void Renderer2D::HandleBeginViewUpdate(StringHash eventType, VariantMap& eventDa
     frustum_ = camera->GetFrustum();
     viewMask_ = camera->GetViewMask();
 
+    // 收集本帧 2D 光源（非持有，仅遍历）
+    frameLights_.Clear();
+    if (Scene* scene = GetScene())
+    {
+        Vector<Node*> stack;
+        stack.Push(scene);
+        while (!stack.Empty())
+        {
+            Node* n = stack.Back();
+            stack.Pop();
+            const Vector<SharedPtr<Component>>& comps = n->GetComponents();
+            for (const SharedPtr<Component>& c : comps)
+            {
+                if (auto* l = dynamic_cast<Light2D*>(c.Get()))
+                    if (l->IsEnabledEffective())
+                        frameLights_.Push(l);
+            }
+            const Vector<SharedPtr<Node>>& children = n->GetChildren();
+            for (const SharedPtr<Node>& ch : children)
+                stack.Push(ch.Get());
+        }
+    }
+
+    // BGFX 后端：将本帧 2D 光源写入 uniforms（便于 lit 技术使用）
+    if (auto* graphics = GetSubsystem<Graphics>())
+    {
+        if (graphics->IsBgfxActive())
+        {
+            const int maxLights = 8;
+            Vector<Vector4> posRange;
+            Vector<Vector4> colorInt;
+            int n = Min((int)frameLights_.Size(), maxLights);
+            posRange.Resize(n);
+            colorInt.Resize(n);
+            for (int i = 0; i < n; ++i)
+            {
+                Light2D* l = frameLights_[i];
+                if (!l) { posRange[i] = Vector4::ZERO; colorInt[i] = Vector4::ZERO; continue; }
+                const Vector3 lp3 = l->GetNode()->GetWorldPosition();
+                const float typeVal = (l->GetLightType() == Light2D::POINT) ? 1.0f : 0.0f;
+                posRange[i] = Vector4(lp3.x_, lp3.y_, l->GetRadius(), typeVal);
+                const Color c = l->GetColor();
+                colorInt[i] = Vector4(c.r_, c.g_, c.b_, l->GetIntensity());
+            }
+            const float ambient = 0.0f; // 暂不提供环境光控制
+            graphics->BgfxSet2DLights(posRange, colorInt, n, ambient);
+        }
+    }
+
     // Check visibility
     {
         URHO3D_PROFILE(CheckDrawableVisibility);
 
         auto* queue = GetSubsystem<WorkQueue>();
-        int numWorkItems = queue->GetNumThreads() + 1; // Worker threads + main thread
-        int drawablesPerItem = drawables_.Size() / numWorkItems;
+        unsigned numWorkItems = (unsigned)queue->GetNumThreads() + 1; // Worker threads + main thread
+        unsigned drawablesPerItem = drawables_.Size() / Max(numWorkItems, 1u);
 
         Vector<Drawable2D*>::Iterator start = drawables_.Begin();
-        for (int i = 0; i < numWorkItems; ++i)
+        for (unsigned i = 0; i < numWorkItems; ++i)
         {
             SharedPtr<WorkItem> item = queue->GetFreeItem();
             item->priority_ = WI_MAX_PRIORITY;
@@ -331,7 +445,7 @@ void Renderer2D::HandleBeginViewUpdate(StringHash eventType, VariantMap& eventDa
             item->aux_ = this;
 
             Vector<Drawable2D*>::Iterator end = drawables_.End();
-            if (i < numWorkItems - 1 && end - start > drawablesPerItem)
+            if (i < numWorkItems - 1 && (unsigned)(end - start) > drawablesPerItem)
                 end = start + drawablesPerItem;
 
             item->start_ = &(*start);
@@ -351,6 +465,42 @@ void Renderer2D::HandleBeginViewUpdate(StringHash eventType, VariantMap& eventDa
         viewBatchInfo.vertexBuffer_ = new VertexBuffer(context_);
 
     UpdateViewBatchInfo(viewBatchInfo, camera);
+
+    // 在 BGFX 后端下，直接用 bgfx 提交 2D 批次并阻止老管线重复绘制
+    if (auto* graphics = GetSubsystem<Graphics>())
+    {
+        if (graphics->IsBgfxActive())
+        {
+            const Matrix4 proj = camera->GetGPUProjection();
+            const Matrix3x4& v3 = camera->GetView();
+            const Matrix4 view(
+                v3.m00_, v3.m01_, v3.m02_, v3.m03_,
+                v3.m10_, v3.m11_, v3.m12_, v3.m13_,
+                v3.m20_, v3.m21_, v3.m22_, v3.m23_,
+                0.0f,    0.0f,    0.0f,    1.0f
+            );
+            const Matrix4 mvp = proj * view;
+
+            // 逐批提交（按 material 分组已在 UpdateViewBatchInfo 中完成并排序）
+            for (const SourceBatch2D* src : viewBatchInfo.sourceBatches_)
+            {
+                if (!src || src->vertices_.Empty())
+                    continue;
+
+                Texture2D* tex = nullptr;
+                if (src->material_)
+                    tex = static_cast<Texture2D*>(src->material_->GetTexture(TU_DIFFUSE));
+
+                // Vertex2D 布局为: Vector3 position_, u32 color_, Vector2 uv_，与 BgfxDrawQuads 的 QVertex 对齐
+                graphics->BgfxDrawQuads(src->vertices_.Buffer(), src->vertices_.Size(), tex, mvp);
+            }
+
+            // 清空批次数，避免旧管线继续绘制
+            viewBatchInfo.batchCount_ = 0;
+            batches_.Clear();
+            return;
+        }
+    }
 
     // Go through the drawables to form geometries & batches and calculate the total vertex / index count,
     // but upload the actual vertex data later. The idea is that the View class copies our batch vector to
@@ -405,7 +555,7 @@ void Renderer2D::UpdateViewBatchInfo(ViewBatchInfo2D& viewBatchInfo, Camera* cam
 
     Vector<const SourceBatch2D*>& sourceBatches = viewBatchInfo.sourceBatches_;
     sourceBatches.Clear();
-    for (unsigned d = 0; d < drawables_.Size(); ++d)
+    for (unsigned d = 0; d < static_cast<unsigned>(drawables_.Size()); ++d)
     {
         if (!drawables_[d]->IsInView(camera))
             continue;
@@ -435,7 +585,7 @@ void Renderer2D::UpdateViewBatchInfo(ViewBatchInfo2D& viewBatchInfo, Camera* cam
     unsigned vCount = 0;
     float distance = M_INFINITY;
 
-    for (unsigned b = 0; b < sourceBatches.Size(); ++b)
+    for (unsigned b = 0; b < static_cast<unsigned>(sourceBatches.Size()); ++b)
     {
         distance = Min(distance, sourceBatches[b]->distance_);
         Material* material = sourceBatches[b]->material_;

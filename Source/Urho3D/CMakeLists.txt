@@ -40,6 +40,7 @@ get_directory_property (URHO3D_COMPILE_DEFINITIONS DIRECTORY ${CMAKE_CURRENT_SOU
 
 # Define preprocessor macros (for building the Urho3D library)
 add_definitions (-DURHO3D_IS_BUILDING)
+# Tina2D：已移除 3D 路径，宏不再需要
 # 完全迁移 SDL3：不再启用旧名兼容宏 SDL_ENABLE_OLD_NAMES
 # 统一关闭 SDL 动态 API，确保以静态方式直接链接 SDL_* 实现
 # SDL3：启用旧名兼容，尽量减少迁移改动量
@@ -53,9 +54,11 @@ if ($ENV{COVERITY_SCAN_BRANCH})
     # TODO: The Coverity-Scan modelling is not yet working properly (anyone interested in static analyzer is welcome to give it another try)
     add_definitions (-DCOVERITY_SCAN_MODEL)
 endif ()
-if (TARGET GLEW)
-    # These macros are required because Urho3D (OpenGL) headers are exposed to GLEW headers
-    add_definitions (-DGLEW_STATIC -DGLEW_NO_GLU)
+# Tina2D: 不再依赖 GLEW（OpenGL 后端已停用）
+
+# 启用 bgfx 后端的编译宏
+if (URHO3D_BGFX)
+    add_definitions (-DURHO3D_BGFX)
 endif ()
 if (HAVE_SINCOSF)
     add_definitions (-DHAVE_SINCOSF)
@@ -168,13 +171,15 @@ set (EXCLUDE_3D_PATTERNS
     "Graphics/Skeleton\\.[^;]+"
     "Graphics/Skybox\\.[^;]+"
     "Graphics/Particle(Effect|Emitter)\\.[^;]+"
+    "Graphics/OcclusionBuffer\\.[^;]+"
+    "GraphicsAPI/TextureCube\\.[^;]+"
     "UI/Text3D\\.[^;]+"
     "UI/View3D\\.[^;]+"
     "UI/UIComponent\\.[^;]+"
 )
 list (APPEND EXCLUDE_PATTERNS ${EXCLUDE_3D_PATTERNS})
 
-# 已删除 3D 类与脚本系统，不再需要 2D-only 宏
+# 已删除 3D 类与脚本系统
 
 define_source_files (EXCLUDE_PATTERNS ${EXCLUDE_PATTERNS} GLOB_CPP_PATTERNS *.cpp ${GLOB_OBJC_PATTERN} RECURSE GROUP)
 
@@ -264,6 +269,14 @@ source_group ("Source Files\\Generated" FILES ${CMAKE_CURRENT_BINARY_DIR}/librev
 
 # 注意：此处暂时不链接 SDL，待目标创建后再链接（见下方 setup_library 之后的逻辑）
 
+# 将最新的 stb_vorbis.c 作为 C 源加入 Urho3D 目标（避免 define_source_files 的分组限制）
+set(_STB_VORBIS_PATH ${CMAKE_SOURCE_DIR}/Source/ThirdParty/STB/stb_vorbis.c)
+if (EXISTS ${_STB_VORBIS_PATH})
+    # 先确保目标已/将被创建后可追加源；这里直接追加到 SOURCE_FILES，若宏未使用则在稍后用 target_sources 兜底
+    list(APPEND SOURCE_FILES ${_STB_VORBIS_PATH})
+    set_source_files_properties(${_STB_VORBIS_PATH} PROPERTIES LANGUAGE C)
+endif ()
+
 if (URHO3D_LUA)
     # The host tool must be built natively
     if (CMAKE_CROSSCOMPILING OR URHO3D_LUAJIT)
@@ -336,6 +349,43 @@ if (URHO3D_LUA)
     # This is more practical than patching its header files in many places to make them work with relative path
     list (APPEND INCLUDE_DIRS ${THIRD_PARTY_INCLUDE_DIR}/Lua${JIT})
 endif ()
+
+# 当启用 bgfx 时，将其导出的头文件包含目录注入到 Urho3D 目标的编译包含路径中。
+if (URHO3D_BGFX)
+    if (TARGET bgfx)
+        get_target_property(BGFX_INC_DIRS bgfx INTERFACE_INCLUDE_DIRECTORIES)
+        if (BGFX_INC_DIRS)
+            list (APPEND INCLUDE_DIRS ${BGFX_INC_DIRS})
+        endif ()
+    endif ()
+    if (TARGET bx)
+        get_target_property(BX_INC_DIRS bx INTERFACE_INCLUDE_DIRECTORIES)
+        if (BX_INC_DIRS)
+            list (APPEND INCLUDE_DIRS ${BX_INC_DIRS})
+        endif ()
+    endif ()
+    if (TARGET bimg)
+        get_target_property(BIMG_INC_DIRS bimg INTERFACE_INCLUDE_DIRECTORIES)
+        if (BIMG_INC_DIRS)
+            list (APPEND INCLUDE_DIRS ${BIMG_INC_DIRS})
+        endif ()
+    endif ()
+
+    # 链接 bgfx（带上其依赖，避免某些生成器/平台不传递链接接口）
+    if (TARGET bgfx)
+        list (APPEND LIBS bgfx)
+    endif ()
+    if (TARGET bimg)
+        list (APPEND LIBS bimg)
+    endif ()
+    # bimg 解码库，提供 bimg::imageParse 等符号
+    if (TARGET bimg_decode)
+        list (APPEND LIBS bimg_decode)
+    endif ()
+    if (TARGET bx)
+        list (APPEND LIBS bx)
+    endif ()
+endif ()
 # Workaround for GCC 5.4 and above when building a SHARED lib type for Linux platform to fix the undefined symbol "__cpu_model" issue (see #1519)
 if (CMAKE_COMPILER_IS_GNUCXX AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 5.3.1 AND CMAKE_SYSTEM_NAME STREQUAL Linux AND URHO3D_LIB_TYPE STREQUAL SHARED)  # 5.3.1 was the last known good version
     list (APPEND LIBS gcc)
@@ -357,6 +407,11 @@ if (URHO3D_LUA)
     add_custom_target (LuaGenCppFiles
         DEPENDS tolua++bin ${LUA_GEN_CPP_FILES})
     add_dependencies(${TARGET_NAME} LuaGenCppFiles)
+endif()
+
+# 确保 Urho3D 库在构建前已生成 bgfx 着色器
+if (URHO3D_BGFX AND TARGET tina2d_bgfx_shaders)
+    add_dependencies(${TARGET_NAME} tina2d_bgfx_shaders)
 endif()
 
 # Generate platform specific export header file (can only be called after the target has been added)

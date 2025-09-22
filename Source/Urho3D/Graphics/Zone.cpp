@@ -7,7 +7,7 @@
 #include "../Graphics/DebugRenderer.h"
 #include "../Graphics/Octree.h"
 #include "../Graphics/Zone.h"
-#include "../GraphicsAPI/TextureCube.h"
+#include "../GraphicsAPI/Texture2D.h"
 #include "../Resource/ResourceCache.h"
 #include "../Scene/Node.h"
 #include "../Scene/Scene.h"
@@ -65,7 +65,7 @@ void Zone::RegisterObject(Context* context)
     URHO3D_ATTRIBUTE("Ambient Gradient", ambientGradient_, false, AM_DEFAULT);
     URHO3D_ATTRIBUTE_EX("Priority", priority_, MarkNodeDirty, 0, AM_DEFAULT);
     URHO3D_ACCESSOR_ATTRIBUTE("Zone Texture", GetZoneTextureAttr, SetZoneTextureAttr,
-        ResourceRef(TextureCube::GetTypeStatic()), AM_DEFAULT);
+        ResourceRef(Texture2D::GetTypeStatic()), AM_DEFAULT);
     URHO3D_ATTRIBUTE("Light Mask", lightMask_, DEFAULT_LIGHTMASK, AM_DEFAULT);
     URHO3D_ATTRIBUTE("Shadow Mask", shadowMask_, DEFAULT_SHADOWMASK, AM_DEFAULT);
     URHO3D_ACCESSOR_ATTRIBUTE("Zone Mask", GetZoneMask, SetZoneMask, DEFAULT_ZONEMASK, AM_DEFAULT);
@@ -204,7 +204,7 @@ void Zone::SetZoneTextureAttr(const ResourceRef& value)
 
 ResourceRef Zone::GetZoneTextureAttr() const
 {
-    return GetResourceRef(zoneTexture_, TextureCube::GetTypeStatic());
+    return GetResourceRef(zoneTexture_, Texture2D::GetTypeStatic());
 }
 
 void Zone::OnMarkedDirty(Node* node)

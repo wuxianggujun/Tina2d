@@ -102,6 +102,32 @@ Vector2 SpriteBatchBase::GetVirtualPos(const Vector2& realPos)
     return Vector2(virtualX, virtualY);
 }
 
+Matrix4 SpriteBatchBase::ComputeViewProjMatrix()
+{
+    if (camera_)
+        return camera_->GetGPUProjection() * camera_->GetView();
+
+    i32 width;
+    i32 height;
+    if (VirtualScreenUsed())
+    {
+        width = virtualScreenSize_.x_;
+        height = virtualScreenSize_.y_;
+    }
+    else
+    {
+        width = graphics_->GetWidth();
+        height = graphics_->GetHeight();
+    }
+
+    float pixelWidth = 2.0f / width;
+    float pixelHeight = 2.0f / height;
+    return Matrix4(pixelWidth,  0.0f,         0.0f, -1.0f,
+                   0.0f,       -pixelHeight,  0.0f,  1.0f,
+                   0.0f,        0.0f,         1.0f,  0.0f,
+                   0.0f,        0.0f,         0.0f,  1.0f);
+}
+
 void SpriteBatchBase::UpdateViewProjMatrix()
 {
     if (camera_)
@@ -176,10 +202,31 @@ void SpriteBatchBase::Flush()
 {
     if (tNumVertices_ > 0)
     {
+        if (graphics_ && graphics_->IsBgfxActive())
+        {
+            graphics_->ResetRenderTargets();
+            graphics_->ClearParameterSources();
+            graphics_->SetCullMode(CULL_NONE);
+            // 2.5D: 对使用 SpriteBatch 的形状/四边形也允许写深度，便于与其他内容正确遮挡
+            graphics_->SetDepthWrite(true);
+            graphics_->SetStencilTest(false);
+            graphics_->SetScissorTest(false);
+            graphics_->SetColorWrite(true);
+            graphics_->SetDepthTest(compareMode_);
+            graphics_->SetBlendMode(blendMode_);
+            graphics_->SetViewport(GetViewportRect());
+
+            // 计算与旧管线一致的正交投影矩阵
+            Matrix4 mvp = ComputeViewProjMatrix();
+            // 直接用 bgfx 提交三角形批
+            graphics_->BgfxDrawTriangles(tVertices_, tNumVertices_, mvp);
+            tNumVertices_ = 0;
+            return;
+        }
         graphics_->ResetRenderTargets();
         graphics_->ClearParameterSources();
         graphics_->SetCullMode(CULL_NONE);
-        graphics_->SetDepthWrite(false);
+        graphics_->SetDepthWrite(true);
         graphics_->SetStencilTest(false);
         graphics_->SetScissorTest(false);
         graphics_->SetColorWrite(true);
@@ -210,10 +257,28 @@ void SpriteBatchBase::Flush()
 
     else if (qNumVertices_ > 0)
     {
+        if (graphics_ && graphics_->IsBgfxActive())
+        {
+            graphics_->ResetRenderTargets();
+            graphics_->ClearParameterSources();
+            graphics_->SetCullMode(CULL_NONE);
+            graphics_->SetDepthWrite(true);
+            graphics_->SetStencilTest(false);
+            graphics_->SetScissorTest(false);
+            graphics_->SetColorWrite(true);
+            graphics_->SetDepthTest(compareMode_);
+            graphics_->SetBlendMode(blendMode_);
+            graphics_->SetViewport(GetViewportRect());
+
+            Matrix4 mvp = ComputeViewProjMatrix();
+            graphics_->BgfxDrawQuads(qVertices_, qNumVertices_, qCurrentTexture_, mvp);
+            qNumVertices_ = 0;
+            return;
+        }
         graphics_->ResetRenderTargets();
         graphics_->ClearParameterSources();
         graphics_->SetCullMode(CULL_NONE);
-        graphics_->SetDepthWrite(false);
+        graphics_->SetDepthWrite(true);
         graphics_->SetStencilTest(false);
         graphics_->SetScissorTest(false);
         graphics_->SetColorWrite(true);

@@ -27,7 +27,7 @@ void RenderSurface::SetNumViewports(unsigned num)
 
 void RenderSurface::SetViewport(unsigned index, Viewport* viewport)
 {
-    if (index >= viewports_.Size())
+    if (index >= static_cast<unsigned>(viewports_.Size()))
         viewports_.Resize(index + 1);
 
     viewports_[index] = viewport;
@@ -87,7 +87,7 @@ bool RenderSurface::GetAutoResolve() const
 
 Viewport* RenderSurface::GetViewport(unsigned index) const
 {
-    return index < viewports_.Size() ? viewports_[index] : nullptr;
+    return index < static_cast<unsigned>(viewports_.Size()) ? viewports_[index] : nullptr;
 }
 
 RenderSurface::RenderSurface(Texture* parentTexture)

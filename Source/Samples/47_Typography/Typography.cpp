@@ -5,6 +5,7 @@
 #include <Urho3D/Core/ProcessUtils.h>
 #include <Urho3D/Graphics/RenderPath.h>
 #include <Urho3D/Graphics/Zone.h>
+#include <Urho3D/Graphics/Renderer.h>
 #include <Urho3D/Input/Input.h>
 #include <Urho3D/UI/CheckBox.h>
 #include <Urho3D/UI/DropDownList.h>
@@ -125,7 +126,9 @@ void Typography::CreateText()
     uielement_->AddChild(container);
 
     auto* cache = GetSubsystem<ResourceCache>();
-    auto* font = cache->GetResource<Font>("Fonts/BlueHighway.ttf");
+    // 使用 SDF 字体以展示高质量抗锯齿文本渲染效果
+    // SDF (Signed Distance Field) 字体在小尺寸和缩放时提供更好的清晰度
+    auto* font = cache->GetResource<Font>("Fonts/BlueHighway.sdf");
 
     for (auto size2x = 2; size2x <= 36; ++size2x)
     {

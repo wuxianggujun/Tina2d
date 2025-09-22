@@ -13,6 +13,7 @@ namespace Urho3D
 inline constexpr float DEFAULT_FONT_SIZE = 12;
 
 class Font;
+class Material;
 class FontFace;
 struct FontGlyph;
 
@@ -258,6 +259,8 @@ protected:
     /// Text effect stroke thickness.
     int strokeThickness_;
     /// Text effect stroke rounding flag.
+    /// SDF 文本材质缓存（每个字体页一个）
+    Vector<SharedPtr<Material>> sdfMaterials_;
     bool roundStroke_;
     /// Effect color.
     Color effectColor_;
@@ -288,3 +291,5 @@ protected:
 };
 
 }
+
+

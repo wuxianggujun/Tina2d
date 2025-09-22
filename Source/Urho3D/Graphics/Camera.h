@@ -41,16 +41,16 @@ public:
     /// @nobind
     static void RegisterObject(Context* context);
 
-    /// Visualize the component as debug geometry.
+    /// Visualize the component as debug geometry. (2D-only: simplified)
     void DrawDebugGeometry(DebugRenderer* debug, bool depthTest) override;
 
-    /// Set near clip distance.
+    /// Set near clip distance. (2D-only: kept for compatibility)
     /// @property
     void SetNearClip(float nearClip);
-    /// Set far clip distance.
+    /// Set far clip distance. (2D-only: kept for compatibility)  
     /// @property
     void SetFarClip(float farClip);
-    /// Set vertical field of view in degrees.
+    /// Set vertical field of view in degrees. (2D-only: kept for compatibility)
     /// @property
     void SetFov(float fov);
     /// Set orthographic mode view uniform size.

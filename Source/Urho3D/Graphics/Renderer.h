@@ -27,11 +27,9 @@ class RenderPath;
 class RenderSurface;
 class ResourceCache;
 class Scene;
-class OcclusionBuffer;
 class Technique;
 class Texture;
 class Texture2D;
-class TextureCube;
 class View;
 class Zone;
 struct BatchQueue;
@@ -39,52 +37,37 @@ struct BatchQueue;
 static const int SHADOW_MIN_PIXELS = 64;
 static const int INSTANCING_BUFFER_DEFAULT_SIZE = 1024;
 
-/// Light vertex shader variations.
+/// Light vertex shader variations. (2D-only: minimal set)
 enum LightVSVariation
 {
     LVS_DIR = 0,
-    LVS_SPOT,
-    LVS_POINT,
-    LVS_SHADOW,
-    LVS_SPOTSHADOW,
-    LVS_POINTSHADOW,
-    LVS_SHADOWNORMALOFFSET,
-    LVS_SPOTSHADOWNORMALOFFSET,
-    LVS_POINTSHADOWNORMALOFFSET,
-    MAX_LIGHT_VS_VARIATIONS
+    // 2D-only: 移除其他3D光照变体，但保留占位符避免编译错误
+    LVS_SPOT = -1,         // 无效值
+    LVS_POINT = -1,        // 无效值
+    LVS_SHADOW = -1,       // 无效值
+    LVS_SHADOWNORMALOFFSET = -1, // 无效值
+    MAX_LIGHT_VS_VARIATIONS = 1
 };
 
-/// Per-vertex light vertex shader variations.
+/// Per-vertex light vertex shader variations. (2D-only: minimal set)  
 enum VertexLightVSVariation
 {
     VLVS_NOLIGHTS = 0,
-    VLVS_1LIGHT,
-    VLVS_2LIGHTS,
-    VLVS_3LIGHTS,
-    VLVS_4LIGHTS,
-    MAX_VERTEXLIGHT_VS_VARIATIONS
+    // 2D-only: 移除多光源变体
+    MAX_VERTEXLIGHT_VS_VARIATIONS = 1
 };
 
-/// Light pixel shader variations.
+/// Light pixel shader variations. (2D-only: minimal set)
 enum LightPSVariation
 {
     LPS_NONE = 0,
-    LPS_SPOT,
-    LPS_POINT,
-    LPS_POINTMASK,
-    LPS_SPEC,
-    LPS_SPOTSPEC,
-    LPS_POINTSPEC,
-    LPS_POINTMASKSPEC,
-    LPS_SHADOW,
-    LPS_SPOTSHADOW,
-    LPS_POINTSHADOW,
-    LPS_POINTMASKSHADOW,
-    LPS_SHADOWSPEC,
-    LPS_SPOTSHADOWSPEC,
-    LPS_POINTSHADOWSPEC,
-    LPS_POINTMASKSHADOWSPEC,
-    MAX_LIGHT_PS_VARIATIONS
+    // 2D-only: 移除其他3D光照变体，但保留占位符避免编译错误
+    LPS_SPEC = -1,         // 无效值
+    LPS_SHADOW = -1,       // 无效值
+    LPS_SPOT = -1,         // 无效值
+    LPS_POINT = -1,        // 无效值
+    LPS_POINTMASK = -1,    // 无效值
+    MAX_LIGHT_PS_VARIATIONS = 1
 };
 
 /// Deferred light volume vertex shader variations.
@@ -234,18 +217,6 @@ public:
     /// Set maximum number of sorted instances per batch group. If exceeded, instances are rendered unsorted.
     /// @property
     void SetMaxSortedInstances(int instances);
-    /// Set maximum number of occluder triangles.
-    /// @property
-    void SetMaxOccluderTriangles(int triangles);
-    /// Set occluder buffer width.
-    /// @property
-    void SetOcclusionBufferSize(int size);
-    /// Set required screen size (1.0 = full screen) for occluders.
-    /// @property
-    void SetOccluderSizeThreshold(float screenSize);
-    /// Set whether to thread occluder rendering. Default false.
-    /// @property
-    void SetThreadedOcclusion(bool enable);
     /// Set shadow depth bias multiplier for mobile platforms to counteract possible worse shadow map precision. Default 1.0 (no effect).
     /// @property
     void SetMobileShadowBiasMul(float mul);
@@ -349,21 +320,21 @@ public:
     /// @property
     int GetMaxSortedInstances() const { return maxSortedInstances_; }
 
-    /// Return maximum number of occluder triangles.
+    /// Return maximum number of occluder triangles. (2D-only: no occlusion, return 0)
     /// @property
-    int GetMaxOccluderTriangles() const { return maxOccluderTriangles_; }
+    int GetMaxOccluderTriangles() const { return 0; }
 
-    /// Return occlusion buffer width.
+    /// Return occlusion buffer width. (2D-only: no occlusion, return 0)
     /// @property
-    int GetOcclusionBufferSize() const { return occlusionBufferSize_; }
+    int GetOcclusionBufferSize() const { return 0; }
 
-    /// Return occluder screen size threshold.
+    /// Return occluder screen size threshold. (2D-only: no occlusion, return 0)
     /// @property
-    float GetOccluderSizeThreshold() const { return occluderSizeThreshold_; }
+    float GetOccluderSizeThreshold() const { return 0.0f; }
 
-    /// Return whether occlusion rendering is threaded.
+    /// Return whether occlusion rendering is threaded. (2D-only: no)
     /// @property
-    bool GetThreadedOcclusion() const { return threadedOcclusion_; }
+    bool GetThreadedOcclusion() const { return false; }
 
     /// Return shadow depth bias multiplier for mobile platforms.
     /// @property
@@ -418,11 +389,6 @@ public:
     /// @property
     Texture2D* GetDefaultLightSpot() const { return defaultLightSpot_; }
 
-    /// Return the shadowed pointlight face selection cube map.
-    TextureCube* GetFaceSelectCubeMap() const { return faceSelectCubeMap_; }
-
-    /// Return the shadowed pointlight indirection cube map.
-    TextureCube* GetIndirectionCubeMap() const { return indirectionCubeMap_; }
 
     /// Return the instancing vertex buffer.
     VertexBuffer* GetInstancingBuffer() const { return dynamicInstancing_ ? instancingBuffer_.Get() : nullptr; }
@@ -452,8 +418,6 @@ public:
         (int width, int height, unsigned format, int multiSample, bool autoResolve, bool cubemap, bool filtered, bool srgb, hash32 persistentKey = 0);
     /// Allocate a depth-stencil surface that does not need to be readable. Should only be called during actual rendering, not before.
     RenderSurface* GetDepthStencil(int width, int height, int multiSample, bool autoResolve);
-    /// Allocate an occlusion buffer.
-    OcclusionBuffer* GetOcclusionBuffer(Camera* camera);
     /// Allocate a temporary shadow camera and a scene node for it. Is thread-safe.
     Camera* GetShadowCamera();
     /// Mark a view as prepared by the specified culling camera.
@@ -494,8 +458,6 @@ private:
     void CreateGeometries();
     /// Create instancing vertex buffer.
     void CreateInstancingBuffer();
-    /// Create point light shadow indirection texture data.
-    void SetIndirectionTextureData();
     /// Update a queued viewport for rendering.
     void UpdateQueuedViewport(i32 index);
     /// Prepare for rendering of a new view.
@@ -529,10 +491,6 @@ private:
     SharedPtr<Zone> defaultZone_;
     /// Directional light quad geometry.
     SharedPtr<Geometry> dirLightGeometry_;
-    /// Spot light volume geometry.
-    SharedPtr<Geometry> spotLightGeometry_;
-    /// Point light volume geometry.
-    SharedPtr<Geometry> pointLightGeometry_;
     /// Instance stream vertex buffer.
     SharedPtr<VertexBuffer> instancingBuffer_;
     /// Default material.
@@ -541,14 +499,9 @@ private:
     SharedPtr<Texture2D> defaultLightRamp_;
     /// Default spotlight attenuation texture.
     SharedPtr<Texture2D> defaultLightSpot_;
-    /// Face selection cube map for shadowed pointlights.
-    SharedPtr<TextureCube> faceSelectCubeMap_;
-    /// Indirection cube map for shadowed pointlights.
-    SharedPtr<TextureCube> indirectionCubeMap_;
     /// Reusable scene nodes with shadow camera components.
     Vector<SharedPtr<Node>> shadowCameraNodes_;
-    /// Reusable occlusion buffers.
-    Vector<SharedPtr<OcclusionBuffer>> occlusionBuffers_;
+    /// (2D-only) 不再维护遮挡缓冲。
     /// Shadow maps by resolution.
     HashMap<int, Vector<SharedPtr<Texture2D>>> shadowMaps_;
     /// Shadow map dummy color buffers by resolution.
@@ -607,20 +560,14 @@ private:
     int minInstances_{2};
     /// Maximum sorted instances per batch group.
     int maxSortedInstances_{1000};
-    /// Maximum occluder triangles.
-    int maxOccluderTriangles_{5000};
-    /// Occlusion buffer width.
-    int occlusionBufferSize_{256};
-    /// Occluder screen size threshold.
-    float occluderSizeThreshold_{0.025f};
+    /// (2D-only) 移除遮挡缓冲相关设置。
     /// Mobile platform shadow depth bias multiplier.
     float mobileShadowBiasMul_{1.0f};
     /// Mobile platform shadow depth bias addition.
     float mobileShadowBiasAdd_{};
     /// Mobile platform shadow normal offset multiplier.
     float mobileNormalOffsetMul_{1.0f};
-    /// Number of occlusion buffers in use.
-    i32 numOcclusionBuffers_{};
+    /// (2D-only) 无遮挡缓冲计数。
     /// Number of temporary shadow cameras in use.
     i32 numShadowCameras_{};
     /// Number of primitives (3D geometry only).
@@ -643,8 +590,7 @@ private:
     bool dynamicInstancing_{true};
     /// Number of extra instancing data elements.
     int numExtraInstancingBufferElements_{};
-    /// Threaded occlusion rendering flag.
-    bool threadedOcclusion_{};
+    /// (2D-only) 无遮挡缓冲线程标志。
     /// Shaders need reloading flag.
     bool shadersDirty_{true};
     /// Initialized flag.

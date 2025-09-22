@@ -14,6 +14,7 @@ set (CMAKE_FOLDER samples)
 # Find Urho3D library
 find_package (Urho3D REQUIRED)
 include_directories (${URHO3D_INCLUDE_DIRS})
+include_directories (${CMAKE_SOURCE_DIR}/Source)
 
 # Include common to all samples
 set (COMMON_SAMPLE_H_FILES "${CMAKE_CURRENT_SOURCE_DIR}/Sample.h" "${CMAKE_CURRENT_SOURCE_DIR}/Sample.inl")
@@ -51,7 +52,8 @@ set (ALLOWED_2D_SAMPLES
     47_Typography
     49_Urho2DIsometricDemo
     50_Urho2DPlatformer
-    51_Urho2DStretchableSprite)
+    51_Urho2DStretchableSprite
+    52_2_5DCore)
 
 foreach (DIR ${DIRS})
     get_filename_component (DIR ${DIR} PATH)

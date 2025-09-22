@@ -10,6 +10,7 @@
 #include "../Urho2D/ParticleEffect2D.h"
 #include "../Urho2D/ParticleEmitter2D.h"
 #include "../Urho2D/Renderer2D.h"
+#include "../Urho2D/Light2D.h"
 #include "../Urho2D/Sprite2D.h"
 #include "../Urho2D/SpriteSheet2D.h"
 #include "../Urho2D/TileMap2D.h"
@@ -27,6 +28,7 @@ const char* URHO2D_CATEGORY = "Urho2D";
 void RegisterUrho2DLibrary(Context* context)
 {
     Renderer2D::RegisterObject(context);
+    Light2D::RegisterObject(context);
 
     Sprite2D::RegisterObject(context);
     SpriteSheet2D::RegisterObject(context);

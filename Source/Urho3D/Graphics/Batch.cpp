@@ -64,88 +64,19 @@ inline bool CompareBatchGroupOrder(BatchGroup* lhs, BatchGroup* rhs)
 
 void CalculateShadowMatrix(Matrix4& dest, LightBatchQueue* queue, i32 split, Renderer* renderer)
 {
-    assert(split >= 0);
-
-    Camera* shadowCamera = queue->shadowSplits_[split].shadowCamera_;
-    const IntRect& viewport = queue->shadowSplits_[split].shadowViewport_;
-
-    const Matrix3x4& shadowView(shadowCamera->GetView());
-    Matrix4 shadowProj(shadowCamera->GetGPUProjection());
-    Matrix4 texAdjust(Matrix4::IDENTITY);
-
-    Texture2D* shadowMap = queue->shadowMap_;
-    if (!shadowMap)
-        return;
-
-    auto width = (float)shadowMap->GetWidth();
-    auto height = (float)shadowMap->GetHeight();
-
-    Vector3 offset(
-        (float)viewport.left_ / width,
-        (float)viewport.top_ / height,
-        0.0f
-    );
-
-    Vector3 scale(
-        0.5f * (float)viewport.Width() / width,
-        0.5f * (float)viewport.Height() / height,
-        1.0f
-    );
-
-    offset.x_ += scale.x_;
-    offset.y_ += scale.y_;
-
-    if (Graphics::GetGAPI() == GAPI_OPENGL)
-    {
-        offset.z_ = 0.5f;
-        scale.z_ = 0.5f;
-        offset.y_ = 1.0f - offset.y_;
-    }
-    else
-    {
-        scale.y_ = -scale.y_;
-    }
-
-    // If using 4 shadow samples, offset the position diagonally by half pixel
-    if (renderer->GetShadowQuality() == SHADOWQUALITY_PCF_16BIT || renderer->GetShadowQuality() == SHADOWQUALITY_PCF_24BIT)
-    {
-        offset.x_ -= 0.5f / width;
-        offset.y_ -= 0.5f / height;
-    }
-    texAdjust.SetTranslation(offset);
-    texAdjust.SetScale(scale);
-
-    dest = texAdjust * shadowProj * shadowView;
+    // 2D-only：不计算阴影矩阵
+    (void)dest; (void)queue; (void)split; (void)renderer;
+    return;
 }
+
 
 void CalculateSpotMatrix(Matrix4& dest, Light* light)
 {
-    Node* lightNode = light->GetNode();
-    Matrix3x4 spotView = Matrix3x4(lightNode->GetWorldPosition(), lightNode->GetWorldRotation(), 1.0f).Inverse();
-    Matrix4 spotProj(Matrix4::ZERO);
-    Matrix4 texAdjust(Matrix4::IDENTITY);
-
-    // Make the projected light slightly smaller than the shadow map to prevent light spill
-    float h = 1.005f / tanf(light->GetFov() * M_DEGTORAD * 0.5f);
-    float w = h / light->GetAspectRatio();
-    spotProj.m00_ = w;
-    spotProj.m11_ = h;
-    spotProj.m22_ = 1.0f / Max(light->GetRange(), M_EPSILON);
-    spotProj.m32_ = 1.0f;
-
-    if (Graphics::GetGAPI() == GAPI_OPENGL)
-    {
-        texAdjust.SetTranslation(Vector3(0.5f, 0.5f, 0.5f));
-        texAdjust.SetScale(Vector3(0.5f, -0.5f, 0.5f));
-    }
-    else
-    {
-        texAdjust.SetTranslation(Vector3(0.5f, 0.5f, 0.0f));
-        texAdjust.SetScale(Vector3(0.5f, -0.5f, 1.0f));
-    }
-
-    dest = texAdjust * spotProj * spotView;
+    // 2D-only：不计算聚光矩阵
+    (void)dest; (void)light;
+    return;
 }
+
 
 void Batch::CalculateSortKey()
 {
@@ -172,8 +103,7 @@ void Batch::Prepare(View* view, Camera* camera, bool setModelTransform, bool all
     Renderer* renderer = view->GetRenderer();
     Node* cameraNode = camera ? camera->GetNode() : nullptr;
     Light* light = lightQueue_ ? lightQueue_->light_ : nullptr;
-    Texture2D* shadowMap = lightQueue_ ? lightQueue_->shadowMap_ : nullptr;
-
+Texture2D* shadowMap = nullptr;
     // Set shaders first. The available shader parameters and their register/uniform positions depend on the currently set shaders
     graphics->SetShaders(vertexShader_, pixelShader_);
 
@@ -220,7 +150,7 @@ void Batch::Prepare(View* view, Camera* camera, bool setModelTransform, bool all
     IntRect viewport = graphics->GetViewport();
     IntVector2 viewSize = IntVector2(viewport.Width(), viewport.Height());
     hash32 viewportHash = (hash32)viewSize.x_ | (hash32)viewSize.y_ << 16u;
-    if (graphics->NeedParameterUpdate(SP_CAMERA, reinterpret_cast<const void*>(cameraHash + viewportHash)))
+    if (graphics->NeedParameterUpdate(SP_CAMERA, reinterpret_cast<const void*>((uintptr_t)(cameraHash + viewportHash))))
     {
         view->SetCameraShaderParameters(camera);
         // During renderpath commands the G-Buffer or viewport texture is assumed to always be viewport-sized
@@ -255,7 +185,7 @@ void Batch::Prepare(View* view, Camera* camera, bool setModelTransform, bool all
     hash32 zoneHash = (hash32)(size_t)zone_;
     if (overrideFogColorToBlack)
         zoneHash += 0x80000000;
-    if (zone_ && graphics->NeedParameterUpdate(SP_ZONE, reinterpret_cast<const void*>(zoneHash)))
+    if (zone_ && graphics->NeedParameterUpdate(SP_ZONE, reinterpret_cast<const void*>((uintptr_t)zoneHash)))
     {
         graphics->SetShaderParameter(VSP_AMBIENTSTARTCOLOR, zone_->GetAmbientStartColor());
         graphics->SetShaderParameter(VSP_AMBIENTENDCOLOR,
@@ -322,30 +252,9 @@ void Batch::Prepare(View* view, Camera* camera, bool setModelTransform, bool all
                     }
                     break;
 
-                case LIGHT_SPOT:
-                    {
-                        Matrix4 shadowMatrices[2];
-
-                        CalculateSpotMatrix(shadowMatrices[0], light);
-                        bool isShadowed = shadowMap && graphics->HasTextureUnit(TU_SHADOWMAP);
-                        if (isShadowed)
-                            CalculateShadowMatrix(shadowMatrices[1], lightQueue_, 0, renderer);
-
-                        graphics->SetShaderParameter(VSP_LIGHTMATRICES, shadowMatrices[0].Data(), isShadowed ? 32 : 16);
-                    }
-                    break;
-
-                case LIGHT_POINT:
-                    {
-                        Matrix4 lightVecRot(lightNode->GetWorldRotation().RotationMatrix());
-                        // HLSL compiler will pack the parameters as if the matrix is only 3x4, so must be careful to not overwrite
-                        // the next parameter
-                        if (Graphics::GetGAPI() == GAPI_OPENGL)
-                            graphics->SetShaderParameter(VSP_LIGHTMATRICES, lightVecRot.Data(), 16);
-                        else
-                            graphics->SetShaderParameter(VSP_LIGHTMATRICES, lightVecRot.Data(), 12);
-                    }
-                    break;
+                // 2D-only: 移除 LIGHT_SPOT 和 LIGHT_POINT 处理
+                // case LIGHT_SPOT: ... break;
+                // case LIGHT_POINT: ... break;
                 }
             }
 
@@ -381,30 +290,9 @@ void Batch::Prepare(View* view, Camera* camera, bool setModelTransform, bool all
                     }
                     break;
 
-                case LIGHT_SPOT:
-                    {
-                        Matrix4 shadowMatrices[2];
-
-                        CalculateSpotMatrix(shadowMatrices[0], light);
-                        bool isShadowed = lightQueue_->shadowMap_ != nullptr;
-                        if (isShadowed)
-                            CalculateShadowMatrix(shadowMatrices[1], lightQueue_, 0, renderer);
-
-                        graphics->SetShaderParameter(PSP_LIGHTMATRICES, shadowMatrices[0].Data(), isShadowed ? 32 : 16);
-                    }
-                    break;
-
-                case LIGHT_POINT:
-                    {
-                        Matrix4 lightVecRot(lightNode->GetWorldRotation().RotationMatrix());
-                        // HLSL compiler will pack the parameters as if the matrix is only 3x4, so must be careful to not overwrite
-                        // the next parameter
-                        if (Graphics::GetGAPI() == GAPI_OPENGL)
-                            graphics->SetShaderParameter(PSP_LIGHTMATRICES, lightVecRot.Data(), 16);
-                        else
-                            graphics->SetShaderParameter(PSP_LIGHTMATRICES, lightVecRot.Data(), 12);
-                    }
-                    break;
+                // 2D-only: 移除第二组 LIGHT_SPOT 和 LIGHT_POINT 处理
+                // case LIGHT_SPOT: ... break;
+                // case LIGHT_POINT: ... break;
                 }
             }
 
@@ -517,9 +405,9 @@ void Batch::Prepare(View* view, Camera* camera, bool setModelTransform, bool all
                     normalOffsetScale *= light->GetShadowBias().normalOffset_;
 #ifdef MOBILE_GRAPHICS
                     normalOffsetScale *= renderer->GetMobileNormalOffsetMul();
-#endif
                     graphics->SetShaderParameter(VSP_NORMALOFFSETSCALE, normalOffsetScale);
                     graphics->SetShaderParameter(PSP_NORMALOFFSETSCALE, normalOffsetScale);
+#endif
                 }
             }
         }
@@ -541,7 +429,8 @@ void Batch::Prepare(View* view, Camera* camera, bool setModelTransform, bool all
                     invRange = 0.0f;
                 else
                     invRange = 1.0f / Max(vertexLight->GetRange(), M_EPSILON);
-                if (type == LIGHT_SPOT)
+                // 2D-only: 移除LIGHT_SPOT检查
+                if (false) // type == LIGHT_SPOT
                 {
                     cutoff = Cos(vertexLight->GetFov() * 0.5f);
                     invCutoff = 1.0f / (1.0f - cutoff);
@@ -575,16 +464,9 @@ void Batch::Prepare(View* view, Camera* camera, bool setModelTransform, bool all
         }
     }
 
-    // Set zone texture if necessary
-#ifndef URHO3D_GLES2
+    // 设置 Zone 纹理（2D-only：统一使用 TU_ZONE）
     if (zone_ && graphics->HasTextureUnit(TU_ZONE))
         graphics->SetTexture(TU_ZONE, zone_->GetZoneTexture());
-#else
-    // On OpenGL ES2 set the zone texture to the environment unit instead
-    if (zone_ && zone_->GetZoneTexture() && graphics->HasTextureUnit(TU_ENVIRONMENT))
-        graphics->SetTexture(TU_ENVIRONMENT, zone_->GetZoneTexture());
-#endif
-
     // Set material-specific shader parameters and textures
     if (material_)
     {
@@ -603,26 +485,7 @@ void Batch::Prepare(View* view, Camera* camera, bool setModelTransform, bool all
         }
     }
 
-    // Set light-related textures
-    if (light)
-    {
-        if (shadowMap && graphics->HasTextureUnit(TU_SHADOWMAP))
-            graphics->SetTexture(TU_SHADOWMAP, shadowMap);
-        if (graphics->HasTextureUnit(TU_LIGHTRAMP))
-        {
-            Texture* rampTexture = light->GetRampTexture();
-            if (!rampTexture)
-                rampTexture = renderer->GetDefaultLightRamp();
-            graphics->SetTexture(TU_LIGHTRAMP, rampTexture);
-        }
-        if (graphics->HasTextureUnit(TU_LIGHTSHAPE))
-        {
-            Texture* shapeTexture = light->GetShapeTexture();
-            if (!shapeTexture && light->GetLightType() == LIGHT_SPOT)
-                shapeTexture = renderer->GetDefaultLightSpot();
-            graphics->SetTexture(TU_LIGHTSHAPE, shapeTexture);
-        }
-    }
+    // 2D-only：不再设置与阴影/体积光相关的 3D 纹理单元
 }
 
 void Batch::Draw(View* view, Camera* camera, bool allowDepthWrite) const
@@ -896,3 +759,6 @@ i32 BatchQueue::GetNumInstances() const
 }
 
 }
+
+
+

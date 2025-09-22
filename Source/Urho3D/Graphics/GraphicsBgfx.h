@@ -1,0 +1,214 @@
+// 版权声明同项目整体许可证
+//
+// 本文件为 bgfx 渲染后端的最小封装骨架。
+// 目标：在不破坏现有 OpenGL/D3D 渲染路径的前提下，引入 bgfx 依赖并提供统一接口，
+// 后续可逐步将 Graphics/Renderer 等调用切换到该封装。
+
+#pragma once
+
+#include "../GraphicsAPI/GraphicsDefs.h"
+#include "../Math/Rect.h"
+#include "../Math/Color.h"
+#include "../Math/Matrix4.h"
+#include "../Math/Vector4.h"
+#include <unordered_map>
+#include <string>
+
+namespace Urho3D
+{
+
+class Texture2D;
+class ResourceCache;
+class Material;
+class Variant;
+
+/// bgfx 渲染器薄封装（最小骨架）。
+/// 说明：仅提供初始化/帧提交等基础能力，具体渲染管线、资源管理与 Urho3D 类型映射将在后续阶段逐步完善。
+class GraphicsBgfx
+{
+public:
+    GraphicsBgfx();
+    ~GraphicsBgfx();
+
+    /// 使用原生窗口句柄进行初始化（SDL/Win32/… 均可传入底层原生句柄）。
+    /// width/height 初始分辨率，非严格要求，后续可 Reset。
+    bool Initialize(void* nativeWindowHandle, unsigned width, unsigned height, void* nativeDisplayHandle = nullptr);
+
+    /// 通过 SDL_Window* 初始化，内部会提取 nwh/ndt（仅在部分平台可用）。
+    bool InitializeFromSDL(void* sdlWindow, unsigned width, unsigned height);
+
+    /// 关闭并释放 bgfx 资源。
+    void Shutdown();
+
+    /// 视口重置（窗口尺寸变化时调用）。
+    void Reset(unsigned width, unsigned height);
+
+    /// 帧开始：可做清屏等。
+    void BeginFrame();
+
+    /// 帧结束：提交并翻转。
+    void EndFrame();
+
+    /// 设置视口矩形（映射到 view 0）。
+    void SetViewport(const IntRect& rect);
+
+    /// 清屏：flags 使用 Urho3D 的 CLEAR_* 标志位。
+    void Clear(ClearTargetFlags flags, const Color& color, float depth, u32 stencil);
+
+    // 渲染状态设置（2D 需要的最小子集）
+    void SetBlendMode(BlendMode mode, bool alphaToCoverage);
+    void SetColorWrite(bool enable);
+    void SetCullMode(CullMode mode);
+    void SetDepthTest(CompareMode mode);
+    void SetDepthWrite(bool enable);
+    void SetScissor(bool enable, const IntRect& rect);
+    void SetStencilTest(bool enable, CompareMode mode, StencilOp pass, StencilOp fail, StencilOp zFail,
+                        unsigned stencilRef, unsigned compareMask, unsigned writeMask);
+    void SetFillMode(FillMode mode);
+    void SetDepthBias(float constantBias, float slopeScaledBias);
+    void SetLineAntiAlias(bool enable);
+    void SetClipPlane(bool enable, const Vector4& clipPlane);
+
+    /// 是否已完成初始化。
+    bool IsInitialized() const { return initialized_; }
+
+    /// 载入 UI 所需着色器程序（vs_ui + fs_ui_diff/fs_ui_alpha），从资源系统读取 BGFX 编译产物。
+    /// 需要 ResourceCache 可用（CoreData/Shaders/BGFX）。
+    bool LoadUIPrograms(class ResourceCache* cache);
+    /// 使用最小示例程序绘制一个测试四边形（验证渲染/着色器/管线）。
+    void DebugDrawHello();
+
+    // 批量绘制（供 SpriteBatch 调用）
+    bool DrawQuads(const void* qvertices /*SpriteBatchBase::QVertex[]*/, int numVertices, Texture2D* texture, ResourceCache* cache, const Matrix4& mvp);
+    bool DrawTriangles(const void* tvertices /*SpriteBatchBase::TVertex[]*/, int numVertices, ResourceCache* cache, const Matrix4& mvp);
+    // UI: 直接从 UI 顶点浮点数组绘制三角形（pos, color, uv，按 UI_VERTEX_SIZE=6 排列）
+    bool DrawUITriangles(const float* vertices, int numVertices, Texture2D* texture, ResourceCache* cache, const Matrix4& mvp);
+    // 通用彩色顶点绘制：pos(3f) + color(abgr u32打包在第4个float中)，不采样纹理
+    bool DrawColored(PrimitiveType prim, const float* vertices, int numVertices, const Matrix4& mvp);
+    // UI: 使用自定义材质（贴图+uniform），仍然复用 UI 顶点布局与通用 UI 程序集
+    bool DrawUIWithMaterial(const float* vertices, int numVertices, Material* material, ResourceCache* cache, const Matrix4& mvp);
+    // 使用 CopyFramebuffer 程序将纹理绘制为全屏三角形（若不可用则回退到 Basic_Diff_VC）
+    bool DrawFullscreenTexture(Texture2D* texture, ResourceCache* cache);
+
+    // 从 Image 创建 BGFX 纹理并保存到映射（供 UI 字体等路径使用）
+    bool CreateTextureFromImage(Texture2D* tex, class Image* image, bool useAlpha);
+    /// 释放并移除由 GetOrCreateTexture/CreateTextureFromImage 创建的 BGFX 纹理。
+    void ReleaseTexture(Texture2D* tex);
+
+    // 渲染目标与帧缓冲
+    bool SetFrameBuffer(Texture2D* color, Texture2D* depth);
+    bool ResetFrameBuffer();
+
+    // 纹理局部更新（level=0 默认），数据应为 RGBA8；若纹理为 A8 则自动扩展为 RGBA8。
+    bool UpdateTextureRegion(Texture2D* tex, int x, int y, int width, int height, const void* data, unsigned level = 0);
+
+    // SRGB 与默认采样参数（全局）
+    void SetSRGBBackbuffer(bool enable) { srgbBackbuffer_ = enable; }
+    bool GetSRGBBackbuffer() const { return srgbBackbuffer_; }
+    void SetDefaultSampler(TextureFilterMode mode, unsigned aniso) { defaultFilter_ = mode; defaultAniso_ = aniso; }
+
+    // 从渲染目标读取到 Image（同步等待，谨慎使用）
+    bool ReadRenderTargetToImage(Texture2D* color, class Image& dest);
+    bool Blit(Texture2D* dst, Texture2D* src, const IntRect* rect);
+
+    // Urho2D 专用：载入 2D 程序与设置灯光
+    bool LoadUrho2DPrograms(class ResourceCache* cache);
+    // 设置 2D 灯光（count<=8）：
+    // posRange[i] = (x, y, radius, type[0=Directional,1=Point])
+    // colorInt[i] = (r, g, b, intensity)
+    void Set2DLights(const Vector4* posRange, const Vector4* colorInt, int count, float ambient);
+
+private:
+    void ApplyState();
+
+private:
+    bool initialized_{};
+    unsigned width_{};
+    unsigned height_{};
+    uint64_t state_{};     // bgfx 渲染状态位
+    bool scissorEnabled_{};
+    IntRect scissorRect_{};
+    BlendMode lastBlendMode_{BLEND_REPLACE};
+
+    // 简单示例程序与资源
+    struct UIHandles
+    {
+        unsigned short programDiff{0xFFFF};   // Basic+DIFFMAP+VERTEXCOLOR
+        unsigned short programAlpha{0xFFFF};  // Basic+ALPHAMAP+VERTEXCOLOR（字体）
+        unsigned short programMask{0xFFFF};   // Basic+DIFFMAP+ALPHAMASK+VERTEXCOLOR
+        unsigned short programTextSDF{0xFFFF};   // Text_SDF_VC（SDF 文本）
+        unsigned short programCopy{0xFFFF};      // CopyFramebuffer（全屏拷贝/呈现）
+        unsigned short u_mvp{0xFFFF};
+        // s_tex 约定为 s_texColor（主采样器），s_texAlt 兼容 Basic2D 等使用 s_tex 的着色器
+        unsigned short s_tex{0xFFFF};      // "s_texColor"
+        unsigned short s_texAlt{0xFFFF};   // "s_tex"
+        unsigned short whiteTex{0xFFFF};
+        bool ready{};
+    } ui_;
+
+    // 纹理缓存：Urho3D Texture2D* -> bgfx::TextureHandle.idx
+    std::unordered_map<const Texture2D*, unsigned short> textureCache_;
+    unsigned short GetOrCreateTexture(Texture2D* tex, class ResourceCache* cache);
+    // 动态 uniform/sampler 缓存
+    unsigned short GetOrCreateSampler(const char* name);
+    unsigned short GetOrCreateVec4(const char* name);
+    unsigned short GetOrCreateMat4(const char* name);
+    unsigned short GetOrCreateVec4Array(const char* name, unsigned short num);
+    void SetUniformByVariant(const char* name, const Variant& v);
+
+    struct FBKey
+    {
+        const Texture2D* color{};
+        const Texture2D* depth{};
+        bool operator==(const FBKey& rhs) const { return color==rhs.color && depth==rhs.depth; }
+    };
+    struct FBKeyHash { size_t operator()(const FBKey& k) const { return (reinterpret_cast<size_t>(k.color)>>4) ^ (reinterpret_cast<size_t>(k.depth)<<1); } };
+    std::unordered_map<FBKey, unsigned short, FBKeyHash> fbCache_;
+
+    // 状态扩展
+    bool stencilEnabled_{};
+    CompareMode stencilFunc_{CMP_ALWAYS};
+    StencilOp stencilPass_{OP_KEEP};
+    StencilOp stencilFail_{OP_KEEP};
+    StencilOp stencilZFail_{OP_KEEP};
+    unsigned stencilRef_{};
+    unsigned stencilReadMask_{0xFF};
+    unsigned stencilWriteMask_{0xFF};
+    FillMode fillMode_{FILL_SOLID};
+    float depthBiasConst_{};
+    float depthBiasSlope_{};
+    bool lineAA_{};
+    bool clipPlaneEnabled_{};
+    Vector4 clipPlane_{};
+
+    std::unordered_map<std::string, unsigned short> samplerCache_;
+    std::unordered_map<std::string, unsigned short> vec4Cache_;
+    std::unordered_map<std::string, unsigned short> mat4Cache_;
+    std::unordered_map<std::string, unsigned short> vec4ArrayCache_;
+
+    // 全局选项
+    bool srgbBackbuffer_{};
+    TextureFilterMode defaultFilter_{FILTER_TRILINEAR};
+    unsigned defaultAniso_{4};
+
+    // Urho2D 程序与灯光 uniforms
+    struct U2DHandles
+    {
+        unsigned short programUnlit{0xFFFF};  // Urho2D_Diff_VC
+        unsigned short programLit{0xFFFF};    // Urho2D_Lit2D_Diff_VC
+        unsigned short u_mvp{0xFFFF};
+        unsigned short u_lightCountAmbient{0xFFFF};
+        unsigned short u_lightsPosRange{0xFFFF}; // array[8]
+        unsigned short u_lightsColorInt{0xFFFF}; // array[8]
+        bool ready{};
+    } u2d_;
+
+    // CPU 侧缓存的灯光参数
+    static const int MAX_U2D_LIGHTS = 8;
+    Vector4 u2d_posRange_[MAX_U2D_LIGHTS]{};
+    Vector4 u2d_colorInt_[MAX_U2D_LIGHTS]{};
+    int     u2d_count_{};
+    float   u2d_ambient_{};
+};
+
+} // namespace Urho3D

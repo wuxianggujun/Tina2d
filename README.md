@@ -1,96 +1,110 @@
 # TINA2D
 
-**TINA2D** is a lightweight 2D game engine based on [Urho3D](https://github.com/urho3d/Urho3D).
+**TINA2D** is a lightweight 2D/2.5D game engine based on [Urho3D](https://github.com/urho3d/Urho3D) with pure BGFX rendering backend.
 
 English | [中文](README_zh.md)
 
 ## Overview
 
-TINA2D is a fork of the Urho3D game engine specifically designed for 2D game development. All 3D-related functionality has been removed to provide an efficient and streamlined 2D game development experience.
+TINA2D is a specialized fork of Urho3D focused exclusively on 2D and 2.5D game development. The engine has migrated to **BGFX-only** rendering and removed all OpenGL/D3D legacy code for better performance and cross-platform support.
 
-## Key Changes
+## Key Features ✅
 
-- **Removed 3D functionality**: Eliminated 60+ 3D-related classes and the entire 3D rendering pipeline
-- **Retained 2D core**: Preserved all Urho2D, Physics2D, UI system, and other 2D features
-- **SDL3 upgrade**: Upgraded the underlying SDL library from SDL2 to SDL3 for better performance and new features
-- **Streamlined build**: Removed dependencies including AngelScript, IK, Navigation, and 3D Physics
-- **Optimized samples**: Kept and optimized 2D-related samples while removing 3D examples
+### **Rendering System**
+- **🎯 BGFX-only Backend**: Pure BGFX rendering, OpenGL/D3D paths completely removed
+- **🔄 Cross-platform**: Supports DX10/DX11/OpenGL/OpenGL ES/Vulkan through BGFX
+- **📦 Complete Shader Pipeline**: 11 optimized shader groups for 2D/2.5D rendering
+- **🎨 High-quality Text**: SDF text rendering with anti-aliasing and effects
 
-## Based on Open Source Project
+### **2D/2.5D Capabilities**
+- **🌟 2D Core**: Full Urho2D, Physics2D, UI system support
+- **💡 2D Lighting**: Point/directional lights with 8-light limit
+- **📏 Depth System**: Y→Z mapping for 2.5D depth sorting and occlusion
+- **🎭 Advanced Effects**: Post-processing pipeline with framebuffer operations
 
-This project is based on the [Urho3D](https://github.com/urho3d/Urho3D) game engine, a powerful cross-platform 2D and 3D game engine.
+### **Development Experience**
+- **⚡ Streamlined**: Removed 60+ 3D classes and dependencies  
+- **📚 Rich Samples**: Optimized 2D sample collection
+- **🛠️ Modern Tooling**: CMake-based build with shader compilation
+- **📖 Complete Documentation**: Comprehensive technical documentation
 
-## Features
+## Shader System 🎨
 
-- **2D-focused**: Pure 2D game engine without 3D functionality overhead
-- **High performance**: Modern graphics backend based on SDL3
-- **Rich 2D features**: Sprite rendering, particle systems, tile maps, physics engine
-- **Easy to use**: Simplified API with extensive sample code
-- **Cross-platform**: Supports Windows, Linux, macOS, and other platforms
-- **Lightweight**: Significantly reduced size and dependencies compared to full Urho3D
+TINA2D includes a complete BGFX shader pipeline with cross-platform support:
 
-## Build Requirements
+### **Shader Naming Convention**
+- **Source**: `{name}_vs.sc` / `{name}_fs.sc` (vertex/fragment shaders)
+- **Definitions**: `{name}.def.sc` (variable definitions)
+- **Compiled**: `{platform}/{name}_vs.bin` / `{name}_fs.bin`
 
-- CMake 3.15+
-- C++17 compatible compiler
-- SDL3 library (included)
+### **Platforms Supported**
+- **dx10/dx11**: DirectX 10/11 (Windows)
+- **glsl**: OpenGL 3.3+ (Windows/Linux/macOS)
+- **essl**: OpenGL ES (Mobile/Web)
+- **spirv**: Vulkan (Modern platforms)
 
-## Quick Start
-
-```bash
-# Clone the project
-git clone [your-repository-url]
-cd Tina2d
-
-# Build the project
-mkdir build && cd build
-cmake ..
-cmake --build .
+### **Shader Location**
+```
+bin/CoreData/Shaders/BGFX/
+├── *.sc                    # Source shaders
+├── *.def.sc               # Definition files
+├── dx10/*.bin             # DirectX 10 compiled
+├── dx11/*.bin             # DirectX 11 compiled
+├── essl/*.bin             # OpenGL ES compiled
+├── glsl/*.bin             # OpenGL compiled
+└── spirv/*.bin            # Vulkan compiled
 ```
 
-## Sample Projects
+## Build & Development
 
-TINA2D includes multiple 2D game samples:
+### **Quick Start**
+```bash
+# Clone repository
+git clone [repository-url] tina2d
+cd tina2d
 
-- **Sprite Rendering** - 2D sprite display and animation
-- **Particle Systems** - 2D particle effects
-- **Physics Simulation** - 2D physics collision and constraints
-- **Tile Maps** - TMX format map support
-- **UI System** - Complete user interface components
+# Generate build files
+mkdir build && cd build
+cmake ..
 
-## Technical Architecture
+# Build (Windows)
+cmake --build . --config Release
 
-TINA2D retains Urho3D's core architecture but is specifically optimized for 2D:
+# Build (Linux/macOS)
+make -j$(nproc)
+```
 
-- **Renderer**: SDL3-based 2D rendering pipeline
-- **Scene System**: Node-component architecture
-- **Resource Management**: Efficient resource caching system
-- **Event System**: Publisher-subscriber pattern event handling
-- **Input Processing**: Keyboard, mouse, and touch input support
+### **CMake Options**
+- `URHO3D_BGFX=ON` (Forced ON, BGFX-only)
+- `URHO3D_2D=ON` (2D features enabled)
+- `URHO3D_SAMPLES=ON` (Build sample applications)
+
+### **Development Notes**
+- **Shader Compilation**: Automatically handled by CMake
+- **Cross-compilation**: Use BGFX's shaderc for custom shaders
+- **Asset Pipeline**: Standard Urho3D resource system
+## Documentation 📚
+
+- **[2.5D Design Guide](Docs/2_5D_Design.md)** - 2.5D rendering and lighting system
+- **[BGFX Migration](Docs/BGFX_Only_Migration.md)** - Complete migration status and assets
+- **[Shader Translation Report](Docs/Tina2D_BGFX着色器翻译状态报告.md)** - Shader pipeline details
+- **[Integration Guide](Docs/BGFX_2D_INTEGRATION_GUIDE.md)** - Technical integration reference
 
 ## License
 
-TINA2D is licensed under the MIT License. See [LICENSE](licenses/urho3d/LICENSE) for details.
+TINA2D is licensed under the MIT license. Based on [Urho3D](https://github.com/urho3d/Urho3D).
 
-Third-party library licenses: [licenses](licenses)
+See [LICENSE](licenses/urho3d/LICENSE) for more details.
 
-Credits: [licenses/urho3d/credits.md](licenses/urho3d/credits.md)
+---
 
-## Related Links
+**Status**: 🎯 **Production Ready** - Complete 2D/2.5D game engine  
+**Version**: BGFX-only v1.0  
+**Last Updated**: 2025-01-22
 
-### Original Project
-* [Urho3D Official Repository](https://github.com/urho3d/Urho3D)
-* [Urho3D Documentation](https://urho3d-doxygen.github.io/latest/index.html)
-* [Urho3D Community Forum](https://github.com/urho3d-community/discussions/discussions)
 
-### SDL3 Related
-* [SDL3 Official Documentation](https://wiki.libsdl.org/SDL3/FrontPage)
-* [SDL3 Migration Guide](https://github.com/libsdl-org/SDL/blob/main/docs/README-migration.md)
 
-## Project Authors
 
-**TINA2D** is based on the [Urho3D](https://github.com/urho3d/Urho3D) project.
 
-Urho3D was founded by [Lasse Öörni](https://github.com/cadaver). Huge contributions were also made by [Yao Wei Tjong](https://github.com/weitjong), [asterj](https://github.com/aster2013), and [many other contributors](https://github.com/urho3d/Urho3D/graphs/contributors).
 
-The 2D-specific optimizations and SDL3 upgrade for TINA2D were completed by the project maintenance team.
+

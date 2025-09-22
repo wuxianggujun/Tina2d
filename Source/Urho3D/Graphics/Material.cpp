@@ -12,8 +12,6 @@
 #include "../Graphics/Technique.h"
 #include "../GraphicsAPI/Texture2D.h"
 #include "../GraphicsAPI/Texture2DArray.h"
-#include "../GraphicsAPI/Texture3D.h"
-#include "../GraphicsAPI/TextureCube.h"
 #include "../IO/FileSystem.h"
 #include "../IO/Log.h"
 #include "../IO/VectorBuffer.h"
@@ -33,30 +31,15 @@ extern const char* wrapModeNames[];
 
 static const char* textureUnitNames[] =
 {
-    "diffuse",
-    "normal",
-    "specular",
-    "emissive",
-    "environment",
-#ifdef DESKTOP_GRAPHICS_OR_GLES3
-    "volume",
-    "custom1",
-    "custom2",
-    "lightramp",
-    "lightshape",
-    "shadowmap",
-    "faceselect",
-    "indirection",
-    "depth",
-    "light",
-    "zone",
+    "diffuse",     // TU_DIFFUSE
+    "normal",      // TU_NORMAL
+    "specular",    // TU_SPECULAR（2D可保留，不影响）
+    "emissive",    // TU_EMISSIVE
+    "volume",      // TU_VOLUMEMAP（2D通常不使用）
+    "custom1",     // TU_CUSTOM1
+    "custom2",     // TU_CUSTOM2
+    "zone",        // TU_ZONE
     nullptr
-#else
-    "lightramp",
-    "lightshape",
-    "shadowmap",
-    nullptr
-#endif
 };
 
 const char* cullModeNames[] =
@@ -82,7 +65,7 @@ TextureUnit ParseTextureUnitName(String name)
     TextureUnit unit = (TextureUnit)GetStringListIndex(name.CString(), textureUnitNames, MAX_TEXTURE_UNITS);
     if (unit == MAX_TEXTURE_UNITS)
     {
-        // Check also for shorthand names
+        // 检查简写名（仅限 2D 可用简写）
         if (name == "diff")
             unit = TU_DIFFUSE;
         else if (name == "albedo")
@@ -91,9 +74,7 @@ TextureUnit ParseTextureUnitName(String name)
             unit = TU_NORMAL;
         else if (name == "spec")
             unit = TU_SPECULAR;
-        else if (name == "env")
-            unit = TU_ENVIRONMENT;
-        // Finally check for specifying the texture unit directly as a number
+        // 也允许以数字指定纹理单元索引（如 "0"、"1"）
         else if (name.Length() < 3)
             unit = (TextureUnit)Clamp(ToI32(name), 0, MAX_TEXTURE_UNITS - 1);
     }
@@ -111,9 +92,8 @@ StringHash ParseTextureTypeName(const String& name)
     if (lowerCaseName == "texture")
         return Texture2D::GetTypeStatic();
     else if (lowerCaseName == "cubemap")
-        return TextureCube::GetTypeStatic();
-    else if (lowerCaseName == "texture3d")
-        return Texture3D::GetTypeStatic();
+        return Texture2D::GetTypeStatic(); // 2D-only：将 cubemap 视作 2D 纹理
+    // 2D-only：忽略 3D 纹理类型
     else if (lowerCaseName == "texturearray")
         return Texture2DArray::GetTypeStatic();
 
@@ -256,120 +236,94 @@ bool Material::BeginLoadXML(Deserializer& source)
     loadXMLFile_ = new XMLFile(context_);
     if (loadXMLFile_->Load(source))
     {
-        // If async loading, scan the XML content beforehand for technique & texture resources
-        // and request them to also be loaded. Can not do anything else at this point
+        // 如果是异步加载，仅预请求依赖资源
         if (GetAsyncLoadState() == ASYNC_LOADING)
         {
             auto* cache = GetSubsystem<ResourceCache>();
             XMLElement rootElem = loadXMLFile_->GetRoot();
+            // 预加载 Technique 依赖
             XMLElement techniqueElem = rootElem.GetChild("technique");
             while (techniqueElem)
             {
                 cache->BackgroundLoadResource<Technique>(techniqueElem.GetAttribute("name"), true, this);
                 techniqueElem = techniqueElem.GetNext("technique");
             }
-
+            // 预加载 Texture 依赖
             XMLElement textureElem = rootElem.GetChild("texture");
             while (textureElem)
             {
                 String name = textureElem.GetAttribute("name");
-                // Detect cube maps and arrays by file extension: they are defined by an XML file
                 if (GetExtension(name) == ".xml")
                 {
-#ifdef DESKTOP_GRAPHICS_OR_GLES3
                     StringHash type = ParseTextureTypeXml(cache, name);
-                    if (!type && textureElem.HasAttribute("unit"))
+                    bool handled = false;
+                    if (type == Texture2DArray::GetTypeStatic())
                     {
-                        TextureUnit unit = ParseTextureUnitName(textureElem.GetAttribute("unit"));
-                        if (unit == TU_VOLUMEMAP)
-                            type = Texture3D::GetTypeStatic();
-                    }
-
-                    if (type == Texture3D::GetTypeStatic())
-                        cache->BackgroundLoadResource<Texture3D>(name, true, this);
-                    else if (type == Texture2DArray::GetTypeStatic())
                         cache->BackgroundLoadResource<Texture2DArray>(name, true, this);
-                    else
-#endif
-                        cache->BackgroundLoadResource<TextureCube>(name, true, this);
+                        handled = true;
+                    }
+                    if (!handled)
+                        cache->BackgroundLoadResource<Texture2D>(name, true, this);
                 }
                 else
                     cache->BackgroundLoadResource<Texture2D>(name, true, this);
+
                 textureElem = textureElem.GetNext("texture");
             }
         }
-
         return true;
     }
-
     return false;
 }
 
 bool Material::BeginLoadJSON(Deserializer& source)
 {
-    // Attempt to load a JSON file
     ResetToDefaults();
-    loadXMLFile_.Reset();
-
-    // Attempt to load from JSON file instead
     loadJSONFile_ = new JSONFile(context_);
     if (loadJSONFile_->Load(source))
     {
-        // If async loading, scan the XML content beforehand for technique & texture resources
-        // and request them to also be loaded. Can not do anything else at this point
         if (GetAsyncLoadState() == ASYNC_LOADING)
         {
             auto* cache = GetSubsystem<ResourceCache>();
             const JSONValue& rootVal = loadJSONFile_->GetRoot();
 
+            // 预请求 techniques
             JSONArray techniqueArray = rootVal.Get("techniques").GetArray();
-
             for (const JSONValue& techVal : techniqueArray)
                 cache->BackgroundLoadResource<Technique>(techVal.Get("name").GetString(), true, this);
 
+            // 预请求 textures
             JSONObject textureObject = rootVal.Get("textures").GetObject();
             for (JSONObject::ConstIterator it = textureObject.Begin(); it != textureObject.End(); it++)
             {
-                String unitString = it->first_;
                 String name = it->second_.GetString();
-                // Detect cube maps and arrays by file extension: they are defined by an XML file
                 if (GetExtension(name) == ".xml")
                 {
-#ifdef DESKTOP_GRAPHICS_OR_GLES3
                     StringHash type = ParseTextureTypeXml(cache, name);
-                    if (!type && !unitString.Empty())
+                    bool handled = false;
+                    if (type == Texture2DArray::GetTypeStatic())
                     {
-                        TextureUnit unit = ParseTextureUnitName(unitString);
-                        if (unit == TU_VOLUMEMAP)
-                            type = Texture3D::GetTypeStatic();
-                    }
-
-                    if (type == Texture3D::GetTypeStatic())
-                        cache->BackgroundLoadResource<Texture3D>(name, true, this);
-                    else if (type == Texture2DArray::GetTypeStatic())
                         cache->BackgroundLoadResource<Texture2DArray>(name, true, this);
-                    else
-#endif
-                        cache->BackgroundLoadResource<TextureCube>(name, true, this);
+                        handled = true;
+                    }
+                    if (!handled)
+                        cache->BackgroundLoadResource<Texture2D>(name, true, this);
                 }
                 else
                     cache->BackgroundLoadResource<Texture2D>(name, true, this);
             }
         }
-
-        // JSON material was successfully loaded
         return true;
     }
-
     return false;
 }
 
 bool Material::Save(Serializer& dest) const
 {
     SharedPtr<XMLFile> xml(new XMLFile(context_));
-    XMLElement materialElem = xml->CreateRoot("material");
-
-    Save(materialElem);
+    XMLElement root = xml->CreateRoot("material");
+    if (!Save(root))
+        return false;
     return xml->Save(dest);
 }
 
@@ -385,6 +339,7 @@ bool Material::Load(const XMLElement& source)
 
     auto* cache = GetSubsystem<ResourceCache>();
 
+    // 着色器宏
     XMLElement shaderElem = source.GetChild("shader");
     if (shaderElem)
     {
@@ -392,12 +347,12 @@ bool Material::Load(const XMLElement& source)
         pixelShaderDefines_ = shaderElem.GetAttribute("psdefines");
     }
 
+    // 技术列表
     XMLElement techniqueElem = source.GetChild("technique");
     techniques_.Clear();
-
     while (techniqueElem)
     {
-        auto* tech = cache->GetResource<Technique>(techniqueElem.GetAttribute("name"));
+        Technique* tech = cache->GetResource<Technique>(techniqueElem.GetAttribute("name"));
         if (tech)
         {
             TechniqueEntry newTechnique;
@@ -408,13 +363,13 @@ bool Material::Load(const XMLElement& source)
                 newTechnique.lodDistance_ = techniqueElem.GetFloat("loddistance");
             techniques_.Push(newTechnique);
         }
-
         techniqueElem = techniqueElem.GetNext("technique");
     }
 
     SortTechniques();
     ApplyShaderDefines();
 
+    // 纹理列表
     XMLElement textureElem = source.GetChild("texture");
     while (textureElem)
     {
@@ -424,21 +379,17 @@ bool Material::Load(const XMLElement& source)
         if (unit < MAX_TEXTURE_UNITS)
         {
             String name = textureElem.GetAttribute("name");
-            // Detect cube maps and arrays by file extension: they are defined by an XML file
             if (GetExtension(name) == ".xml")
             {
-#ifdef DESKTOP_GRAPHICS_OR_GLES3
                 StringHash type = ParseTextureTypeXml(cache, name);
-                if (!type && unit == TU_VOLUMEMAP)
-                    type = Texture3D::GetTypeStatic();
-
-                if (type == Texture3D::GetTypeStatic())
-                    SetTexture(unit, cache->GetResource<Texture3D>(name));
-                else if (type == Texture2DArray::GetTypeStatic())
+                bool handled = false;
+                if (type == Texture2DArray::GetTypeStatic())
+                {
                     SetTexture(unit, cache->GetResource<Texture2DArray>(name));
-                else
-#endif
-                    SetTexture(unit, cache->GetResource<TextureCube>(name));
+                    handled = true;
+                }
+                if (!handled)
+                    SetTexture(unit, cache->GetResource<Texture2D>(name));
             }
             else
                 SetTexture(unit, cache->GetResource<Texture2D>(name));
@@ -446,6 +397,7 @@ bool Material::Load(const XMLElement& source)
         textureElem = textureElem.GetNext("texture");
     }
 
+    // 参数（批量）
     batchedParameterUpdate_ = true;
     XMLElement parameterElem = source.GetChild("parameter");
     while (parameterElem)
@@ -459,6 +411,7 @@ bool Material::Load(const XMLElement& source)
     }
     batchedParameterUpdate_ = false;
 
+    // 参数动画
     XMLElement parameterAnimationElem = source.GetChild("parameteranimation");
     while (parameterAnimationElem)
     {
@@ -487,6 +440,7 @@ bool Material::Load(const XMLElement& source)
         parameterAnimationElem = parameterAnimationElem.GetNext("parameteranimation");
     }
 
+    // 其他属性
     XMLElement cullElem = source.GetChild("cull");
     if (cullElem)
         SetCullMode((CullMode)GetStringListIndex(cullElem.GetAttribute("value").CString(), cullModeNames, CULL_CCW));
@@ -583,18 +537,22 @@ bool Material::Load(const JSONValue& source)
             // Detect cube maps and arrays by file extension: they are defined by an XML file
             if (GetExtension(textureName) == ".xml")
             {
-#ifdef DESKTOP_GRAPHICS_OR_GLES3
+// 桌面/GLES3 平台：识别 3D/数组/Cube map 的 XML 包装类型
                 StringHash type = ParseTextureTypeXml(cache, textureName);
                 if (!type && unit == TU_VOLUMEMAP)
-                    type = Texture3D::GetTypeStatic();
+                {
+// 2D-only：忽略 3D 体积纹理
+                }
 
-                if (type == Texture3D::GetTypeStatic())
-                    SetTexture(unit, cache->GetResource<Texture3D>(textureName));
-                else if (type == Texture2DArray::GetTypeStatic())
+                bool handled = false;
+
+                if (!handled && type == Texture2DArray::GetTypeStatic())
+                {
                     SetTexture(unit, cache->GetResource<Texture2DArray>(textureName));
-                else
-#endif
-                    SetTexture(unit, cache->GetResource<TextureCube>(textureName));
+                    handled = true;
+                }
+                if (!handled)
+                    SetTexture(unit, cache->GetResource<Texture2D>(textureName));
             }
             else
                 SetTexture(unit, cache->GetResource<Texture2D>(textureName));
@@ -1239,7 +1197,7 @@ void Material::ResetToDefaults()
     SetNumTechniques(1);
     auto* renderer = GetSubsystem<Renderer>();
     SetTechnique(0, renderer ? renderer->GetDefaultTechnique() :
-        GetSubsystem<ResourceCache>()->GetResource<Technique>("Techniques/NoTexture.xml"));
+        GetSubsystem<ResourceCache>()->GetResource<Technique>("Techniques/NoTextureUnlit.xml"));
 
     textures_.Clear();
 
@@ -1250,7 +1208,6 @@ void Material::ResetToDefaults()
     SetShaderParameter("VOffset", Vector4(0.0f, 1.0f, 0.0f, 0.0f));
     SetShaderParameter("MatDiffColor", Vector4::ONE);
     SetShaderParameter("MatEmissiveColor", Vector3::ZERO);
-    SetShaderParameter("MatEnvMapColor", Vector3::ONE);
     SetShaderParameter("MatSpecColor", Vector4(0.0f, 0.0f, 0.0f, 1.0f));
     SetShaderParameter("Roughness", 0.5f);
     SetShaderParameter("Metallic", 0.0f);
@@ -1370,3 +1327,8 @@ void Material::ApplyShaderDefines(i32 index/* = NINDEX*/)
 }
 
 }
+
+
+
+
+
