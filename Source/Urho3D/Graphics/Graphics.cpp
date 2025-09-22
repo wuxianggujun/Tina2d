@@ -733,15 +733,6 @@ bool Graphics::SetScreenMode(int width, int height, const ScreenModeParams& para
     }
 #endif
 
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return SetScreenMode_OGL(width, height, params, maximize);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return SetScreenMode_D3D11(width, height, params, maximize);;
-#endif
 
     return {}; // Prevent warning
 }
@@ -920,15 +911,6 @@ void Graphics::Draw(PrimitiveType type, unsigned vertexStart, unsigned vertexCou
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return Draw_OGL(type, vertexStart, vertexCount);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return Draw_D3D11(type, vertexStart, vertexCount);
-#endif
 #ifdef URHO3D_BGFX
     if (gapi == GAPI_BGFX)
     {
@@ -947,15 +929,6 @@ void Graphics::Draw(PrimitiveType type, unsigned indexStart, unsigned indexCount
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return Draw_OGL(type, indexStart, indexCount, minVertex, vertexCount);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return Draw_D3D11(type, indexStart, indexCount, minVertex, vertexCount);
-#endif
 #ifdef URHO3D_BGFX
     if (gapi == GAPI_BGFX)
     {
@@ -974,15 +947,6 @@ void Graphics::Draw(PrimitiveType type, unsigned indexStart, unsigned indexCount
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return Draw_OGL(type, indexStart, indexCount, baseVertexIndex, minVertex, vertexCount);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return Draw_D3D11(type, indexStart, indexCount, baseVertexIndex, minVertex, vertexCount);
-#endif
 #ifdef URHO3D_BGFX
     if (gapi == GAPI_BGFX)
     {
@@ -1001,15 +965,6 @@ void Graphics::DrawInstanced(PrimitiveType type, unsigned indexStart, unsigned i
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return DrawInstanced_OGL(type, indexStart, indexCount, minVertex, vertexCount, instanceCount);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return DrawInstanced_D3D11(type, indexStart, indexCount, minVertex, vertexCount, instanceCount);
-#endif
 #ifdef URHO3D_BGFX
     if (gapi == GAPI_BGFX)
     {
@@ -1029,15 +984,6 @@ void Graphics::DrawInstanced(PrimitiveType type, unsigned indexStart, unsigned i
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return DrawInstanced_OGL(type, indexStart, indexCount, baseVertexIndex, minVertex, vertexCount, instanceCount);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return DrawInstanced_D3D11(type, indexStart, indexCount, baseVertexIndex, minVertex, vertexCount, instanceCount);
-#endif
 #ifdef URHO3D_BGFX
     if (gapi == GAPI_BGFX)
     {
@@ -1056,30 +1002,12 @@ void Graphics::SetVertexBuffer(VertexBuffer* buffer)
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return SetVertexBuffer_OGL(buffer);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return SetVertexBuffer_D3D11(buffer);
-#endif
 }
 
 bool Graphics::SetVertexBuffers(const Vector<VertexBuffer*>& buffers, unsigned instanceOffset)
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return SetVertexBuffers_OGL(buffers, instanceOffset);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return SetVertexBuffers_D3D11(buffers, instanceOffset);
-#endif
 
     return {}; // Prevent warning
 }
@@ -1088,15 +1016,6 @@ bool Graphics::SetVertexBuffers(const Vector<SharedPtr<VertexBuffer>>& buffers, 
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return SetVertexBuffers_OGL(buffers, instanceOffset);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return SetVertexBuffers_D3D11(buffers, instanceOffset);
-#endif
 
     return {}; // Prevent warning
 }
@@ -1105,210 +1024,84 @@ void Graphics::SetIndexBuffer(IndexBuffer* buffer)
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return SetIndexBuffer_OGL(buffer);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return SetIndexBuffer_D3D11(buffer);
-#endif
 }
 
 void Graphics::SetShaders(ShaderVariation* vs, ShaderVariation* ps)
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return SetShaders_OGL(vs, ps);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return SetShaders_D3D11(vs, ps);
-#endif
 }
 
 void Graphics::SetShaderParameter(StringHash param, const float* data, unsigned count)
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return SetShaderParameter_OGL(param, data, count);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return SetShaderParameter_D3D11(param, data, count);
-#endif
 }
 
 void Graphics::SetShaderParameter(StringHash param, float value)
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return SetShaderParameter_OGL(param, value);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return SetShaderParameter_D3D11(param, value);
-#endif
 }
 
 void Graphics::SetShaderParameter(StringHash param, int value)
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return SetShaderParameter_OGL(param, value);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return SetShaderParameter_D3D11(param, value);
-#endif
 }
 
 void Graphics::SetShaderParameter(StringHash param, bool value)
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return SetShaderParameter_OGL(param, value);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return SetShaderParameter_D3D11(param, value);
-#endif
 }
 
 void Graphics::SetShaderParameter(StringHash param, const Color& color)
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return SetShaderParameter_OGL(param, color);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return SetShaderParameter_D3D11(param, color);
-#endif
 }
 
 void Graphics::SetShaderParameter(StringHash param, const Vector2& vector)
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return SetShaderParameter_OGL(param, vector);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return SetShaderParameter_D3D11(param, vector);
-#endif
 }
 
 void Graphics::SetShaderParameter(StringHash param, const Matrix3& matrix)
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return SetShaderParameter_OGL(param, matrix);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return SetShaderParameter_D3D11(param, matrix);
-#endif
 }
 
 void Graphics::SetShaderParameter(StringHash param, const Vector3& vector)
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return SetShaderParameter_OGL(param, vector);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return SetShaderParameter_D3D11(param, vector);
-#endif
 }
 
 void Graphics::SetShaderParameter(StringHash param, const Matrix4& matrix)
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return SetShaderParameter_OGL(param, matrix);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return SetShaderParameter_D3D11(param, matrix);
-#endif
 }
 
 void Graphics::SetShaderParameter(StringHash param, const Vector4& vector)
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return SetShaderParameter_OGL(param, vector);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return SetShaderParameter_D3D11(param, vector);
-#endif
 }
 
 void Graphics::SetShaderParameter(StringHash param, const Matrix3x4& matrix)
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return SetShaderParameter_OGL(param, matrix);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return SetShaderParameter_D3D11(param, matrix);
-#endif
 }
 
 bool Graphics::NeedParameterUpdate(ShaderParameterGroup group, const void* source)
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return NeedParameterUpdate_OGL(group, source);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return NeedParameterUpdate_D3D11(group, source);
-#endif
 
     return {}; // Prevent warning
 }
@@ -1317,15 +1110,6 @@ bool Graphics::HasShaderParameter(StringHash param)
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return HasShaderParameter_OGL(param);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return HasShaderParameter_D3D11(param);
-#endif
 
     return {}; // Prevent warning
 }
@@ -1334,15 +1118,6 @@ bool Graphics::HasTextureUnit(TextureUnit unit)
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return HasTextureUnit_OGL(unit);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return HasTextureUnit_D3D11(unit);
-#endif
 
     return {}; // Prevent warning
 }
@@ -1351,60 +1126,24 @@ void Graphics::ClearParameterSource(ShaderParameterGroup group)
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return ClearParameterSource_OGL(group);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return ClearParameterSource_D3D11(group);
-#endif
 }
 
 void Graphics::ClearParameterSources()
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return ClearParameterSources_OGL();
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return ClearParameterSources_D3D11();
-#endif
 }
 
 void Graphics::ClearTransformSources()
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return ClearTransformSources_OGL();
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return ClearTransformSources_D3D11();
-#endif
 }
 
 void Graphics::SetTexture(unsigned index, Texture* texture)
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return SetTexture_OGL(index, texture);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return SetTexture_D3D11(index, texture);
-#endif
 }
 
 void Graphics::SetDefaultTextureFilterMode(TextureFilterMode mode)
@@ -1420,15 +1159,6 @@ void Graphics::SetDefaultTextureFilterMode(TextureFilterMode mode)
         return;
     }
 #endif
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return SetDefaultTextureFilterMode_OGL(mode);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return SetDefaultTextureFilterMode_D3D11(mode);
-#endif
 }
 
 void Graphics::SetDefaultTextureAnisotropy(unsigned level)
@@ -1442,15 +1172,6 @@ void Graphics::SetDefaultTextureAnisotropy(unsigned level)
         defaultTextureAnisotropy_ = level;
         return;
     }
-#endif
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return SetDefaultTextureAnisotropy_OGL(level);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return SetDefaultTextureAnisotropy_D3D11(level);
 #endif
 }
 
@@ -1483,15 +1204,6 @@ void Graphics::ResetRenderTargets()
         return;
     }
 #endif
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return ResetRenderTargets_OGL();
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return ResetRenderTargets_D3D11();
-#endif
 }
 
 void Graphics::ResetRenderTarget(unsigned index)
@@ -1507,15 +1219,6 @@ void Graphics::ResetRenderTarget(unsigned index)
         return;
     }
 #endif
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return ResetRenderTarget_OGL(index);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return ResetRenderTarget_D3D11(index);
-#endif
 }
 
 void Graphics::ResetDepthStencil()
@@ -1529,15 +1232,6 @@ void Graphics::ResetDepthStencil()
         bgfx_->SetFrameBuffer(bgfxColorRT_, bgfxDepthRT_);
         return;
     }
-#endif
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return ResetDepthStencil_OGL();
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return ResetDepthStencil_D3D11();
 #endif
 }
 
@@ -1556,15 +1250,6 @@ void Graphics::SetRenderTarget(unsigned index, RenderSurface* renderTarget)
         return;
     }
 #endif
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return SetRenderTarget_OGL(index, renderTarget);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return SetRenderTarget_D3D11(index, renderTarget);
-#endif
 }
 
 void Graphics::SetRenderTarget(unsigned index, Texture2D* texture)
@@ -1579,15 +1264,6 @@ void Graphics::SetRenderTarget(unsigned index, Texture2D* texture)
         bgfx_->SetFrameBuffer(bgfxColorRT_, bgfxDepthRT_);
         return;
     }
-#endif
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return SetRenderTarget_OGL(index, texture);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return SetRenderTarget_D3D11(index, texture);
 #endif
 }
 
@@ -1604,15 +1280,6 @@ void Graphics::SetDepthStencil(RenderSurface* depthStencil)
         return;
     }
 #endif
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return SetDepthStencil_OGL(depthStencil);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return SetDepthStencil_D3D11(depthStencil);
-#endif
 }
 
 void Graphics::SetDepthStencil(Texture2D* texture)
@@ -1627,15 +1294,6 @@ void Graphics::SetDepthStencil(Texture2D* texture)
         return;
     }
 #endif
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return SetDepthStencil_OGL(texture);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return SetDepthStencil_D3D11(texture);
-#endif
 }
 
 void Graphics::SetViewport(const IntRect& rect)
@@ -1647,15 +1305,6 @@ void Graphics::SetViewport(const IntRect& rect)
         return bgfx_->SetViewport(rect);
 #endif
 
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return SetViewport_OGL(rect);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return SetViewport_D3D11(rect);
-#endif
 }
 
 void Graphics::SetBlendMode(BlendMode mode, bool alphaToCoverage)
@@ -1685,15 +1334,6 @@ void Graphics::SetDepthBias(float constantBias, float slopeScaledBias)
         return bgfx_->SetDepthBias(constantBias, slopeScaledBias);
 #endif
 
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return SetDepthBias_OGL(constantBias, slopeScaledBias);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return SetDepthBias_D3D11(constantBias, slopeScaledBias);
-#endif
 }
 
 void Graphics::SetDepthTest(CompareMode mode)
@@ -2032,15 +1672,6 @@ ConstantBuffer* Graphics::GetOrCreateConstantBuffer(ShaderType type, unsigned in
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return GetOrCreateConstantBuffer_OGL(type, index, size);
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return GetOrCreateConstantBuffer_D3D11(type, index, size);
-#endif
 
     return {}; // Prevent warning
 }
@@ -2049,15 +1680,6 @@ unsigned Graphics::GetMaxBones()
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return GetMaxBones_OGL();
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return GetMaxBones_D3D11();
-#endif
 
     return {}; // Prevent warning
 }
@@ -2066,15 +1688,6 @@ bool Graphics::GetGL3Support()
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_OPENGL
-    if (gapi == GAPI_OPENGL)
-        return GetGL3Support_OGL();
-#endif
-
-#ifdef URHO3D_D3D11
-    if (gapi == GAPI_D3D11)
-        return GetGL3Support_D3D11();
-#endif
 
     return {}; // Prevent warning
 }
@@ -2181,4 +1794,5 @@ void RegisterGraphicsLibrary(Context* context)
 }
 
 }
+
 
