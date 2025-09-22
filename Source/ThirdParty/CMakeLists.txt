@@ -72,6 +72,15 @@ if (URHO3D_TRACY_PROFILING)
     add_subdirectory (Tracy)
 endif ()
 
+# EASTL / EABase：构建并整库链接（推荐）。
+if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/EASTL AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/EABase)
+    # 先创建本地 EABase 头文件目标（其本身是 header-only）
+    add_subdirectory (EABase)
+    # 使用 EASTL 自带 CMake 构建静态库，内部会尝试 FetchContent(EABase)，
+    # 若同名目标已存在则直接复用本地目标，不会重复拉取。
+    add_subdirectory (EASTL)
+endif ()
+
 if (NOT ANDROID AND NOT ARM AND NOT WEB)
     # Tina2D: 不再使用传统 OpenGL 渲染路径，彻底移除 GLEW 依赖
     # 如果未来需要恢复 OpenGL 支持，可在此处重新引入 GLEW。

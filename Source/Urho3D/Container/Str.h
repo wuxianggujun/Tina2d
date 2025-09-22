@@ -4,6 +4,7 @@
 #pragma once
 
 #include "../Container/Vector.h"
+#include <EASTL/unordered_map.h>
 
 #include <cstdarg>
 #include <cstring>
@@ -18,10 +19,9 @@ static const int MATRIX_CONVERSION_BUFFER_LENGTH = 256;
 class WString;
 
 class StringHash;
-template <class T, class U> class HashMap;
 
-/// Map of strings.
-using StringMap = HashMap<StringHash, String>;
+/// Map of strings（改用 EASTL unordered_map）
+using StringMap = eastl::unordered_map<StringHash, String>;
 
 /// %String class.
 class URHO3D_API String

@@ -36,11 +36,7 @@
 namespace Urho3D
 {
 
-// 为 SLNet::AddressOrGUID 提供 Hash 特化，避免要求类型提供 ToHash 成员
-template<> inline hash32 MakeHash(const SLNet::AddressOrGUID& value)
-{
-    return static_cast<hash32>(SLNet::AddressOrGUID::ToInteger(value));
-}
+// 迁移到 EASTL unordered_map 后，不再需要 Urho3D::MakeHash 的特化
 
 static const char* RAKNET_MESSAGEID_STRINGS[] = {
     "ID_CONNECTED_PING",
@@ -213,47 +209,47 @@ Network::Network(Context* context) :
     SubscribeToEvent(E_RENDERUPDATE, URHO3D_HANDLER(Network, HandleRenderUpdate));
 
     // Blacklist remote events which are not to be allowed to be registered in any case
-    blacklistedRemoteEvents_.Insert(E_CONSOLECOMMAND);
-    blacklistedRemoteEvents_.Insert(E_LOGMESSAGE);
-    blacklistedRemoteEvents_.Insert(E_BEGINFRAME);
-    blacklistedRemoteEvents_.Insert(E_UPDATE);
-    blacklistedRemoteEvents_.Insert(E_POSTUPDATE);
-    blacklistedRemoteEvents_.Insert(E_RENDERUPDATE);
-    blacklistedRemoteEvents_.Insert(E_ENDFRAME);
-    blacklistedRemoteEvents_.Insert(E_MOUSEBUTTONDOWN);
-    blacklistedRemoteEvents_.Insert(E_MOUSEBUTTONUP);
-    blacklistedRemoteEvents_.Insert(E_MOUSEMOVE);
-    blacklistedRemoteEvents_.Insert(E_MOUSEWHEEL);
-    blacklistedRemoteEvents_.Insert(E_KEYDOWN);
-    blacklistedRemoteEvents_.Insert(E_KEYUP);
-    blacklistedRemoteEvents_.Insert(E_TEXTINPUT);
-    blacklistedRemoteEvents_.Insert(E_JOYSTICKCONNECTED);
-    blacklistedRemoteEvents_.Insert(E_JOYSTICKDISCONNECTED);
-    blacklistedRemoteEvents_.Insert(E_JOYSTICKBUTTONDOWN);
-    blacklistedRemoteEvents_.Insert(E_JOYSTICKBUTTONUP);
-    blacklistedRemoteEvents_.Insert(E_JOYSTICKAXISMOVE);
-    blacklistedRemoteEvents_.Insert(E_JOYSTICKHATMOVE);
-    blacklistedRemoteEvents_.Insert(E_TOUCHBEGIN);
-    blacklistedRemoteEvents_.Insert(E_TOUCHEND);
-    blacklistedRemoteEvents_.Insert(E_TOUCHMOVE);
-    blacklistedRemoteEvents_.Insert(E_GESTURERECORDED);
-    blacklistedRemoteEvents_.Insert(E_GESTUREINPUT);
-    blacklistedRemoteEvents_.Insert(E_MULTIGESTURE);
-    blacklistedRemoteEvents_.Insert(E_DROPFILE);
-    blacklistedRemoteEvents_.Insert(E_INPUTFOCUS);
-    blacklistedRemoteEvents_.Insert(E_MOUSEVISIBLECHANGED);
-    blacklistedRemoteEvents_.Insert(E_EXITREQUESTED);
-    blacklistedRemoteEvents_.Insert(E_SERVERCONNECTED);
-    blacklistedRemoteEvents_.Insert(E_SERVERDISCONNECTED);
-    blacklistedRemoteEvents_.Insert(E_CONNECTFAILED);
-    blacklistedRemoteEvents_.Insert(E_CLIENTCONNECTED);
-    blacklistedRemoteEvents_.Insert(E_CLIENTDISCONNECTED);
-    blacklistedRemoteEvents_.Insert(E_CLIENTIDENTITY);
-    blacklistedRemoteEvents_.Insert(E_CLIENTSCENELOADED);
-    blacklistedRemoteEvents_.Insert(E_NETWORKMESSAGE);
-    blacklistedRemoteEvents_.Insert(E_NETWORKUPDATE);
-    blacklistedRemoteEvents_.Insert(E_NETWORKUPDATESENT);
-    blacklistedRemoteEvents_.Insert(E_NETWORKSCENELOADFAILED);
+    blacklistedRemoteEvents_.insert(E_CONSOLECOMMAND);
+    blacklistedRemoteEvents_.insert(E_LOGMESSAGE);
+    blacklistedRemoteEvents_.insert(E_BEGINFRAME);
+    blacklistedRemoteEvents_.insert(E_UPDATE);
+    blacklistedRemoteEvents_.insert(E_POSTUPDATE);
+    blacklistedRemoteEvents_.insert(E_RENDERUPDATE);
+    blacklistedRemoteEvents_.insert(E_ENDFRAME);
+    blacklistedRemoteEvents_.insert(E_MOUSEBUTTONDOWN);
+    blacklistedRemoteEvents_.insert(E_MOUSEBUTTONUP);
+    blacklistedRemoteEvents_.insert(E_MOUSEMOVE);
+    blacklistedRemoteEvents_.insert(E_MOUSEWHEEL);
+    blacklistedRemoteEvents_.insert(E_KEYDOWN);
+    blacklistedRemoteEvents_.insert(E_KEYUP);
+    blacklistedRemoteEvents_.insert(E_TEXTINPUT);
+    blacklistedRemoteEvents_.insert(E_JOYSTICKCONNECTED);
+    blacklistedRemoteEvents_.insert(E_JOYSTICKDISCONNECTED);
+    blacklistedRemoteEvents_.insert(E_JOYSTICKBUTTONDOWN);
+    blacklistedRemoteEvents_.insert(E_JOYSTICKBUTTONUP);
+    blacklistedRemoteEvents_.insert(E_JOYSTICKAXISMOVE);
+    blacklistedRemoteEvents_.insert(E_JOYSTICKHATMOVE);
+    blacklistedRemoteEvents_.insert(E_TOUCHBEGIN);
+    blacklistedRemoteEvents_.insert(E_TOUCHEND);
+    blacklistedRemoteEvents_.insert(E_TOUCHMOVE);
+    blacklistedRemoteEvents_.insert(E_GESTURERECORDED);
+    blacklistedRemoteEvents_.insert(E_GESTUREINPUT);
+    blacklistedRemoteEvents_.insert(E_MULTIGESTURE);
+    blacklistedRemoteEvents_.insert(E_DROPFILE);
+    blacklistedRemoteEvents_.insert(E_INPUTFOCUS);
+    blacklistedRemoteEvents_.insert(E_MOUSEVISIBLECHANGED);
+    blacklistedRemoteEvents_.insert(E_EXITREQUESTED);
+    blacklistedRemoteEvents_.insert(E_SERVERCONNECTED);
+    blacklistedRemoteEvents_.insert(E_SERVERDISCONNECTED);
+    blacklistedRemoteEvents_.insert(E_CONNECTFAILED);
+    blacklistedRemoteEvents_.insert(E_CLIENTCONNECTED);
+    blacklistedRemoteEvents_.insert(E_CLIENTDISCONNECTED);
+    blacklistedRemoteEvents_.insert(E_CLIENTIDENTITY);
+    blacklistedRemoteEvents_.insert(E_CLIENTSCENELOADED);
+    blacklistedRemoteEvents_.insert(E_NETWORKMESSAGE);
+    blacklistedRemoteEvents_.insert(E_NETWORKUPDATE);
+    blacklistedRemoteEvents_.insert(E_NETWORKUPDATESENT);
+    blacklistedRemoteEvents_.insert(E_NETWORKSCENELOADFAILED);
 }
 
 Network::~Network()
@@ -264,7 +260,7 @@ Network::~Network()
     Disconnect(100);
     serverConnection_.Reset();
 
-    clientConnections_.Clear();
+    clientConnections_.clear();
 
     delete natPunchthroughServerClient_;
     natPunchthroughServerClient_ = nullptr;
@@ -313,10 +309,10 @@ void Network::NewConnectionEstablished(const SLNet::AddressOrGUID& connection)
 void Network::ClientDisconnected(const SLNet::AddressOrGUID& connection)
 {
     // Remove the client connection that corresponds to this MessageConnection
-    HashMap<SLNet::AddressOrGUID, SharedPtr<Connection>>::Iterator i = clientConnections_.Find(connection);
-    if (i != clientConnections_.End())
+    auto it = clientConnections_.find(connection);
+    if (it != clientConnections_.end())
     {
-        Connection* connection = i->second_;
+        Connection* connection = it->second;
         URHO3D_LOGINFO("Client " + connection->ToString() + " disconnected");
 
         using namespace ClientDisconnected;
@@ -325,7 +321,7 @@ void Network::ClientDisconnected(const SLNet::AddressOrGUID& connection)
         eventData[P_CONNECTION] = connection;
         connection->SendEvent(E_CLIENTDISCONNECTED, eventData);
 
-        clientConnections_.Erase(i);
+        clientConnections_.erase(it);
     }
 }
 
@@ -439,7 +435,7 @@ bool Network::StartServer(unsigned short port, unsigned int maxConnections)
 
 void Network::StopServer()
 {
-    clientConnections_.Clear();
+    clientConnections_.clear();
 
     if (!rakPeer_)
         return;
@@ -524,17 +520,16 @@ void Network::BroadcastMessage(int msgID, bool reliable, bool inOrder, const byt
 
 void Network::BroadcastRemoteEvent(StringHash eventType, bool inOrder, const VariantMap& eventData)
 {
-    for (HashMap<SLNet::AddressOrGUID, SharedPtr<Connection>>::Iterator i = clientConnections_.Begin(); i != clientConnections_.End(); ++i)
-        i->second_->SendRemoteEvent(eventType, inOrder, eventData);
+    for (auto& kv : clientConnections_)
+        kv.second->SendRemoteEvent(eventType, inOrder, eventData);
 }
 
 void Network::BroadcastRemoteEvent(Scene* scene, StringHash eventType, bool inOrder, const VariantMap& eventData)
 {
-    for (HashMap<SLNet::AddressOrGUID, SharedPtr<Connection>>::Iterator i = clientConnections_.Begin();
-         i != clientConnections_.End(); ++i)
+    for (auto& kv : clientConnections_)
     {
-        if (i->second_->GetScene() == scene)
-            i->second_->SendRemoteEvent(eventType, inOrder, eventData);
+        if (kv.second->GetScene() == scene)
+            kv.second->SendRemoteEvent(eventType, inOrder, eventData);
     }
 }
 
@@ -552,11 +547,10 @@ void Network::BroadcastRemoteEvent(Node* node, StringHash eventType, bool inOrde
     }
 
     Scene* scene = node->GetScene();
-    for (HashMap<SLNet::AddressOrGUID, SharedPtr<Connection>>::Iterator i = clientConnections_.Begin();
-         i != clientConnections_.End(); ++i)
+    for (auto& kv : clientConnections_)
     {
-        if (i->second_->GetScene() == scene)
-            i->second_->SendRemoteEvent(node, eventType, inOrder, eventData);
+        if (kv.second->GetScene() == scene)
+            kv.second->SendRemoteEvent(node, eventType, inOrder, eventData);
     }
 }
 
@@ -581,23 +575,23 @@ void Network::SetSimulatedPacketLoss(float probability)
 
 void Network::RegisterRemoteEvent(StringHash eventType)
 {
-    if (blacklistedRemoteEvents_.Find(eventType) != blacklistedRemoteEvents_.End())
+    if (blacklistedRemoteEvents_.find(eventType) != blacklistedRemoteEvents_.end())
     {
         URHO3D_LOGERROR("Attempted to register blacklisted remote event type " + String(eventType));
         return;
     }
 
-    allowedRemoteEvents_.Insert(eventType);
+    allowedRemoteEvents_.insert(eventType);
 }
 
 void Network::UnregisterRemoteEvent(StringHash eventType)
 {
-    allowedRemoteEvents_.Erase(eventType);
+    allowedRemoteEvents_.erase(eventType);
 }
 
 void Network::UnregisterAllRemoteEvents()
 {
-    allowedRemoteEvents_.Clear();
+    allowedRemoteEvents_.clear();
 }
 
 void Network::SetPackageCacheDir(const String& path)
@@ -618,11 +612,10 @@ void Network::SendPackageToClients(Scene* scene, PackageFile* package)
         return;
     }
 
-    for (HashMap<SLNet::AddressOrGUID, SharedPtr<Connection>>::Iterator i = clientConnections_.Begin();
-         i != clientConnections_.End(); ++i)
+    for (auto& kv : clientConnections_)
     {
-        if (i->second_->GetScene() == scene)
-            i->second_->SendPackageToClient(package);
+        if (kv.second->GetScene() == scene)
+            kv.second->SendPackageToClient(package);
     }
 }
 
@@ -647,9 +640,9 @@ Connection* Network::GetConnection(const SLNet::AddressOrGUID& connection) const
         return serverConnection_;
     else
     {
-        HashMap<SLNet::AddressOrGUID, SharedPtr<Connection>>::ConstIterator i = clientConnections_.Find(connection);
-        if (i != clientConnections_.End())
-            return i->second_;
+        auto it = clientConnections_.find(connection);
+        if (it != clientConnections_.end())
+            return it->second;
         else
             return nullptr;
     }
@@ -663,9 +656,8 @@ Connection* Network::GetServerConnection() const
 Vector<SharedPtr<Connection>> Network::GetClientConnections() const
 {
     Vector<SharedPtr<Connection>> ret;
-    for (HashMap<SLNet::AddressOrGUID, SharedPtr<Connection>>::ConstIterator i = clientConnections_.Begin();
-         i != clientConnections_.End(); ++i)
-        ret.Push(i->second_);
+    for (const auto& kv : clientConnections_)
+        ret.Push(kv.second);
 
     return ret;
 }
@@ -679,7 +671,7 @@ bool Network::IsServerRunning() const
 
 bool Network::CheckRemoteEvent(StringHash eventType) const
 {
-    return allowedRemoteEvents_.Contains(eventType);
+    return allowedRemoteEvents_.find(eventType) != allowedRemoteEvents_.end();
 }
 
 void Network::HandleIncomingPacket(SLNet::Packet* packet, bool isServer)
@@ -920,30 +912,28 @@ void Network::PostUpdate(float timeStep)
             {
                 URHO3D_PROFILE(PrepareServerUpdate);
 
-                networkScenes_.Clear();
-                for (HashMap<SLNet::AddressOrGUID, SharedPtr<Connection>>::Iterator i = clientConnections_.Begin();
-                     i != clientConnections_.End(); ++i)
+                networkScenes_.clear();
+                for (auto& kv : clientConnections_)
                 {
-                    Scene* scene = i->second_->GetScene();
+                    Scene* scene = kv.second->GetScene();
                     if (scene)
-                        networkScenes_.Insert(scene);
+                        networkScenes_.insert(scene);
                 }
 
-                for (HashSet<Scene*>::ConstIterator i = networkScenes_.Begin(); i != networkScenes_.End(); ++i)
-                    (*i)->PrepareNetworkUpdate();
+                for (Scene* s : networkScenes_)
+                    s->PrepareNetworkUpdate();
             }
 
             {
                 URHO3D_PROFILE(SendServerUpdate);
 
                 // Then send server updates for each client connection
-                for (HashMap<SLNet::AddressOrGUID, SharedPtr<Connection>>::Iterator i = clientConnections_.Begin();
-                     i != clientConnections_.End(); ++i)
+                for (auto& kv : clientConnections_)
                 {
-                    i->second_->SendServerUpdate();
-                    i->second_->SendRemoteEvents();
-                    i->second_->SendPackages();
-                    i->second_->SendAllBuffers();
+                    kv.second->SendServerUpdate();
+                    kv.second->SendRemoteEvents();
+                    kv.second->SendPackages();
+                    kv.second->SendAllBuffers();
                 }
             }
         }
@@ -1017,9 +1007,8 @@ void Network::ConfigureNetworkSimulator()
     if (serverConnection_)
         serverConnection_->ConfigureNetworkSimulator(simulatedLatency_, simulatedPacketLoss_);
 
-    for (HashMap<SLNet::AddressOrGUID, SharedPtr<Connection>>::Iterator i = clientConnections_.Begin();
-         i != clientConnections_.End(); ++i)
-        i->second_->ConfigureNetworkSimulator(simulatedLatency_, simulatedPacketLoss_);
+    for (auto& kv : clientConnections_)
+        kv.second->ConfigureNetworkSimulator(simulatedLatency_, simulatedPacketLoss_);
 }
 
 void RegisterNetworkLibrary(Context* context)

@@ -60,6 +60,22 @@ endif ()
 if (URHO3D_BGFX)
     add_definitions (-DURHO3D_BGFX)
 endif ()
+
+# EASTL：若可用，则将其包含目录透传，并把链接设为 PUBLIC 以便下游可执行自动得到依赖
+if (TARGET EASTL)
+    get_target_property(_EASTL_INCS EASTL INTERFACE_INCLUDE_DIRECTORIES)
+    if (_EASTL_INCS)
+        list (APPEND INCLUDE_DIRS ${_EASTL_INCS})
+    endif ()
+    # 暂不通过 LIBS 旧签名传播，改为在目标创建后追加 PUBLIC 链接
+endif ()
+ # 若 EABase 目标存在，则将其头文件包含路径透传，保证 EASTL 头可解析到 <EABase/...>
+if (TARGET EABase)
+    get_target_property(_EABASE_INCS EABase INTERFACE_INCLUDE_DIRECTORIES)
+    if (_EABASE_INCS)
+        list (APPEND INCLUDE_DIRS ${_EABASE_INCS})
+    endif ()
+endif ()
 if (HAVE_SINCOSF)
     add_definitions (-DHAVE_SINCOSF)
 elseif (HAVE___SINCOSF)
@@ -399,6 +415,11 @@ if (IOS OR TVOS)
     set (EXCLUDE_FROM_ALL EXCLUDE_FROM_ALL)
 endif ()
 setup_library (${URHO3D_LIB_TYPE} ${EXCLUDE_FROM_ALL})
+
+# 让 Urho3D 公有地依赖 EASTL，使所有示例与下游应用“整库链接”EASTL
+if (TARGET EASTL)
+    target_link_libraries(${TARGET_NAME} EASTL)
+endif ()
 
 # SDL 依赖的链接改由 define_dependency_libs() 统一处理，避免混用 target_link_libraries 的不同签名导致配置错误。
 

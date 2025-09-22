@@ -3,7 +3,6 @@
 
 #pragma once
 
-#include "../Container/HashMap.h"
 #include "../Container/Ptr.h"
 #include "../Math/StringHash.h"
 
@@ -38,7 +37,7 @@ public:
     const StringMap& GetInternalMap() const { return map_; }
 
 private:
-    /// Hash to string map.
+    /// Hash to string map（EASTL）。
     StringMap map_;
 
     /// Mutex.
