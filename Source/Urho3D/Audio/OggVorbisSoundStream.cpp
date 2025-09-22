@@ -6,6 +6,11 @@
 #include "../Audio/OggVorbisSoundStream.h"
 #include "../Audio/Sound.h"
 
+// 强制以“仅声明”方式包含 stb_vorbis 头，防止某些环境/旧版本头文件在未定义宏时内联实现，
+// 造成与独立编译的 stb_vorbis.c 重复定义（LNK4006）。
+#ifndef STB_VORBIS_HEADER_ONLY
+#define STB_VORBIS_HEADER_ONLY 1
+#endif
 #include <STB/stb_vorbis.h>
 
 #include "../DebugNew.h"

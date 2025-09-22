@@ -94,6 +94,10 @@ set (STATIC_LIBRARY_TARGETS ${STATIC_LIBRARY_TARGETS} PARENT_SCOPE)
 if (URHO3D_BGFX)
     if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/bgfx.cmake/CMakeLists.txt)
         message (STATUS "Using local bgfx.cmake at ThirdParty/bgfx.cmake (no FetchContent)")
+        # 关闭 bgfx 的示例构建，保留工具（shaderc 等）以用于着色器编译
+        set (BGFX_BUILD_EXAMPLES OFF CACHE BOOL "Disable bgfx examples" FORCE)
+        set (BGFX_BUILD_TESTS    OFF CACHE BOOL "Disable bgfx tests"    FORCE)
+        set (BGFX_BUILD_TOOLS    ON  CACHE BOOL "Build bgfx tools"       FORCE)
         add_subdirectory (bgfx.cmake)
         # 将 bgfx 工具 (shaderc/texturec 等) 拷贝到引擎惯用的 tool 目录
         # 注意：add_custom_command(TARGET ...) 只能作用于当前目录创建的目标，因此

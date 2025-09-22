@@ -16,8 +16,17 @@ if (MSVC AND URHO3D_64BIT)
     # Commented out due to cmake bug
     #set (ASM_FILES src/masm-x64.asm)
     # As a temporary workaround
-    add_custom_command (OUTPUT masm-x64.obj COMMAND ${CMAKE_ASM_MASM_COMPILER} -Fo ${CMAKE_CURRENT_BINARY_DIR}/masm-x64.obj -c ${CMAKE_CURRENT_SOURCE_DIR}/src/masm-x64.asm DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/masm-x64.asm COMMENT "Temporary workaround for MASM")
-    set (ASM_FILES ${CMAKE_CURRENT_BINARY_DIR}/masm-x64.obj ${CMAKE_CURRENT_SOURCE_DIR}/src/masm-x64.asm)
+    # 说明：此前同时将編译产物 masm-x64.obj 与源文件 src/masm-x64.asm
+    # 一并加入 ASM_FILES，最终会在静态库中产生两份等价实现（masm-x64.asm.obj 与 masm-x64.obj），
+    # 导致链接阶段出现 LNK4006 重复定义（exec_cpuid/cpu_rdtsc/busy_sse_loop）。
+    # 这里仅保留自定义命令生成的目标对象（.obj），避免重复收录同一实现。
+    add_custom_command (
+        OUTPUT masm-x64.obj
+        COMMAND ${CMAKE_ASM_MASM_COMPILER} -Fo ${CMAKE_CURRENT_BINARY_DIR}/masm-x64.obj -c ${CMAKE_CURRENT_SOURCE_DIR}/src/masm-x64.asm
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/masm-x64.asm
+        COMMENT "Temporary workaround for MASM (single .obj to avoid duplicates)"
+    )
+    set (ASM_FILES ${CMAKE_CURRENT_BINARY_DIR}/masm-x64.obj)
 endif ()
 
 # Define source files

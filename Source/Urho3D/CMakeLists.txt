@@ -269,6 +269,14 @@ source_group ("Source Files\\Generated" FILES ${CMAKE_CURRENT_BINARY_DIR}/librev
 
 # 注意：此处暂时不链接 SDL，待目标创建后再链接（见下方 setup_library 之后的逻辑）
 
+# 将最新的 stb_vorbis.c 作为 C 源加入 Urho3D 目标（避免 define_source_files 的分组限制）
+set(_STB_VORBIS_PATH ${CMAKE_SOURCE_DIR}/Source/ThirdParty/STB/stb_vorbis.c)
+if (EXISTS ${_STB_VORBIS_PATH})
+    # 先确保目标已/将被创建后可追加源；这里直接追加到 SOURCE_FILES，若宏未使用则在稍后用 target_sources 兜底
+    list(APPEND SOURCE_FILES ${_STB_VORBIS_PATH})
+    set_source_files_properties(${_STB_VORBIS_PATH} PROPERTIES LANGUAGE C)
+endif ()
+
 if (URHO3D_LUA)
     # The host tool must be built natively
     if (CMAKE_CROSSCOMPILING OR URHO3D_LUAJIT)
