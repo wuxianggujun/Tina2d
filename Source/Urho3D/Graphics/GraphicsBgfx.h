@@ -11,7 +11,7 @@
 #include "../Math/Color.h"
 #include "../Math/Matrix4.h"
 #include "../Math/Vector4.h"
-#include <unordered_map>
+#include "../Container/STLAdapter.h"
 #include <string>
 
 namespace Urho3D
@@ -147,7 +147,7 @@ private:
     } ui_;
 
     // 纹理缓存：Urho3D Texture2D* -> bgfx::TextureHandle.idx
-    std::unordered_map<const Texture2D*, unsigned short> textureCache_;
+    Urho3D::stl::unordered_map<const Texture2D*, unsigned short> textureCache_;
     unsigned short GetOrCreateTexture(Texture2D* tex, class ResourceCache* cache);
     // 动态 uniform/sampler 缓存
     unsigned short GetOrCreateSampler(const char* name);
@@ -163,7 +163,7 @@ private:
         bool operator==(const FBKey& rhs) const { return color==rhs.color && depth==rhs.depth; }
     };
     struct FBKeyHash { size_t operator()(const FBKey& k) const { return (reinterpret_cast<size_t>(k.color)>>4) ^ (reinterpret_cast<size_t>(k.depth)<<1); } };
-    std::unordered_map<FBKey, unsigned short, FBKeyHash> fbCache_;
+    Urho3D::stl::unordered_map<FBKey, unsigned short, FBKeyHash> fbCache_;
 
     // 状态扩展
     bool stencilEnabled_{};
@@ -181,10 +181,10 @@ private:
     bool clipPlaneEnabled_{};
     Vector4 clipPlane_{};
 
-    std::unordered_map<std::string, unsigned short> samplerCache_;
-    std::unordered_map<std::string, unsigned short> vec4Cache_;
-    std::unordered_map<std::string, unsigned short> mat4Cache_;
-    std::unordered_map<std::string, unsigned short> vec4ArrayCache_;
+    Urho3D::stl::unordered_map<std::string, unsigned short> samplerCache_;
+    Urho3D::stl::unordered_map<std::string, unsigned short> vec4Cache_;
+    Urho3D::stl::unordered_map<std::string, unsigned short> mat4Cache_;
+    Urho3D::stl::unordered_map<std::string, unsigned short> vec4ArrayCache_;
 
     // 全局选项
     bool srgbBackbuffer_{};
