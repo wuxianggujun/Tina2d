@@ -351,7 +351,8 @@ list (APPEND SOURCE_FILES ${GEN_CPP_FILES} ${LUA_GEN_CPP_FILES} librevision.h Ur
 # 适配器初始化与 EASTL new[] 包装
 list (APPEND SOURCE_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/Container/STLAdapter.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/Core/EASTLNew.cpp)
+    ${CMAKE_CURRENT_SOURCE_DIR}/Core/EASTLNew.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Core/MemoryHooks.cpp)
 
 # Define dependency libs
 # Add include directories to find the precompiled header, export header, and installed headers from third-party libs
@@ -425,6 +426,12 @@ setup_library (${URHO3D_LIB_TYPE} ${EXCLUDE_FROM_ALL})
 if (TARGET EASTL)
     # 与 UrhoCommon.cmake 的 plain 签名保持一致，避免关键字/非关键字混用
     target_link_libraries(${TARGET_NAME} EASTL)
+endif ()
+
+# 若启用 mimalloc，则链接并打开编译宏以在代码中启用 mimalloc 注入路径
+if (DEFINED MIMALLOC_TARGET)
+    target_link_libraries(${TARGET_NAME} ${MIMALLOC_TARGET})
+    add_definitions(-DURHO3D_HAS_MIMALLOC)
 endif ()
 
 # SDL 依赖的链接改由 define_dependency_libs() 统一处理，避免混用 target_link_libraries 的不同签名导致配置错误。

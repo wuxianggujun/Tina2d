@@ -6,6 +6,9 @@
 set (CMAKE_FOLDER "third-party libs")
 
 # 基础第三方库：仅在目录存在时引入，避免裁剪后构建失败
+set (SDL_TEST_LIBRARY OFF CACHE BOOL "Disable building SDL3_test" FORCE)
+set (SDL_TESTS        OFF CACHE BOOL "Disable SDL tests"      FORCE)
+set (SDL_EXAMPLES     OFF CACHE BOOL "Disable SDL examples"   FORCE)
 foreach (TARGET ETCPACK FreeType LZ4 PugiXml rapidjson SDL STB)
     if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${TARGET}/CMakeLists.txt)
         add_subdirectory (${TARGET})
@@ -70,6 +73,28 @@ endif ()
 
 if (URHO3D_TRACY_PROFILING)
     add_subdirectory (Tracy)
+endif ()
+
+# 高性能分配器：mimalloc 深度集成（仅使用本地 ThirdParty），默认尝试启用；
+# 若本地不存在或当前工具链无法编译 C/Windows SDK 头，则静默跳过并退回 CRT。
+if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/mimalloc/CMakeLists.txt)
+    include(CheckCSourceCompiles)
+    set(CMAKE_REQUIRED_QUIET TRUE)
+    check_c_source_compiles("#include <stddef.h>\n#ifdef _WIN32\n#include <windows.h>\n#endif\nint main(void){return 0;}" CAN_BUILD_C_SDK)
+    if (CAN_BUILD_C_SDK)
+        set (MI_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+        add_subdirectory (mimalloc)
+        if (TARGET mimalloc-static)
+            set (MIMALLOC_TARGET mimalloc-static)
+        elseif (TARGET mimalloc)
+            set (MIMALLOC_TARGET mimalloc)
+        endif ()
+        set (HAVE_MIMALLOC ON)
+    else ()
+        message (STATUS "mimalloc: 检测到当前工具链环境缺少标准/SDK 头，已跳过本地 mimalloc 构建（回退 CRT）")
+    endif ()
+else ()
+    message (STATUS "mimalloc: 未发现 Source/ThirdParty/mimalloc，已跳过（回退 CRT）")
 endif ()
 
 # EASTL / EABase：构建并整库链接（推荐）。

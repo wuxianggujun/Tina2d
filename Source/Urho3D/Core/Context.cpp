@@ -4,6 +4,7 @@
 #include "../Precompiled.h"
 
 #include "../Core/Context.h"
+#include "MemoryHooks.h"
 #include "../Core/EventProfiler.h"
 #include "../IO/Log.h"
 
@@ -92,6 +93,8 @@ void RemoveNamedAttribute(HashMap<StringHash, Vector<AttributeInfo>>& attributes
 Context::Context() :
     eventHandler_(nullptr)
 {
+    // 深度集成：尽早尝试安装 mimalloc（若可用），失败则回退 CRT
+    InstallMimallocAllocator();
 #ifdef __ANDROID__
     // Always reset the random seed on Android, as the Urho3D library might not be unloaded between runs
     SetRandomSeed(1);
