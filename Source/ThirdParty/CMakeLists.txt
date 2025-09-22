@@ -74,11 +74,23 @@ endif ()
 
 # EASTL / EABase：构建并整库链接（推荐）。
 if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/EASTL AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/EABase)
-    # 先创建本地 EABase 头文件目标（其本身是 header-only）
+    # 优先使用本地 EABase 源，避免网络获取失败或版本漂移
+    set(FETCHCONTENT_SOURCE_DIR_EABASE ${CMAKE_CURRENT_SOURCE_DIR}/EABase CACHE PATH "Local EABase path for EASTL FetchContent")
+    set(FETCHCONTENT_UPDATES_DISCONNECTED_EABASE ON CACHE BOOL "Disable EABase FetchContent updates" FORCE)
+    # 先添加 EABase，确保 INTERFACE 目标被创建
     add_subdirectory (EABase)
-    # 使用 EASTL 自带 CMake 构建静态库，内部会尝试 FetchContent(EABase)，
-    # 若同名目标已存在则直接复用本地目标，不会重复拉取。
     add_subdirectory (EASTL)
+    # EASTL 源文件直接包含 <EABase/eabase.h>，需要把 EABase 的 include 路径注入到 EASTL 目标
+    if (TARGET EASTL AND TARGET EABase)
+        get_target_property(_EABASE_INCS EABase INTERFACE_INCLUDE_DIRECTORIES)
+        if (_EABASE_INCS)
+            target_include_directories(EASTL PUBLIC ${_EABASE_INCS})
+        endif ()
+    endif ()
+    # 兜底：直接注入本地 EABase 头文件路径，防止上游 CMake 未正确透传
+    if (TARGET EASTL)
+        target_include_directories(EASTL PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/EABase/include/Common)
+    endif ()
 endif ()
 
 if (NOT ANDROID AND NOT ARM AND NOT WEB)
@@ -107,6 +119,10 @@ if (URHO3D_BGFX)
         set (BGFX_BUILD_EXAMPLES OFF CACHE BOOL "Disable bgfx examples" FORCE)
         set (BGFX_BUILD_TESTS    OFF CACHE BOOL "Disable bgfx tests"    FORCE)
         set (BGFX_BUILD_TOOLS    ON  CACHE BOOL "Build bgfx tools"       FORCE)
+        # 仅需 shaderc，禁用纹理工具链，避免 iqa 等 C 依赖在非开发者命令行下找不到 SDK 头
+        set (BGFX_BUILD_TOOLS_TEXTURE OFF CACHE BOOL "Disable bgfx texture tools" FORCE)
+        set (BGFX_BUILD_TOOLS_GEOMETRY OFF CACHE BOOL "Disable bgfx geometry tools" FORCE)
+        set (BGFX_BUILD_TOOLS_BIN2C OFF CACHE BOOL "Disable bgfx bin2c tool" FORCE)
         add_subdirectory (bgfx.cmake)
         # 将 bgfx 工具 (shaderc/texturec 等) 拷贝到引擎惯用的 tool 目录
         # 注意：add_custom_command(TARGET ...) 只能作用于当前目录创建的目标，因此

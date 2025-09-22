@@ -8,9 +8,8 @@
 #include "../IO/VectorBuffer.h"
 #include "../Network/Connection.h"
 
-// EASTL 容器（激进替换逐步推进）
-#include <EASTL/unordered_map.h>
-#include <EASTL/unordered_set.h>
+// EASTL 容器（通过适配器统一分配器/类型别名）
+#include "../Container/STLAdapter.h"
 // SLikeNet 基本类型（用于哈希）
 #include <slikenet/types.h>
 
@@ -158,14 +157,14 @@ private:
     SLNet::RakPeerInterface* rakPeerClient_;
     /// Client's server connection.
     SharedPtr<Connection> serverConnection_;
-    /// Server's client connections（改用 EASTL unordered_map）。
-    eastl::unordered_map<SLNet::AddressOrGUID, SharedPtr<Connection>, AddressOrGUIDHasher> clientConnections_;
-    /// Allowed remote events（EASTL）。
-    eastl::unordered_set<StringHash> allowedRemoteEvents_;
-    /// Remote event fixed blacklist（EASTL）。
-    eastl::unordered_set<StringHash> blacklistedRemoteEvents_;
-    /// Networked scenes（EASTL）。
-    eastl::unordered_set<Scene*> networkScenes_;
+    /// Server's client connections（EASTL 适配器容器）。
+    Urho3D::stl::unordered_map<SLNet::AddressOrGUID, SharedPtr<Connection>, AddressOrGUIDHasher> clientConnections_;
+    /// Allowed remote events（EASTL 适配器容器）。
+    Urho3D::stl::unordered_set<StringHash> allowedRemoteEvents_;
+    /// Remote event fixed blacklist（EASTL 适配器容器）。
+    Urho3D::stl::unordered_set<StringHash> blacklistedRemoteEvents_;
+    /// Networked scenes（EASTL 适配器容器）。
+    Urho3D::stl::unordered_set<Scene*> networkScenes_;
     /// Update FPS.
     int updateFps_;
     /// Simulated latency (send delay) in milliseconds.

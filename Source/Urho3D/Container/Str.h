@@ -4,7 +4,7 @@
 #pragma once
 
 #include "../Container/Vector.h"
-#include <EASTL/unordered_map.h>
+#include "../Container/STLAdapter.h"
 
 #include <cstdarg>
 #include <cstring>
@@ -20,8 +20,8 @@ class WString;
 
 class StringHash;
 
-/// Map of strings（改用 EASTL unordered_map）
-using StringMap = eastl::unordered_map<StringHash, String>;
+/// Map of strings（经适配器统一为 EASTL + 自定义分配器）
+using StringMap = Urho3D::stl::unordered_map<StringHash, String>;
 
 /// %String class.
 class URHO3D_API String

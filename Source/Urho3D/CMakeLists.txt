@@ -348,6 +348,11 @@ endif ()
 # Aggregate all source files
 list (APPEND SOURCE_FILES ${GEN_CPP_FILES} ${LUA_GEN_CPP_FILES} librevision.h Urho3D.h ${SYMBOLIC_SOURCES})
 
+# 适配器初始化与 EASTL new[] 包装
+list (APPEND SOURCE_FILES
+    ${CMAKE_CURRENT_SOURCE_DIR}/Container/STLAdapter.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Core/EASTLNew.cpp)
+
 # Define dependency libs
 # Add include directories to find the precompiled header, export header, and installed headers from third-party libs
 set (INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR} ${THIRD_PARTY_INCLUDE_DIR})
@@ -418,6 +423,7 @@ setup_library (${URHO3D_LIB_TYPE} ${EXCLUDE_FROM_ALL})
 
 # 让 Urho3D 公有地依赖 EASTL，使所有示例与下游应用“整库链接”EASTL
 if (TARGET EASTL)
+    # 与 UrhoCommon.cmake 的 plain 签名保持一致，避免关键字/非关键字混用
     target_link_libraries(${TARGET_NAME} EASTL)
 endif ()
 
