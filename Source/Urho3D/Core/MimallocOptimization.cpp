@@ -1,7 +1,9 @@
-// 可选的mimalloc性能调优配置
-// 添加到 MemoryHooks.cpp 中
+// 可选的 mimalloc 性能调优配置
+// 注意：仅在启用了 URHO3D_HAS_MIMALLOC 时生效
 
 #ifdef URHO3D_HAS_MIMALLOC
+#include <mimalloc.h>
+
 void OptimizeMimallocForGame()
 {
     // 针对游戏优化的mimalloc配置

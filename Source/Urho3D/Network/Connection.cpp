@@ -342,13 +342,13 @@ void Connection::SendPackages()
         for (HashMap<StringHash, PackageUpload>::Iterator i = uploads_.Begin(); i != uploads_.End();)
         {
             HashMap<StringHash, PackageUpload>::Iterator current = i++;
-            PackageUpload& upload = current->second_;
+            PackageUpload& upload = current->second;
             auto fragmentSize =
                 (unsigned)Min((int)(upload.file_->GetSize() - upload.file_->GetPosition()), (int)PACKAGE_FRAGMENT_SIZE);
             upload.file_->Read(buffer, fragmentSize);
 
             msg_.Clear();
-            msg_.WriteStringHash(current->first_);
+            msg_.WriteStringHash(current->first);
             msg_.WriteU32(upload.fragment_++);
             msg_.Write(buffer, fragmentSize);
             SendMessage(MSG_PACKAGEDATA, true, false, msg_);
@@ -402,10 +402,10 @@ void Connection::ProcessPendingLatestData()
     for (HashMap<unsigned, Vector<byte>>::Iterator i = nodeLatestData_.Begin(); i != nodeLatestData_.End();)
     {
         HashMap<unsigned, Vector<byte>>::Iterator current = i++;
-        Node* node = scene_->GetNode(current->first_);
+        Node* node = scene_->GetNode(current->first);
         if (node)
         {
-            MemoryBuffer msg(current->second_);
+            MemoryBuffer msg(current->second);
             msg.ReadNetID(); // Skip the node ID
             node->ReadLatestDataUpdate(msg);
             // ApplyAttributes() is deliberately skipped, as Node has no attributes that require late applying.
@@ -418,10 +418,10 @@ void Connection::ProcessPendingLatestData()
     for (HashMap<unsigned, Vector<byte>>::Iterator i = componentLatestData_.Begin(); i != componentLatestData_.End();)
     {
         HashMap<unsigned, Vector<byte>>::Iterator current = i++;
-        Component* component = scene_->GetComponent(current->first_);
+        Component* component = scene_->GetComponent(current->first);
         if (component)
         {
-            MemoryBuffer msg(current->second_);
+            MemoryBuffer msg(current->second);
             msg.ReadNetID(); // Skip the component ID
             if (component->ReadLatestDataUpdate(msg))
                 component->ApplyAttributes();
@@ -856,7 +856,7 @@ void Connection::ProcessPackageDownload(int msgID, MemoryBuffer& msg)
             if (i == downloads_.End())
                 return;
 
-            PackageDownload& download = i->second_;
+            PackageDownload& download = i->second;
 
             // If no further data, this is an error reply
             if (msg.IsEof())
@@ -903,7 +903,7 @@ void Connection::ProcessPackageDownload(int msgID, MemoryBuffer& msg)
                     OnPackagesReady();
                 else
                 {
-                    PackageDownload& nextDownload = downloads_.Begin()->second_;
+                    PackageDownload& nextDownload = downloads_.Begin()->second;
 
                     URHO3D_LOGINFO("Requesting package " + nextDownload.name_ + " from server");
                     msg_.Clear();
@@ -1117,8 +1117,8 @@ const String& Connection::GetDownloadName() const
 {
     for (HashMap<StringHash, PackageDownload>::ConstIterator i = downloads_.Begin(); i != downloads_.End(); ++i)
     {
-        if (i->second_.initiated_)
-            return i->second_.name_;
+        if (i->second.initiated_)
+            return i->second.name_;
     }
     return String::EMPTY;
 }
@@ -1127,8 +1127,8 @@ float Connection::GetDownloadProgress() const
 {
     for (HashMap<StringHash, PackageDownload>::ConstIterator i = downloads_.Begin(); i != downloads_.End(); ++i)
     {
-        if (i->second_.initiated_)
-            return (float)i->second_.receivedFragments_.Size() / (float)i->second_.totalFragments_;
+        if (i->second.initiated_)
+            return (float)i->second.receivedFragments_.Size() / (float)i->second.totalFragments_;
     }
     return 1.0f;
 }
@@ -1192,7 +1192,7 @@ void Connection::ProcessNode(unsigned nodeID)
     if (i != sceneState_.nodeStates_.End())
     {
         // Replication state found: the node is either be existing or removed
-        Node* node = i->second_.node_;
+        Node* node = i->second.node_;
         if (!node)
         {
             msg_.Clear();
@@ -1205,7 +1205,7 @@ void Connection::ProcessNode(unsigned nodeID)
             sceneState_.nodeStates_.Erase(nodeID);
         }
         else
-            ProcessExistingNode(node, i->second_);
+            ProcessExistingNode(node, i->second);
     }
     else
     {
@@ -1249,8 +1249,8 @@ void Connection::ProcessNewNode(Node* node)
     msg_.WriteVLE(vars.Size());
     for (VariantMap::ConstIterator i = vars.Begin(); i != vars.End(); ++i)
     {
-        msg_.WriteStringHash(i->first_);
-        msg_.WriteVariant(i->second_);
+        msg_.WriteStringHash(i->first);
+        msg_.WriteVariant(i->second);
     }
 
     // Write node's components
@@ -1342,8 +1342,8 @@ void Connection::ProcessExistingNode(Node* node, NodeReplicationState& nodeState
                 VariantMap::ConstIterator j = vars.Find(*i);
                 if (j != vars.End())
                 {
-                    msg_.WriteStringHash(j->first_);
-                    msg_.WriteVariant(j->second_);
+                    msg_.WriteStringHash(j->first);
+                    msg_.WriteVariant(j->second);
                 }
                 else
                 {
@@ -1366,13 +1366,13 @@ void Connection::ProcessExistingNode(Node* node, NodeReplicationState& nodeState
          i != nodeState.componentStates_.End();)
     {
         HashMap<unsigned, ComponentReplicationState>::Iterator current = i++;
-        ComponentReplicationState& componentState = current->second_;
+        ComponentReplicationState& componentState = current->second;
         Component* component = componentState.component_;
         if (!component)
         {
             // Removed component
             msg_.Clear();
-            msg_.WriteNetID(current->first_);
+            msg_.WriteNetID(current->first);
 
             SendMessage(MSG_REMOVECOMPONENT, true, true, msg_);
             nodeState.componentStates_.Erase(current);

@@ -173,7 +173,7 @@ bool FontFaceBitmap::Load(FontFace* fontFace, bool usedGlyphs)
 
     for (HashMap<c32, FontGlyph>::ConstIterator i = fontFace->glyphMapping_.Begin(); i != fontFace->glyphMapping_.End(); ++i)
     {
-        FontGlyph fontGlyph = i->second_;
+        FontGlyph fontGlyph = i->second;
         if (!fontGlyph.used_)
             continue;
 
@@ -191,7 +191,7 @@ bool FontFaceBitmap::Load(FontFace* fontFace, bool usedGlyphs)
         fontGlyph.y_ = (short)y;
         fontGlyph.page_ = numPages - 1;
 
-        glyphMapping_[i->first_] = fontGlyph;
+        glyphMapping_[i->first] = fontGlyph;
     }
 
     // Assume that format is the same for all textures and that bitmap font type may have more than one component
@@ -223,8 +223,8 @@ bool FontFaceBitmap::Load(FontFace* fontFace, bool usedGlyphs)
 
     for (HashMap<c32, FontGlyph>::Iterator i = glyphMapping_.Begin(); i != glyphMapping_.End(); ++i)
     {
-        FontGlyph& newGlyph = i->second_;
-        const FontGlyph& oldGlyph = fontFace->glyphMapping_[i->first_];
+        FontGlyph& newGlyph = i->second;
+        const FontGlyph& oldGlyph = fontFace->glyphMapping_[i->first];
         Blit(newImages[newGlyph.page_], newGlyph.x_, newGlyph.y_, newGlyph.width_, newGlyph.height_, oldImages[oldGlyph.page_],
             oldGlyph.x_, oldGlyph.y_, components);
     }
@@ -235,10 +235,10 @@ bool FontFaceBitmap::Load(FontFace* fontFace, bool usedGlyphs)
 
     for (HashMap<u32, float>::ConstIterator i = fontFace->kerningMapping_.Begin(); i != fontFace->kerningMapping_.End(); ++i)
     {
-        unsigned first = (i->first_) >> 16u;
-        unsigned second = (i->first_) & 0xffffu;
+        unsigned first = (i->first) >> 16u;
+        unsigned second = (i->first) & 0xffffu;
         if (glyphMapping_.Find(first) != glyphMapping_.End() && glyphMapping_.Find(second) != glyphMapping_.End())
-            kerningMapping_[i->first_] = i->second_;
+            kerningMapping_[i->first] = i->second;
     }
 
     return true;
@@ -295,9 +295,9 @@ bool FontFaceBitmap::Save(Serializer& dest, int pointSize, const String& indenta
     {
         // Char
         XMLElement charElem = charsElem.CreateChild("char");
-        charElem.SetI32("id", i->first_);
+        charElem.SetI32("id", i->first);
 
-        const FontGlyph& glyph = i->second_;
+        const FontGlyph& glyph = i->second;
         charElem.SetI32("x", glyph.x_);
         charElem.SetI32("y", glyph.y_);
         charElem.SetI32("width", glyph.width_);
@@ -314,9 +314,9 @@ bool FontFaceBitmap::Save(Serializer& dest, int pointSize, const String& indenta
         for (HashMap<u32, float>::ConstIterator i = kerningMapping_.Begin(); i != kerningMapping_.End(); ++i)
         {
             XMLElement kerningElem = kerningsElem.CreateChild("kerning");
-            kerningElem.SetI32("first", i->first_ >> 16u);
-            kerningElem.SetI32("second", i->first_ & 0xffffu);
-            kerningElem.SetI32("amount", i->second_);
+            kerningElem.SetI32("first", i->first >> 16u);
+            kerningElem.SetI32("second", i->first & 0xffffu);
+            kerningElem.SetI32("amount", i->second);
         }
     }
 

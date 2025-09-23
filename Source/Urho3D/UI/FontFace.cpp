@@ -38,7 +38,7 @@ const FontGlyph* FontFace::GetGlyph(c32 c)
     HashMap<c32, FontGlyph>::Iterator i = glyphMapping_.Find(c);
     if (i != glyphMapping_.End())
     {
-        FontGlyph& glyph = i->second_;
+        FontGlyph& glyph = i->second;
         glyph.used_ = true;
         return &glyph;
     }
@@ -61,7 +61,7 @@ float FontFace::GetKerning(c32 c, c32 d) const
 
     HashMap<u32, float>::ConstIterator i = kerningMapping_.Find(value);
     if (i != kerningMapping_.End())
-        return i->second_;
+        return i->second;
 
     return 0;
 }

@@ -63,7 +63,7 @@ void XMLFile::RegisterObject(Context* context)
 
 bool XMLFile::BeginLoad(Deserializer& source)
 {
-    unsigned dataSize = source.GetSize();
+    unsigned dataSize = static_cast<unsigned>(source.GetSize());
     if (!dataSize && !source.GetName().Empty())
     {
         URHO3D_LOGERROR("Zero sized XML data in " + source.GetName());
@@ -170,7 +170,7 @@ String XMLFile::ToString(const String& indentation) const
     VectorBuffer dest;
     XMLWriter writer(dest);
     document_->save(writer, indentation.CString());
-    return String((const char*)dest.GetData(), dest.GetSize());
+    return String((const char*)dest.GetData(), static_cast<i32>(dest.GetSize()));
 }
 
 void XMLFile::Patch(XMLFile* patchFile)

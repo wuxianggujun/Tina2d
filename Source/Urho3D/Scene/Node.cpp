@@ -1396,7 +1396,7 @@ bool Node::IsChildOf(Node* node) const
 const Variant& Node::GetVar(StringHash key) const
 {
     VariantMap::ConstIterator i = vars_.Find(key);
-    return i != vars_.End() ? i->second_ : Variant::EMPTY;
+    return i != vars_.End() ? i->second : Variant::EMPTY;
 }
 
 Component* Node::GetComponent(StringHash type, bool recursive) const
@@ -1747,17 +1747,17 @@ void Node::PrepareNetworkUpdate()
     // Finally check for user var changes
     for (VariantMap::ConstIterator i = vars_.Begin(); i != vars_.End(); ++i)
     {
-        VariantMap::ConstIterator j = networkState_->previousVars_.Find(i->first_);
-        if (j == networkState_->previousVars_.End() || j->second_ != i->second_)
+        VariantMap::ConstIterator j = networkState_->previousVars_.Find(i->first);
+        if (j == networkState_->previousVars_.End() || j->second != i->second)
         {
-            networkState_->previousVars_[i->first_] = i->second_;
+            networkState_->previousVars_[i->first] = i->second;
 
             // Mark the var dirty in all replication states that are tracking this node
             for (auto j = networkState_->replicationStates_.begin();
                  j != networkState_->replicationStates_.end(); ++j)
             {
                 auto* nodeState = static_cast<NodeReplicationState*>(*j);
-                nodeState->dirtyVars_.insert(i->first_);
+                nodeState->dirtyVars_.insert(i->first);
 
                 if (!nodeState->markedDirty_)
                 {

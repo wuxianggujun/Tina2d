@@ -135,8 +135,8 @@ FontFace* Font::GetFace(float pointSize)
     HashMap<int, SharedPtr<FontFace>>::Iterator i = faces_.Find(key);
     if (i != faces_.End())
     {
-        if (!i->second_->IsDataLost())
-            return i->second_;
+        if (!i->second->IsDataLost())
+            return i->second;
         else
         {
             // Erase and reload face if texture data lost (OpenGL mode only)

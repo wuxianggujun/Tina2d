@@ -41,7 +41,7 @@ void SceneResolver::Resolve()
     HashSet<StringHash> noIDAttributes;
     for (HashMap<ComponentId, WeakPtr<Component>>::ConstIterator i = components_.Begin(); i != components_.End(); ++i)
     {
-        Component* component = i->second_;
+        Component* component = i->second;
         if (!component || noIDAttributes.Contains(component->GetType()))
             continue;
 
@@ -65,9 +65,9 @@ void SceneResolver::Resolve()
                 {
                     HashMap<NodeId, WeakPtr<Node>>::ConstIterator k = nodes_.Find(oldNodeID);
 
-                    if (k != nodes_.End() && k->second_)
+                    if (k != nodes_.End() && k->second)
                     {
-                        NodeId newNodeID = k->second_->GetID();
+                        NodeId newNodeID = k->second->GetID();
                         component->SetAttribute(j, Variant(newNodeID));
                     }
                     else
@@ -83,9 +83,9 @@ void SceneResolver::Resolve()
                 {
                     HashMap<ComponentId, WeakPtr<Component>>::ConstIterator k = components_.Find(oldComponentID);
 
-                    if (k != components_.End() && k->second_)
+                    if (k != components_.End() && k->second)
                     {
-                        ComponentId newComponentID = k->second_->GetID();
+                        ComponentId newComponentID = k->second->GetID();
                         component->SetAttribute(j, Variant(newComponentID));
                     }
                     else
@@ -110,8 +110,8 @@ void SceneResolver::Resolve()
                         NodeId oldNodeID = oldNodeIDs[k].GetU32();
                         HashMap<NodeId, WeakPtr<Node>>::ConstIterator l = nodes_.Find(oldNodeID);
 
-                        if (l != nodes_.End() && l->second_)
-                            newIDs.Push(l->second_->GetID());
+                        if (l != nodes_.End() && l->second)
+                            newIDs.Push(l->second->GetID());
                         else
                         {
                             // If node was not found, retain number of elements, just store ID 0

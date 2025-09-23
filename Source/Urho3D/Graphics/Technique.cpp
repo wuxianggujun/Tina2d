@@ -410,9 +410,9 @@ void Technique::RemovePass(const String& name)
     HashMap<String, i32>::ConstIterator i = passIndices.Find(name.ToLower());
     if (i == passIndices.End())
         return;
-    else if (i->second_ < passes_.Size() && passes_[i->second_].Get())
+    else if (i->second < passes_.Size() && passes_[i->second].Get())
     {
-        passes_[i->second_].Reset();
+        passes_[i->second].Reset();
         SetMemoryUse((unsigned)(sizeof(Technique) + GetNumPasses() * sizeof(Pass)));
     }
 }
@@ -420,19 +420,19 @@ void Technique::RemovePass(const String& name)
 bool Technique::HasPass(const String& name) const
 {
     HashMap<String, i32>::ConstIterator i = passIndices.Find(name.ToLower());
-    return i != passIndices.End() ? HasPass(i->second_) : false;
+    return i != passIndices.End() ? HasPass(i->second) : false;
 }
 
 Pass* Technique::GetPass(const String& name) const
 {
     HashMap<String, i32>::ConstIterator i = passIndices.Find(name.ToLower());
-    return i != passIndices.End() ? GetPass(i->second_) : nullptr;
+    return i != passIndices.End() ? GetPass(i->second) : nullptr;
 }
 
 Pass* Technique::GetSupportedPass(const String& name) const
 {
     HashMap<String, i32>::ConstIterator i = passIndices.Find(name.ToLower());
-    return i != passIndices.End() ? GetSupportedPass(i->second_) : nullptr;
+    return i != passIndices.End() ? GetSupportedPass(i->second) : nullptr;
 }
 
 i32 Technique::GetNumPasses() const
@@ -487,13 +487,13 @@ SharedPtr<Technique> Technique::CloneWithDefines(const String& vsDefines, const 
     // Return existing if possible
     HashMap<Pair<StringHash, StringHash>, SharedPtr<Technique>>::Iterator i = cloneTechniques_.Find(key);
     if (i != cloneTechniques_.End())
-        return i->second_;
+        return i->second;
 
     // Set same name as the original for the clones to ensure proper serialization of the material. This should not be a problem
     // since the clones are never stored to the resource cache
     i = cloneTechniques_.Insert(MakePair(key, Clone(GetName())));
 
-    for (Vector<SharedPtr<Pass>>::ConstIterator j = i->second_->passes_.Begin(); j != i->second_->passes_.End(); ++j)
+    for (Vector<SharedPtr<Pass>>::ConstIterator j = i->second->passes_.Begin(); j != i->second->passes_.End(); ++j)
     {
         Pass* pass = (*j);
         if (!pass)
@@ -505,7 +505,7 @@ SharedPtr<Technique> Technique::CloneWithDefines(const String& vsDefines, const 
             pass->SetPixelShaderDefines(pass->GetPixelShaderDefines() + " " + psDefines);
     }
 
-    return i->second_;
+    return i->second;
 }
 
 i32 Technique::GetPassIndex(const String& passName)
@@ -527,7 +527,7 @@ i32 Technique::GetPassIndex(const String& passName)
     HashMap<String, i32>::Iterator i = passIndices.Find(nameLower);
     if (i != passIndices.End())
     {
-        return i->second_;
+        return i->second;
     }
     else
     {

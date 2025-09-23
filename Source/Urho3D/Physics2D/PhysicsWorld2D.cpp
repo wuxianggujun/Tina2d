@@ -297,7 +297,7 @@ void PhysicsWorld2D::Update(float timeStep)
         for (HashMap<RigidBody2D*, DelayedWorldTransform2D>::Iterator i = delayedWorldTransforms_.Begin();
             i != delayedWorldTransforms_.End();)
         {
-            const DelayedWorldTransform2D& transform = i->second_;
+            const DelayedWorldTransform2D& transform = i->second;
 
             // If parent's transform has already been assigned, can proceed
             if (!delayedWorldTransforms_.Contains(transform.parentRigidBody_))

@@ -95,9 +95,9 @@ bool Shader::EndLoad()
 {
     // If variations had already been created, release them and require recompile
     for (HashMap<StringHash, SharedPtr<ShaderVariation>>::Iterator i = vsVariations_.Begin(); i != vsVariations_.End(); ++i)
-        i->second_->Release();
+        i->second->Release();
     for (HashMap<StringHash, SharedPtr<ShaderVariation>>::Iterator i = psVariations_.Begin(); i != psVariations_.End(); ++i)
-        i->second_->Release();
+        i->second->Release();
 
     return true;
 }
@@ -121,22 +121,22 @@ ShaderVariation* Shader::GetVariation(ShaderType type, const char* defines)
 
         i = variations.Find(normalizedHash);
         if (i != variations.End())
-            variations.Insert(MakePair(definesHash, i->second_));
+            variations.Insert(MakePair(definesHash, i->second));
         else
         {
             // No shader variation found. Create new
             i = variations.Insert(MakePair(normalizedHash, SharedPtr<ShaderVariation>(new ShaderVariation(this, type))));
             if (definesHash != normalizedHash)
-                variations.Insert(MakePair(definesHash, i->second_));
+                variations.Insert(MakePair(definesHash, i->second));
 
-            i->second_->SetName(GetFileName(GetName()));
-            i->second_->SetDefines(normalizedDefines);
+            i->second->SetName(GetFileName(GetName()));
+            i->second->SetDefines(normalizedDefines);
             ++numVariations_;
             RefreshMemoryUse();
         }
     }
 
-    return i->second_;
+    return i->second;
 }
 
 bool Shader::ProcessSource(String& code, Deserializer& source)

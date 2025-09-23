@@ -327,8 +327,8 @@ void Renderer::SetMaxShadowMaps(int shadowMaps)
     maxShadowMaps_ = shadowMaps;
     for (HashMap<int, Vector<SharedPtr<Texture2D>>>::Iterator i = shadowMaps_.Begin(); i != shadowMaps_.End(); ++i)
     {
-        if ((int)i->second_.Size() > maxShadowMaps_)
-            i->second_.Resize((unsigned)maxShadowMaps_);
+        if ((int)i->second.Size() > maxShadowMaps_)
+            i->second.Resize((unsigned)maxShadowMaps_);
     }
 }
 
@@ -707,7 +707,7 @@ void Renderer::StorePreparedView(View* view, Camera* camera)
 View* Renderer::GetPreparedView(Camera* camera)
 {
     HashMap<Camera*, WeakPtr<View>>::Iterator i = preparedViews_.Find(camera);
-    return i != preparedViews_.End() ? i->second_ : nullptr;
+    return i != preparedViews_.End() ? i->second : nullptr;
 }
 
 View* Renderer::GetActualView(View* view)
@@ -1077,7 +1077,7 @@ void Renderer::RemoveUnusedBuffers()
     for (HashMap<hash64, Vector<SharedPtr<Texture>>>::Iterator i = screenBuffers_.Begin(); i != screenBuffers_.End();)
     {
         HashMap<hash64, Vector<SharedPtr<Texture>>>::Iterator current = i++;
-        Vector<SharedPtr<Texture>>& buffers = current->second_;
+        Vector<SharedPtr<Texture>>& buffers = current->second;
         for (i32 j = buffers.Size() - 1; j >= 0; --j)
         {
             Texture* buffer = buffers[j];
@@ -1090,7 +1090,7 @@ void Renderer::RemoveUnusedBuffers()
         }
         if (buffers.Empty())
         {
-            screenBufferAllocations_.Erase(current->first_);
+            screenBufferAllocations_.Erase(current->first);
             screenBuffers_.Erase(current);
         }
     }
@@ -1099,13 +1099,13 @@ void Renderer::RemoveUnusedBuffers()
 void Renderer::ResetShadowMapAllocations()
 {
     for (HashMap<int, Vector<Light*>>::Iterator i = shadowMapAllocations_.Begin(); i != shadowMapAllocations_.End(); ++i)
-        i->second_.Clear();
+        i->second.Clear();
 }
 
 void Renderer::ResetScreenBufferAllocations()
 {
     for (HashMap<hash64, i32>::Iterator i = screenBufferAllocations_.Begin(); i != screenBufferAllocations_.End(); ++i)
-        i->second_ = 0;
+        i->second = 0;
 }
 
 void Renderer::Initialize()

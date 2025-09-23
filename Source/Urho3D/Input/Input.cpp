@@ -1045,7 +1045,7 @@ int Input::AddScreenJoystick(XMLFile* layoutFile, XMLFile* styleFile)
 
                     HashMap<String, int>::Iterator i = keyBindingMap.Find(key);
                     if (i != keyBindingMap.End())
-                        keyBinding = i->second_;
+                        keyBinding = i->second;
                     else
                     {
                         URHO3D_LOGERRORF("Unsupported key binding: %s", key.CString());
@@ -1067,7 +1067,7 @@ int Input::AddScreenJoystick(XMLFile* layoutFile, XMLFile* styleFile)
 
                 HashMap<String, int>::Iterator i = mouseButtonBindingMap.Find(mouseButton);
                 if (i != mouseButtonBindingMap.End())
-                    element->SetVar(VAR_BUTTON_MOUSE_BUTTON_BINDING, i->second_);
+                    element->SetVar(VAR_BUTTON_MOUSE_BUTTON_BINDING, i->second);
                 else
                     URHO3D_LOGERRORF("Unsupported mouse button binding: %s", mouseButton.CString());
             }
@@ -1110,7 +1110,7 @@ int Input::AddScreenJoystick(XMLFile* layoutFile, XMLFile* styleFile)
                         {
                             HashMap<String, int>::Iterator i = keyBindingMap.Find(keyBindings[j]);
                             if (i != keyBindingMap.End())
-                                mappedKeyBinding[j] = i->second_;
+                                mappedKeyBinding[j] = i->second;
                             else
                                 URHO3D_LOGERRORF("%s - %s cannot be mapped, fallback to '%c'", name.CString(), keyBindings[j].CString(),
                                     mappedKeyBinding[j]);
@@ -1451,7 +1451,7 @@ TouchState* Input::GetTouch(i32 index) const
     while (index--)
         ++i;
 
-    return const_cast<TouchState*>(&i->second_);
+    return const_cast<TouchState*>(&i->second);
 }
 
 JoystickState* Input::GetJoystickByIndex(i32 index)
@@ -1462,7 +1462,7 @@ JoystickState* Input::GetJoystickByIndex(i32 index)
     for (HashMap<SDL_JoystickID, JoystickState>::Iterator i = joysticks_.Begin(); i != joysticks_.End(); ++i)
     {
         if (compare++ == index)
-            return &(i->second_);
+            return &(i->second);
     }
 
     return nullptr;
@@ -1472,8 +1472,8 @@ JoystickState* Input::GetJoystickByName(const String& name)
 {
     for (HashMap<SDL_JoystickID, JoystickState>::Iterator i = joysticks_.Begin(); i != joysticks_.End(); ++i)
     {
-        if (i->second_.name_ == name)
-            return &(i->second_);
+        if (i->second.name_ == name)
+            return &(i->second);
     }
 
     return nullptr;
@@ -1482,13 +1482,13 @@ JoystickState* Input::GetJoystickByName(const String& name)
 JoystickState* Input::GetJoystick(SDL_JoystickID id)
 {
     HashMap<SDL_JoystickID, JoystickState>::Iterator i = joysticks_.Find(id);
-    return i != joysticks_.End() ? &(i->second_) : nullptr;
+    return i != joysticks_.End() ? &(i->second) : nullptr;
 }
 
 bool Input::IsScreenJoystickVisible(SDL_JoystickID id) const
 {
     HashMap<SDL_JoystickID, JoystickState>::ConstIterator i = joysticks_.Find(id);
-    return i != joysticks_.End() && i->second_.screenJoystick_ && i->second_.screenJoystick_->IsVisible();
+    return i != joysticks_.End() && i->second.screenJoystick_ && i->second.screenJoystick_->IsVisible();
 }
 
 bool Input::GetScreenKeyboardSupport() const
@@ -1594,14 +1594,14 @@ void Input::ResetInputAccumulation()
     mouseMoveWheel_ = 0;
     for (HashMap<SDL_JoystickID, JoystickState>::Iterator i = joysticks_.Begin(); i != joysticks_.End(); ++i)
     {
-        for (i32 j = 0; j < i->second_.buttonPress_.size(); ++j)
-            i->second_.buttonPress_[j] = false;
+        for (i32 j = 0; j < i->second.buttonPress_.size(); ++j)
+            i->second.buttonPress_[j] = false;
     }
 
     // Reset touch delta movement
     for (HashMap<int, TouchState>::Iterator i = touches_.Begin(); i != touches_.End(); ++i)
     {
-        TouchState& state = i->second_;
+        TouchState& state = i->second;
         state.lastPosition_ = state.position_;
         state.delta_ = IntVector2::ZERO;
     }
@@ -1660,7 +1660,7 @@ void Input::ResetState()
 
     /// \todo Check if resetting joystick state on input focus loss is even necessary
     for (HashMap<SDL_JoystickID, JoystickState>::Iterator i = joysticks_.Begin(); i != joysticks_.End(); ++i)
-        i->second_.Reset();
+        i->second.Reset();
 
     ResetTouches();
 
@@ -1678,7 +1678,7 @@ void Input::ResetTouches()
 {
     for (HashMap<int, TouchState>::Iterator i = touches_.Begin(); i != touches_.End(); ++i)
     {
-        TouchState& state = i->second_;
+        TouchState& state = i->second;
 
         using namespace TouchEnd;
 
@@ -1702,7 +1702,7 @@ i32 Input::GetTouchIndexFromID(int touchID)
     HashMap<int, int>::ConstIterator i = touchIDMap_.Find(touchID);
     if (i != touchIDMap_.End())
     {
-        return i->second_;
+        return i->second;
     }
 
     i32 index = PopTouchIndex();
@@ -2421,7 +2421,7 @@ void Input::HandleScreenMode(StringHash eventType, VariantMap& eventData)
     // Resize screen joysticks to new screen size
     for (HashMap<SDL_JoystickID, JoystickState>::Iterator i = joysticks_.Begin(); i != joysticks_.End(); ++i)
     {
-        UIElement* screenjoystick = i->second_.screenJoystick_;
+        UIElement* screenjoystick = i->second.screenJoystick_;
         if (screenjoystick)
             screenjoystick->SetSize(graphics_->GetWidth(), graphics_->GetHeight());
     }

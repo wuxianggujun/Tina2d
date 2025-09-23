@@ -342,8 +342,8 @@ bool Serializer::WriteVariantMap(const VariantMap& value)
     success &= WriteVLE(value.Size());
     for (VariantMap::ConstIterator i = value.Begin(); i != value.End(); ++i)
     {
-        WriteStringHash(i->first_);
-        WriteVariant(i->second_);
+        WriteStringHash(i->first);
+        WriteVariant(i->second);
     }
     return success;
 }

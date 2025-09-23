@@ -1010,7 +1010,7 @@ Variant Serializable::GetInstanceDefault(const String& name) const
     {
         VariantMap::ConstIterator i = instanceDefaultValues_->Find(name);
         if (i != instanceDefaultValues_->End())
-            return i->second_;
+            return i->second;
     }
 
     return Variant::EMPTY;

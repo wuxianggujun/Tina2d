@@ -196,7 +196,7 @@ void FileWatcher::StopWatching()
         CloseHandle((HANDLE)dirHandle_);
 #elif defined(__linux__)
         for (HashMap<int, String>::Iterator i = dirHandle_.Begin(); i != dirHandle_.End(); ++i)
-            inotify_rm_watch(watchHandle_, i->first_);
+            inotify_rm_watch(watchHandle_, i->first);
         dirHandle_.Clear();
 #elif defined(__APPLE__) && !defined(IOS) && !defined(TVOS)
         CloseFileWatcher(watcher_);
@@ -327,9 +327,9 @@ bool FileWatcher::GetNextChange(String& dest)
     {
         for (HashMap<String, Timer>::Iterator i = changes_.Begin(); i != changes_.End(); ++i)
         {
-            if (i->second_.GetMSec(false) >= delayMsec)
+            if (i->second.GetMSec(false) >= delayMsec)
             {
-                dest = i->first_;
+                dest = i->first;
                 changes_.Erase(i);
                 return true;
             }

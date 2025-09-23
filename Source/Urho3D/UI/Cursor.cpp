@@ -72,10 +72,10 @@ Cursor::~Cursor()
 {
     for (HashMap<String, CursorShapeInfo>::Iterator i = shapeInfos_.Begin(); i != shapeInfos_.End(); ++i)
     {
-        if (i->second_.osCursor_)
+        if (i->second.osCursor_)
         {
-            SDL_DestroyCursor(i->second_.osCursor_);
-            i->second_.osCursor_ = nullptr;
+            SDL_DestroyCursor(i->second.osCursor_);
+            i->second.osCursor_ = nullptr;
         }
     }
 }
@@ -219,14 +219,14 @@ VariantVector Cursor::GetShapesAttr() const
 
     for (HashMap<String, CursorShapeInfo>::ConstIterator i = shapeInfos_.Begin(); i != shapeInfos_.End(); ++i)
     {
-        if (i->second_.imageRect_ != IntRect::ZERO)
+        if (i->second.imageRect_ != IntRect::ZERO)
         {
             // Could use a map but this simplifies the UI xml.
             VariantVector shape;
-            shape.Push(i->first_);
-            shape.Push(GetResourceRef(i->second_.texture_, Texture2D::GetTypeStatic()));
-            shape.Push(i->second_.imageRect_);
-            shape.Push(i->second_.hotSpot_);
+            shape.Push(i->first);
+            shape.Push(GetResourceRef(i->second.texture_, Texture2D::GetTypeStatic()));
+            shape.Push(i->second.imageRect_);
+            shape.Push(i->second.hotSpot_);
             ret.Push(shape);
         }
     }

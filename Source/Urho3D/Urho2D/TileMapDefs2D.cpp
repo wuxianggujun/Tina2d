@@ -128,16 +128,16 @@ void PropertySet2D::Load(const XMLElement& element)
 
 bool PropertySet2D::HasProperty(const String& name) const
 {
-    return nameToValueMapping_.Find(name) != nameToValueMapping_.End();
+    return nameToValueMapping_.find(name) != nameToValueMapping_.end();
 }
 
 const String& PropertySet2D::GetProperty(const String& name) const
 {
-    HashMap<String, String>::ConstIterator i = nameToValueMapping_.Find(name);
-    if (i == nameToValueMapping_.End())
+    auto i = nameToValueMapping_.find(name);
+    if (i == nameToValueMapping_.end())
         return String::EMPTY;
 
-    return i->second_;
+    return i->second;
 }
 
 Tile2D::Tile2D() :

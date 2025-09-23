@@ -300,7 +300,7 @@ void UI::Update(float timeStep)
 
     // Expire hovers
     for (HashMap<WeakPtr<UIElement>, bool>::Iterator i = hoveredElements_.Begin(); i != hoveredElements_.End(); ++i)
-        i->second_ = false;
+        i->second = false;
 
     auto* input = GetSubsystem<Input>();
     bool mouseGrabbed = input->IsMouseGrabbed();
@@ -314,8 +314,8 @@ void UI::Update(float timeStep)
     {
         for (HashMap<WeakPtr<UIElement>, UI::DragData*>::Iterator i = dragElements_.Begin(); i != dragElements_.End();)
         {
-            WeakPtr<UIElement> dragElement = i->first_;
-            UI::DragData* dragData = i->second_;
+            WeakPtr<UIElement> dragElement = i->first;
+            UI::DragData* dragData = i->second;
 
             if (!dragElement)
             {
@@ -367,9 +367,9 @@ void UI::Update(float timeStep)
     // End hovers that expired without refreshing
     for (HashMap<WeakPtr<UIElement>, bool>::Iterator i = hoveredElements_.Begin(); i != hoveredElements_.End();)
     {
-        if (i->first_.Expired() || !i->second_)
+        if (i->first.Expired() || !i->second)
         {
-            UIElement* element = i->first_;
+            UIElement* element = i->first;
             if (element)
             {
                 using namespace HoverEnd;
@@ -867,8 +867,8 @@ const Vector<UIElement*> UI::GetDragElements()
 
     for (HashMap<WeakPtr<UIElement>, UI::DragData*>::Iterator i = dragElements_.Begin(); i != dragElements_.End();)
     {
-        WeakPtr<UIElement> dragElement = i->first_;
-        UI::DragData* dragData = i->second_;
+        WeakPtr<UIElement> dragElement = i->first;
+        UI::DragData* dragData = i->second;
 
         if (!dragElement)
         {
@@ -1185,14 +1185,14 @@ void UI::Render(VertexBuffer* buffer, const Vector<UIBatch>& batches, unsigned b
                 auto shader_parameters = batch.customMaterial_->GetShaderParameters();
                 for (auto it = shader_parameters.Begin(); it != shader_parameters.End(); ++it)
                 {
-                    graphics_->SetShaderParameter(it->second_.name_, it->second_.value_);
+                    graphics_->SetShaderParameter(it->second.name_, it->second.value_);
                 }
             }
             // Apply custom shader textures
             auto textures = batch.customMaterial_->GetTextures();
             for (auto it = textures.Begin(); it != textures.End(); ++it)
             {
-                graphics_->SetTexture(it->first_, it->second_);
+                graphics_->SetTexture(it->first, it->second);
             }
         }
 
@@ -1205,7 +1205,7 @@ void UI::Render(VertexBuffer* buffer, const Vector<UIBatch>& batches, unsigned b
             auto textures = batch.customMaterial_->GetTextures();
             for (auto it = textures.Begin(); it != textures.End(); ++it)
             {
-                graphics_->SetTexture(it->first_, 0);
+                graphics_->SetTexture(it->first, 0);
             }
         }
     }
@@ -1399,8 +1399,8 @@ void UI::ProcessHover(const IntVector2& windowCursorPos, MouseButtonFlags button
 
     for (HashMap<WeakPtr<UIElement>, UI::DragData*>::Iterator i = dragElements_.Begin(); i != dragElements_.End();)
     {
-        WeakPtr<UIElement> dragElement = i->first_;
-        UI::DragData* dragData = i->second_;
+        WeakPtr<UIElement> dragElement = i->first;
+        UI::DragData* dragData = i->second;
 
         if (!dragElement)
         {
@@ -1573,8 +1573,8 @@ void UI::ProcessClickEnd(const IntVector2& windowCursorPos, MouseButton button, 
     // Handle end of drag
     for (HashMap<WeakPtr<UIElement>, UI::DragData*>::Iterator i = dragElements_.Begin(); i != dragElements_.End();)
     {
-        WeakPtr<UIElement> dragElement = i->first_;
-        UI::DragData* dragData = i->second_;
+        WeakPtr<UIElement> dragElement = i->first;
+        UI::DragData* dragData = i->second;
 
         if (!dragElement || !cursorVisible)
         {
@@ -1641,8 +1641,8 @@ void UI::ProcessMove(const IntVector2& windowCursorPos, const IntVector2& cursor
         bool mouseGrabbed = input->IsMouseGrabbed();
         for (HashMap<WeakPtr<UIElement>, UI::DragData*>::Iterator i = dragElements_.Begin(); i != dragElements_.End();)
         {
-            WeakPtr<UIElement> dragElement = i->first_;
-            UI::DragData* dragData = i->second_;
+            WeakPtr<UIElement> dragElement = i->first;
+            UI::DragData* dragData = i->second;
 
             if (!dragElement)
             {
@@ -1969,7 +1969,7 @@ void UI::HandleTouchEnd(StringHash eventType, VariantMap& eventData)
     // Clear any drag events that were using the touch id
     for (auto i = touchDragElements_.Begin(); i != touchDragElements_.End();)
     {
-        const MouseButtonFlags touches = i->second_;
+        const MouseButtonFlags touches = i->second;
         if (touches & touchId)
             i = touchDragElements_.Erase(i);
         else
@@ -2140,7 +2140,7 @@ HashMap<WeakPtr<UIElement>, UI::DragData*>::Iterator UI::DragElementErase(HashMa
 
     dragElementsConfirmed_.Clear();
 
-    DragData* dragData = i->second_;
+    DragData* dragData = i->second;
 
     if (!dragData->dragBeginPending)
         --dragConfirmedCount_;
@@ -2163,8 +2163,8 @@ void UI::ProcessDragCancel()
 
     for (HashMap<WeakPtr<UIElement>, UI::DragData*>::Iterator i = dragElements_.Begin(); i != dragElements_.End();)
     {
-        WeakPtr<UIElement> dragElement = i->first_;
-        UI::DragData* dragData = i->second_;
+        WeakPtr<UIElement> dragElement = i->first;
+        UI::DragData* dragData = i->second;
 
         if (dragElement && dragElement->IsEnabled() && dragElement->IsVisible() && !dragData->dragBeginPending)
         {

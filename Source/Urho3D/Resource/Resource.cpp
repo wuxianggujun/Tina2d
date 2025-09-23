@@ -140,7 +140,7 @@ void ResourceWithMetadata::RemoveAllMetadata()
 const Urho3D::Variant& ResourceWithMetadata::GetMetadata(const String& name) const
 {
     auto it = metadata_.Find(StringHash(name));
-    return it != metadata_.End() ? it->second_ : Variant::EMPTY;
+    return it != metadata_.End() ? it->second : Variant::EMPTY;
 }
 
 bool ResourceWithMetadata::HasMetadata() const

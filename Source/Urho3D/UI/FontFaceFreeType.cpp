@@ -276,7 +276,7 @@ const FontGlyph* FontFaceFreeType::GetGlyph(c32 c)
     HashMap<c32, FontGlyph>::Iterator i = glyphMapping_.Find(c);
     if (i != glyphMapping_.End())
     {
-        FontGlyph& glyph = i->second_;
+        FontGlyph& glyph = i->second;
         glyph.used_ = true;
         return &glyph;
     }
@@ -286,7 +286,7 @@ const FontGlyph* FontFaceFreeType::GetGlyph(c32 c)
         HashMap<c32, FontGlyph>::Iterator i = glyphMapping_.Find(c);
         if (i != glyphMapping_.End())
         {
-            FontGlyph& glyph = i->second_;
+            FontGlyph& glyph = i->second;
             glyph.used_ = true;
             return &glyph;
         }

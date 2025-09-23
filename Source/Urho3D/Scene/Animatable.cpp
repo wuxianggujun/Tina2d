@@ -271,7 +271,7 @@ void Animatable::SetAnimationTime(float time)
     {
         for (HashMap<String, SharedPtr<AttributeAnimationInfo>>::ConstIterator i = attributeAnimationInfos_.Begin();
             i != attributeAnimationInfos_.End(); ++i)
-            i->second_->SetTime(time);
+            i->second->SetTime(time);
     }
 }
 

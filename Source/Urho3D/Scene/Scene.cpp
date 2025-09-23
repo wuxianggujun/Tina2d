@@ -69,9 +69,9 @@ Scene::~Scene()
 
     // Remove scene reference and owner from all nodes that still exist
     for (HashMap<NodeId, Node*>::Iterator i = replicatedNodes_.Begin(); i != replicatedNodes_.End(); ++i)
-        i->second_->ResetScene();
+        i->second->ResetScene();
     for (HashMap<NodeId, Node*>::Iterator i = localNodes_.Begin(); i != localNodes_.End(); ++i)
-        i->second_->ResetScene();
+        i->second->ResetScene();
 }
 
 void Scene::RegisterObject(Context* context)
@@ -192,7 +192,7 @@ void Scene::AddReplicationState(NodeReplicationState* state)
 
     // This is the first update for a new connection. Mark all replicated nodes dirty
     for (HashMap<NodeId, Node*>::ConstIterator i = replicatedNodes_.Begin(); i != replicatedNodes_.End(); ++i)
-        state->sceneState_->dirtyNodes_.Insert(i->first_);
+        state->sceneState_->dirtyNodes_.Insert(i->first);
 }
 
 bool Scene::LoadXML(Deserializer& source)
@@ -689,12 +689,12 @@ Node* Scene::GetNode(NodeId id) const
     if (IsReplicatedID(id))
     {
         HashMap<NodeId, Node*>::ConstIterator i = replicatedNodes_.Find(id);
-        return i != replicatedNodes_.End() ? i->second_ : nullptr;
+        return i != replicatedNodes_.End() ? i->second : nullptr;
     }
     else
     {
         HashMap<NodeId, Node*>::ConstIterator i = localNodes_.Find(id);
-        return i != localNodes_.End() ? i->second_ : nullptr;
+        return i != localNodes_.End() ? i->second : nullptr;
     }
 }
 
@@ -704,7 +704,7 @@ bool Scene::GetNodesWithTag(Vector<Node*>& dest, const String& tag) const
     HashMap<StringHash, Vector<Node*>>::ConstIterator it = taggedNodes_.Find(tag);
     if (it != taggedNodes_.End())
     {
-        dest = it->second_;
+        dest = it->second;
         return true;
     }
     else
@@ -716,12 +716,12 @@ Component* Scene::GetComponent(ComponentId id) const
     if (IsReplicatedID(id))
     {
         HashMap<ComponentId, Component*>::ConstIterator i = replicatedComponents_.Find(id);
-        return i != replicatedComponents_.End() ? i->second_ : nullptr;
+        return i != replicatedComponents_.End() ? i->second : nullptr;
     }
     else
     {
         HashMap<ComponentId, Component*>::ConstIterator i = localComponents_.Find(id);
-        return i != localComponents_.End() ? i->second_ : nullptr;
+        return i != localComponents_.End() ? i->second : nullptr;
     }
 }
 
@@ -735,7 +735,7 @@ float Scene::GetAsyncProgress() const
 const String& Scene::GetVarName(StringHash hash) const
 {
     HashMap<StringHash, String>::ConstIterator i = varNames_.Find(hash);
-    return i != varNames_.End() ? i->second_ : String::EMPTY;
+    return i != varNames_.End() ? i->second : String::EMPTY;
 }
 
 void Scene::Update(float timeStep)
@@ -908,10 +908,10 @@ void Scene::NodeAdded(Node* node)
     if (IsReplicatedID(id))
     {
         HashMap<NodeId, Node*>::Iterator i = replicatedNodes_.Find(id);
-        if (i != replicatedNodes_.End() && i->second_ != node)
+        if (i != replicatedNodes_.End() && i->second != node)
         {
             URHO3D_LOGWARNING("Overwriting node with ID " + String(id));
-            NodeRemoved(i->second_);
+            NodeRemoved(i->second);
         }
 
         replicatedNodes_[id] = node;
@@ -922,10 +922,10 @@ void Scene::NodeAdded(Node* node)
     else
     {
         HashMap<NodeId, Node*>::Iterator i = localNodes_.Find(id);
-        if (i != localNodes_.End() && i->second_ != node)
+        if (i != localNodes_.End() && i->second != node)
         {
             URHO3D_LOGWARNING("Overwriting node with ID " + String(id));
-            NodeRemoved(i->second_);
+            NodeRemoved(i->second);
         }
         localNodes_[id] = node;
     }
@@ -1007,10 +1007,10 @@ void Scene::ComponentAdded(Component* component)
     if (IsReplicatedID(id))
     {
         HashMap<ComponentId, Component*>::Iterator i = replicatedComponents_.Find(id);
-        if (i != replicatedComponents_.End() && i->second_ != component)
+        if (i != replicatedComponents_.End() && i->second != component)
         {
             URHO3D_LOGWARNING("Overwriting component with ID " + String(id));
-            ComponentRemoved(i->second_);
+            ComponentRemoved(i->second);
         }
 
         replicatedComponents_[id] = component;
@@ -1018,10 +1018,10 @@ void Scene::ComponentAdded(Component* component)
     else
     {
         HashMap<ComponentId, Component*>::Iterator i = localComponents_.Find(id);
-        if (i != localComponents_.End() && i->second_ != component)
+        if (i != localComponents_.End() && i->second != component)
         {
             URHO3D_LOGWARNING("Overwriting component with ID " + String(id));
-            ComponentRemoved(i->second_);
+            ComponentRemoved(i->second);
         }
 
         localComponents_[id] = component;
@@ -1061,7 +1061,7 @@ String Scene::GetVarNamesAttr() const
     if (!varNames_.Empty())
     {
         for (HashMap<StringHash, String>::ConstIterator i = varNames_.Begin(); i != varNames_.End(); ++i)
-            ret += i->second_ + ";";
+            ret += i->second + ";";
 
         ret.Resize(ret.Length() - 1);
     }
@@ -1094,10 +1094,10 @@ void Scene::CleanupConnection(Connection* connection)
     Node::CleanupConnection(connection);
 
     for (HashMap<NodeId, Node*>::Iterator i = replicatedNodes_.Begin(); i != replicatedNodes_.End(); ++i)
-        i->second_->CleanupConnection(connection);
+        i->second->CleanupConnection(connection);
 
     for (HashMap<ComponentId, Component*>::Iterator i = replicatedComponents_.Begin(); i != replicatedComponents_.End(); ++i)
-        i->second_->CleanupConnection(connection);
+        i->second->CleanupConnection(connection);
 }
 
 void Scene::MarkNetworkUpdate(Node* node)

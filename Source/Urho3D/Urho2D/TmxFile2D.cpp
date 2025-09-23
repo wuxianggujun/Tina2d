@@ -533,29 +533,29 @@ void TmxFile2D::AddLayer(TmxLayer2D *layer)
 
 Sprite2D* TmxFile2D::GetTileSprite(unsigned gid) const
 {
-    HashMap<unsigned, SharedPtr<Sprite2D>>::ConstIterator i = gidToSpriteMapping_.Find(gid);
-    if (i == gidToSpriteMapping_.End())
+    auto i = gidToSpriteMapping_.find(gid);
+    if (i == gidToSpriteMapping_.end())
         return nullptr;
 
-    return i->second_;
+    return i->second;
 }
 
 Vector<SharedPtr<TileMapObject2D>> TmxFile2D::GetTileCollisionShapes(unsigned gid) const
 {
     Vector<SharedPtr<TileMapObject2D>> tileShapes;
-    HashMap<unsigned, Vector<SharedPtr<TileMapObject2D>>>::ConstIterator i = gidToCollisionShapeMapping_.Find(gid);
-    if (i == gidToCollisionShapeMapping_.End())
+    auto i = gidToCollisionShapeMapping_.find(gid);
+    if (i == gidToCollisionShapeMapping_.end())
         return tileShapes;
 
-    return i->second_;
+    return i->second;
 }
 
 PropertySet2D* TmxFile2D::GetTilePropertySet(unsigned gid) const
 {
-    HashMap<unsigned, SharedPtr<PropertySet2D>>::ConstIterator i = gidToPropertySetMapping_.Find(gid);
-    if (i == gidToPropertySetMapping_.End())
+    auto i = gidToPropertySetMapping_.find(gid);
+    if (i == gidToPropertySetMapping_.end())
         return nullptr;
-    return i->second_;
+    return i->second;
 }
 
 const TmxLayer2D* TmxFile2D::GetLayer(unsigned index) const
@@ -604,8 +604,8 @@ bool TmxFile2D::LoadTileSet(const XMLElement& element)
     if (element.HasAttribute("source"))
     {
         String source = element.GetAttribute("source");
-        HashMap<String, SharedPtr<XMLFile>>::Iterator i = tsxXMLFiles_.Find(source);
-        if (i == tsxXMLFiles_.End())
+        auto i = tsxXMLFiles_.find(source);
+        if (i == tsxXMLFiles_.end())
         {
             SharedPtr<XMLFile> tsxXMLFile = LoadTSXFile(source);
             if (!tsxXMLFile)
@@ -617,7 +617,7 @@ bool TmxFile2D::LoadTileSet(const XMLElement& element)
             tileSetElem = tsxXMLFile->GetRoot("tileset");
         }
         else
-            tileSetElem = i->second_->GetRoot("tileset");
+            tileSetElem = i->second->GetRoot("tileset");
     }
     else
         tileSetElem = element;

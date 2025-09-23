@@ -362,7 +362,7 @@ bool View::Define(RenderSurface* renderTarget, Viewport* viewport)
             HashMap<i32, BatchQueue>::Iterator j = batchQueues_.Find(info.passIndex_);
             if (j == batchQueues_.End())
                 j = batchQueues_.Insert(Pair<i32, BatchQueue>(info.passIndex_, BatchQueue()));
-            info.batchQueue_ = &j->second_;
+            info.batchQueue_ = &j->second;
             SetQueueShaderDefines(*info.batchQueue_, command);
 
             scenePasses_.Push(info);
@@ -463,7 +463,7 @@ void View::Update(const FrameInfo& frame)
     activeOccluders_ = 0;
     vertexLightQueues_.Clear();
     for (HashMap<i32, BatchQueue>::Iterator i = batchQueues_.Begin(); i != batchQueues_.End(); ++i)
-        i->second_.Clear(maxSortedInstances);
+        i->second.Clear(maxSortedInstances);
 
     if (hasScenePasses_ && (!cullCamera_ || !octree_))
     {
@@ -683,7 +683,7 @@ void View::SetCommandShaderParameters(const RenderPathCommand& command)
 {
     const HashMap<StringHash, Variant>& parameters = command.shaderParameters_;
     for (HashMap<StringHash, Variant>::ConstIterator k = parameters.Begin(); k != parameters.End(); ++k)
-        graphics_->SetShaderParameter(k->first_, k->second_);
+        graphics_->SetShaderParameter(k->first, k->second);
 }
 
 void View::SetGBufferShaderParameters(const IntVector2& texSize, const IntRect& viewRect)
@@ -1065,12 +1065,12 @@ void View::GetBaseBatches()
                         if (i == vertexLightQueues_.End())
                         {
                             i = vertexLightQueues_.Insert(MakePair(hash, LightBatchQueue()));
-                            i->second_.light_ = nullptr;
-                            i->second_.shadowMap_ = nullptr;
-                            i->second_.vertexLights_ = drawableVertexLights;
+                            i->second.light_ = nullptr;
+                            i->second.shadowMap_ = nullptr;
+                            i->second.vertexLights_ = drawableVertexLights;
                         }
 
-                        destBatch.lightQueue_ = &(i->second_);
+                        destBatch.lightQueue_ = &(i->second);
                     }
                 }
                 else
@@ -2003,7 +2003,7 @@ void View::CheckMaterialForAuxView(Material* material)
 
     for (HashMap<TextureUnit, SharedPtr<Texture>>::ConstIterator i = textures.Begin(); i != textures.End(); ++i)
     {
-        Texture* texture = i->second_.Get();
+        Texture* texture = i->second.Get();
         if (texture && texture->GetUsage() == TEXTURE_RENDERTARGET)
         {
             // 2D-only：仅处理 2D 纹理的可见更新
@@ -2066,14 +2066,14 @@ void View::AddBatchToQueue(BatchQueue& queue, Batch& batch, Technique* tech, boo
             i = queue.batchGroups_.Insert(MakePair(key, newGroup));
         }
 
-        int oldSize = i->second_.instances_.Size();
-        i->second_.AddTransforms(batch);
+        int oldSize = i->second.instances_.Size();
+        i->second.AddTransforms(batch);
         // Convert to using instancing shaders when the instancing limit is reached
-        if (oldSize < minInstances_ && (int)i->second_.instances_.Size() >= minInstances_)
+        if (oldSize < minInstances_ && (int)i->second.instances_.Size() >= minInstances_)
         {
-            i->second_.geometryType_ = GEOM_INSTANCED;
-            renderer_->SetBatchShaders(i->second_, tech, allowShadows, queue);
-            i->second_.CalculateSortKey();
+            i->second.geometryType_ = GEOM_INSTANCED;
+            renderer_->SetBatchShaders(i->second, tech, allowShadows, queue);
+            i->second.CalculateSortKey();
         }
     }
     else
@@ -2113,7 +2113,7 @@ void View::PrepareInstancingBuffer()
     i32 totalInstances = 0;
 
     for (HashMap<i32, BatchQueue>::Iterator i = batchQueues_.Begin(); i != batchQueues_.End(); ++i)
-        totalInstances += i->second_.GetNumInstances();
+        totalInstances += i->second.GetNumInstances();
 
     for (Vector<LightBatchQueue>::Iterator i = lightQueues_.Begin(); i != lightQueues_.End(); ++i)
     {
@@ -2135,7 +2135,7 @@ void View::PrepareInstancingBuffer()
 
     const i32 stride = instancingBuffer->GetVertexSize();
     for (HashMap<i32, BatchQueue>::Iterator i = batchQueues_.Begin(); i != batchQueues_.End(); ++i)
-        i->second_.SetInstancingData(dest, stride, freeIndex);
+        i->second.SetInstancingData(dest, stride, freeIndex);
 
     for (Vector<LightBatchQueue>::Iterator i = lightQueues_.Begin(); i != lightQueues_.End(); ++i)
     {

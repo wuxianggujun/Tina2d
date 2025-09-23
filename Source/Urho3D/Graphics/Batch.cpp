@@ -474,14 +474,14 @@ Texture2D* shadowMap = nullptr;
         {
             const HashMap<StringHash, MaterialShaderParameter>& parameters = material_->GetShaderParameters();
             for (HashMap<StringHash, MaterialShaderParameter>::ConstIterator i = parameters.Begin(); i != parameters.End(); ++i)
-                graphics->SetShaderParameter(i->first_, i->second_.value_);
+                graphics->SetShaderParameter(i->first, i->second.value_);
         }
 
         const HashMap<TextureUnit, SharedPtr<Texture>>& textures = material_->GetTextures();
         for (HashMap<TextureUnit, SharedPtr<Texture>>::ConstIterator i = textures.Begin(); i != textures.End(); ++i)
         {
-            if (graphics->HasTextureUnit(i->first_))
-                graphics->SetTexture(i->first_, i->second_.Get());
+            if (graphics->HasTextureUnit(i->first))
+                graphics->SetTexture(i->first, i->second.Get());
         }
     }
 
@@ -594,7 +594,7 @@ void BatchQueue::SortBackToFront()
 
     unsigned index = 0;
     for (HashMap<BatchGroupKey, BatchGroup>::Iterator i = batchGroups_.Begin(); i != batchGroups_.End(); ++i)
-        sortedBatchGroups_[index++] = &i->second_;
+        sortedBatchGroups_[index++] = &i->second;
 
     Sort(sortedBatchGroups_.Begin(), sortedBatchGroups_.End(), CompareBatchGroupOrder);
 }
@@ -611,18 +611,18 @@ void BatchQueue::SortFrontToBack()
     // Sort each group front to back
     for (HashMap<BatchGroupKey, BatchGroup>::Iterator i = batchGroups_.Begin(); i != batchGroups_.End(); ++i)
     {
-        if (i->second_.instances_.Size() <= maxSortedInstances_)
+        if (i->second.instances_.Size() <= maxSortedInstances_)
         {
-            Sort(i->second_.instances_.Begin(), i->second_.instances_.End(), CompareInstancesFrontToBack);
-            if (i->second_.instances_.Size())
-                i->second_.distance_ = i->second_.instances_[0].distance_;
+            Sort(i->second.instances_.Begin(), i->second.instances_.End(), CompareInstancesFrontToBack);
+            if (i->second.instances_.Size())
+                i->second.distance_ = i->second.instances_[0].distance_;
         }
         else
         {
             float minDistance = M_INFINITY;
-            for (Vector<InstanceData>::ConstIterator j = i->second_.instances_.Begin(); j != i->second_.instances_.End(); ++j)
+            for (Vector<InstanceData>::ConstIterator j = i->second.instances_.Begin(); j != i->second.instances_.End(); ++j)
                 minDistance = Min(minDistance, j->distance_);
-            i->second_.distance_ = minDistance;
+            i->second.distance_ = minDistance;
         }
     }
 
@@ -630,7 +630,7 @@ void BatchQueue::SortFrontToBack()
 
     unsigned index = 0;
     for (HashMap<BatchGroupKey, BatchGroup>::Iterator i = batchGroups_.Begin(); i != batchGroups_.End(); ++i)
-        sortedBatchGroups_[index++] = &i->second_;
+        sortedBatchGroups_[index++] = &i->second;
 
     SortFrontToBack2Pass(reinterpret_cast<Vector<Batch*>& >(sortedBatchGroups_));
 }
@@ -656,7 +656,7 @@ void BatchQueue::SortFrontToBack2Pass(Vector<Batch*>& batches)
         hash32 shaderID = (hash32)(batch->sortKey_ >> 32u);
         HashMap<hash32, hash32>::ConstIterator j = shaderRemapping_.Find(shaderID);
         if (j != shaderRemapping_.End())
-            shaderID = j->second_;
+            shaderID = j->second;
         else
         {
             shaderID = shaderRemapping_[shaderID] = freeShaderID | (shaderID & 0x80000000);
@@ -666,7 +666,7 @@ void BatchQueue::SortFrontToBack2Pass(Vector<Batch*>& batches)
         hash16 materialID = (hash16)((batch->sortKey_ & 0xffff0000) >> 16u);
         HashMap<hash16, hash16>::ConstIterator k = materialRemapping_.Find(materialID);
         if (k != materialRemapping_.End())
-            materialID = k->second_;
+            materialID = k->second;
         else
         {
             materialID = materialRemapping_[materialID] = freeMaterialID;
@@ -676,7 +676,7 @@ void BatchQueue::SortFrontToBack2Pass(Vector<Batch*>& batches)
         hash16 geometryID = (hash16)(batch->sortKey_ & 0xffffu);
         HashMap<hash16, hash16>::ConstIterator l = geometryRemapping_.Find(geometryID);
         if (l != geometryRemapping_.End())
-            geometryID = l->second_;
+            geometryID = l->second;
         else
         {
             geometryID = geometryRemapping_[geometryID] = freeGeometryID;
@@ -699,7 +699,7 @@ void BatchQueue::SetInstancingData(void* lockedData, i32 stride, i32& freeIndex)
 {
     assert(stride >= 0);
     for (HashMap<BatchGroupKey, BatchGroup>::Iterator i = batchGroups_.Begin(); i != batchGroups_.End(); ++i)
-        i->second_.SetInstancingData(lockedData, stride, freeIndex);
+        i->second.SetInstancingData(lockedData, stride, freeIndex);
 }
 
 void BatchQueue::Draw(View* view, Camera* camera, bool markToStencil, bool usingLightOptimization, bool allowDepthWrite) const
@@ -751,8 +751,8 @@ i32 BatchQueue::GetNumInstances() const
 
     for (HashMap<BatchGroupKey, BatchGroup>::ConstIterator i = batchGroups_.Begin(); i != batchGroups_.End(); ++i)
     {
-        if (i->second_.geometryType_ == GEOM_INSTANCED)
-            total += i->second_.instances_.Size();
+        if (i->second.geometryType_ == GEOM_INSTANCED)
+            total += i->second.instances_.Size();
     }
 
     return total;
