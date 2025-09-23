@@ -62,7 +62,7 @@ bool Animatable::LoadXML(const XMLElement& source)
         return false;
 
     SetObjectAnimation(nullptr);
-    attributeAnimationInfos_.Clear();
+    attributeAnimationInfos_.clear();
 
     XMLElement elem = source.GetChild("objectanimation");
     if (elem)
@@ -108,7 +108,7 @@ bool Animatable::LoadJSON(const JSONValue& source)
         return false;
 
     SetObjectAnimation(nullptr);
-    attributeAnimationInfos_.Clear();
+    attributeAnimationInfos_.clear();
 
     JSONValue value = source.Get("objectanimation");
     if (!value.IsNull())
@@ -269,8 +269,8 @@ void Animatable::SetAnimationTime(float time)
     }
     else
     {
-        for (HashMap<String, SharedPtr<AttributeAnimationInfo>>::ConstIterator i = attributeAnimationInfos_.Begin();
-            i != attributeAnimationInfos_.End(); ++i)
+        for (auto i = attributeAnimationInfos_.begin();
+            i != attributeAnimationInfos_.end(); ++i)
             i->second->SetTime(time);
     }
 }
@@ -348,7 +348,7 @@ void Animatable::SetAttributeAnimation(const String& name, ValueAnimation* attri
 
         // Add network attribute to set
         if (attributeInfo->mode_ & AM_NET)
-            animatedNetworkAttributes_.Insert(attributeInfo);
+            animatedNetworkAttributes_.insert(attributeInfo);
 
         attributeAnimationInfos_[name] = new AttributeAnimationInfo(this, *attributeInfo, attributeAnimation, wrapMode, speed);
 
@@ -362,9 +362,9 @@ void Animatable::SetAttributeAnimation(const String& name, ValueAnimation* attri
 
         // Remove network attribute from set
         if (info->GetAttributeInfo().mode_ & AM_NET)
-            animatedNetworkAttributes_.Erase(&info->GetAttributeInfo());
+            animatedNetworkAttributes_.erase(&info->GetAttributeInfo());
 
-        attributeAnimationInfos_.Erase(name);
+        attributeAnimationInfos_.erase(name);
         OnAttributeAnimationRemoved();
     }
 }

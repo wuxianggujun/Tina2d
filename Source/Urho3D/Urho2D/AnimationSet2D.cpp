@@ -265,7 +265,7 @@ bool AnimationSet2D::EndLoadSpine()
 
 bool AnimationSet2D::BeginLoadSpriter(Deserializer& source)
 {
-    unsigned dataSize = source.GetSize();
+    unsigned dataSize = (unsigned)source.GetSize();
     if (!dataSize && !source.GetName().Empty())
     {
         URHO3D_LOGERROR("Zero sized XML data in " + source.GetName());
@@ -508,7 +508,7 @@ void AnimationSet2D::Dispose()
 
     sprite_.Reset();
     spriteSheet_.Reset();
-    spriterFileSprites_.Clear();
+    spriterFileSprites_.clear();
 }
 
 }

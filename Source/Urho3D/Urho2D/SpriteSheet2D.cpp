@@ -38,7 +38,7 @@ bool SpriteSheet2D::BeginLoad(Deserializer& source)
         SetName(source.GetName());
 
     loadTextureName_.Clear();
-    spriteMapping_.Clear();
+    spriteMapping_.clear();
 
     String extension = GetExtension(source.GetName());
     if (extension == ".plist")

@@ -119,7 +119,7 @@ unsigned Resource::GetUseTimer()
 void ResourceWithMetadata::AddMetadata(const String& name, const Variant& value)
 {
     const StringHash key(name);
-    const bool exists = metadata_.Contains(key);
+    const bool exists = metadata_.find(key) != metadata_.end();
     metadata_[key] = value;
     if (!exists)
         metadataKeys_.Push(name);
@@ -127,25 +127,25 @@ void ResourceWithMetadata::AddMetadata(const String& name, const Variant& value)
 
 void ResourceWithMetadata::RemoveMetadata(const String& name)
 {
-    metadata_.Erase(StringHash(name));
+    metadata_.erase(StringHash(name));
     metadataKeys_.Remove(name);
 }
 
 void ResourceWithMetadata::RemoveAllMetadata()
 {
-    metadata_.Clear();
+    metadata_.clear();
     metadataKeys_.Clear();
 }
 
 const Urho3D::Variant& ResourceWithMetadata::GetMetadata(const String& name) const
 {
-    auto it = metadata_.Find(StringHash(name));
-    return it != metadata_.End() ? it->second : Variant::EMPTY;
+    auto it = metadata_.find(StringHash(name));
+    return it != metadata_.end() ? it->second : Variant::EMPTY;
 }
 
 bool ResourceWithMetadata::HasMetadata() const
 {
-    return !metadata_.Empty();
+    return !metadata_.empty();
 }
 
 void ResourceWithMetadata::LoadMetadataFromXML(const XMLElement& source)

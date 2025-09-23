@@ -223,7 +223,7 @@ public:
     i32 GetNumInstances() const;
 
     /// Return whether the batch group is empty.
-    bool IsEmpty() const { return batches_.Empty() && batchGroups_.Empty(); }
+    bool IsEmpty() const { return batches_.Empty() && batchGroups_.empty(); }
 
     /// Instanced draw calls.
     HashMap<BatchGroupKey, BatchGroup> batchGroups_;

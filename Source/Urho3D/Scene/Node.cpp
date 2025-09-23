@@ -1395,8 +1395,8 @@ bool Node::IsChildOf(Node* node) const
 
 const Variant& Node::GetVar(StringHash key) const
 {
-    VariantMap::ConstIterator i = vars_.Find(key);
-    return i != vars_.End() ? i->second : Variant::EMPTY;
+    auto i = vars_.find(key);
+    return i != vars_.end() ? i->second : Variant::EMPTY;
 }
 
 Component* Node::GetComponent(StringHash type, bool recursive) const
@@ -1745,10 +1745,10 @@ void Node::PrepareNetworkUpdate()
     }
 
     // Finally check for user var changes
-    for (VariantMap::ConstIterator i = vars_.Begin(); i != vars_.End(); ++i)
+    for (auto i = vars_.begin(); i != vars_.end(); ++i)
     {
-        VariantMap::ConstIterator j = networkState_->previousVars_.Find(i->first);
-        if (j == networkState_->previousVars_.End() || j->second != i->second)
+        auto j = networkState_->previousVars_.find(i->first);
+        if (j == networkState_->previousVars_.end() || j->second != i->second)
         {
             networkState_->previousVars_[i->first] = i->second;
 
@@ -1901,13 +1901,13 @@ void Node::SetTransformSilent(const Vector3& position, const Quaternion& rotatio
 
 void Node::OnAttributeAnimationAdded()
 {
-    if (attributeAnimationInfos_.Size() == 1)
+    if (attributeAnimationInfos_.size() == 1)
         SubscribeToEvent(GetScene(), E_ATTRIBUTEANIMATIONUPDATE, URHO3D_HANDLER(Node, HandleAttributeAnimationUpdate));
 }
 
 void Node::OnAttributeAnimationRemoved()
 {
-    if (attributeAnimationInfos_.Empty())
+    if (attributeAnimationInfos_.empty())
         UnsubscribeFromEvent(GetScene(), E_ATTRIBUTEANIMATIONUPDATE);
 }
 

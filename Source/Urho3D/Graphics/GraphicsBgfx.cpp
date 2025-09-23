@@ -1865,19 +1865,19 @@ bool GraphicsBgfx::DrawUIWithMaterial(const float* vertices, int numVertices, Ma
     Texture2D* primaryTex = nullptr;
     if (material)
     {
-        const auto textures = material->GetTextures();
-        if (!textures.Empty())
+        const auto& textures = material->GetTextures();
+        if (!textures.empty())
         {
-            Vector<unsigned> units; units.Reserve(textures.Size());
-            for (auto it = textures.Begin(); it != textures.End(); ++it)
+            Vector<unsigned> units; units.Reserve((unsigned)textures.size());
+            for (auto it = textures.begin(); it != textures.end(); ++it)
                 units.Push(it->first);
             Sort(units.Begin(), units.End());
 
             unsigned stage = 0;
             for (unsigned u : units)
             {
-                auto it2 = textures.Find(static_cast<TextureUnit>(u));
-                if (it2 == textures.End())
+                auto it2 = textures.find(static_cast<TextureUnit>(u));
+                if (it2 == textures.end())
                     continue;
                 Texture* t = it2->second.Get();
                 if (!t) continue;
@@ -1928,7 +1928,7 @@ bool GraphicsBgfx::DrawUIWithMaterial(const float* vertices, int numVertices, Ma
     if (material)
     {
         const auto shaderParams = material->GetShaderParameters();
-        for (auto it = shaderParams.Begin(); it != shaderParams.End(); ++it)
+        for (auto it = shaderParams.begin(); it != shaderParams.end(); ++it)
             SetUniformByVariant(it->second.name_.CString(), it->second.value_);
     }
 

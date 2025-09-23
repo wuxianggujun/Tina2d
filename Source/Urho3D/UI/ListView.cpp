@@ -78,7 +78,7 @@ public:
         // Adjust the container size for child clipping effect
         overlayContainer_->SetSize(GetParent()->GetSize());
 
-        for (i32 i = 0; i < children_.Size(); ++i)
+        for (u32 i = 0; i < (u32)children_.Size(); ++i)
         {
             const IntVector2& position = children_[i]->GetPosition();
             auto* overlay = overlayContainer_->GetChildStaticCast<CheckBox>(i);
@@ -390,7 +390,7 @@ void ListView::InsertItem(i32 index, UIElement* item, UIElement* parentItem)
     // If necessary, shift the following selections
     if (!selections_.Empty())
     {
-        for (i32 i = 0; i < selections_.Size(); ++i)
+        for (u32 i = 0; i < (u32)selections_.Size(); ++i)
         {
             if (selections_[i] >= index)
                 ++selections_[i];

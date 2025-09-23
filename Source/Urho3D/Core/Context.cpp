@@ -92,7 +92,7 @@ void RemoveNamedAttribute(HashMap<StringHash, Vector<AttributeInfo>>& attributes
 
     // If the vector became empty, erase the object type from the map
     if (infos.Empty())
-        attributes.Erase(i);
+        attributes.erase(i);
 }
 
 Context::Context() :

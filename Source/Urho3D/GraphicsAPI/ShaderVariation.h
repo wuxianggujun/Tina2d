@@ -92,7 +92,7 @@ public:
     String GetFullName() const { return name_ + "(" + defines_ + ")"; }
 
     /// Return whether uses a parameter. Not applicable on OpenGL, where this information is contained in ShaderProgram instead.
-    bool HasParameter(StringHash param) const { return parameters_.Contains(param); }
+    bool HasParameter(StringHash param) const { return parameters_.find(param) != parameters_.end(); }
 
     /// Return whether uses a texture unit (only for pixel shaders). Not applicable on OpenGL, where this information is contained in ShaderProgram instead.
     bool HasTextureUnit(TextureUnit unit) const { return useTextureUnits_[unit]; }

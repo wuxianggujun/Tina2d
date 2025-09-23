@@ -122,7 +122,7 @@ void Renderer2D::UpdateGeometry(const FrameInfo& frame)
     }
 
     // Fill index buffer
-    if (indexBuffer_->GetIndexCount() < indexCount || indexBuffer_->IsDataLost())
+    if ((u32)indexBuffer_->GetIndexCount() < indexCount || indexBuffer_->IsDataLost())
     {
         bool largeIndices = (indexCount * 4 / 6) > 0xffff;
         indexBuffer_->SetSize(indexCount, largeIndices);
@@ -178,7 +178,7 @@ void Renderer2D::UpdateGeometry(const FrameInfo& frame)
     {
         unsigned vertexCount = viewBatchInfo.vertexCount_;
         VertexBuffer* vertexBuffer = viewBatchInfo.vertexBuffer_;
-        if (vertexBuffer->GetVertexCount() < vertexCount)
+        if ((u32)vertexBuffer->GetVertexCount() < vertexCount)
             vertexBuffer->SetSize(vertexCount, MASK_VERTEX2D, true);
 
         if (vertexCount)
@@ -339,7 +339,8 @@ SharedPtr<Material> Renderer2D::CreateMaterial(Texture2D* texture, BlendMode ble
         pass->SetDepthWrite(true);
         pass->SetDepthTestMode(CMP_LESSEQUAL);
         pass->SetBlendMode(blendMode);
-        techIt = cachedTechniques_.Insert(MakePair((int)blendMode, tech));
+        cachedTechniques_[(int)blendMode] = tech;
+        techIt = cachedTechniques_.find((int)blendMode);
     }
 
     newMaterial->SetTechnique(0, techIt->second.Get());

@@ -21,7 +21,7 @@ static String letters("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
 
 static String GenerateNameFromType(StringHash typeHash)
 {
-    if (unknownTypeToName.Contains(typeHash))
+    if (unknownTypeToName.find(typeHash) != unknownTypeToName.end())
         return unknownTypeToName[typeHash];
 
     String test;
@@ -80,7 +80,7 @@ bool UnknownComponent::Load(Deserializer& source)
     xmlAttributeInfos_.Clear();
 
     // Assume we are reading from a component data buffer, and the type has already been read
-    unsigned dataSize = source.GetSize() - source.GetPosition();
+    unsigned dataSize = (unsigned)(source.GetSize() - source.GetPosition());
     binaryAttributes_.Resize(dataSize);
     return dataSize ? source.Read(&binaryAttributes_[0], dataSize) == dataSize : true;
 }

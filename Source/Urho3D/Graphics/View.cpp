@@ -359,9 +359,9 @@ bool View::Define(RenderSurface* renderTarget, Viewport* viewport)
                 }
             }
 
-            HashMap<i32, BatchQueue>::Iterator j = batchQueues_.Find(info.passIndex_);
-            if (j == batchQueues_.End())
-                j = batchQueues_.Insert(Pair<i32, BatchQueue>(info.passIndex_, BatchQueue()));
+            auto j = batchQueues_.find(info.passIndex_);
+            if (j == batchQueues_.end())
+                j = batchQueues_.insert(eastl::make_pair(info.passIndex_, BatchQueue())).first;
             info.batchQueue_ = &j->second;
             SetQueueShaderDefines(*info.batchQueue_, command);
 
@@ -455,14 +455,14 @@ void View::Update(const FrameInfo& frame)
     int maxSortedInstances = renderer_->GetMaxSortedInstances();
 
     // Clear buffers, geometry, light, occluder & batch list
-    renderTargets_.Clear();
+    renderTargets_.clear();
     geometries_.Clear();
     lights_.Clear();
     zones_.Clear();
     occluders_.Clear();
     activeOccluders_ = 0;
-    vertexLightQueues_.Clear();
-    for (HashMap<i32, BatchQueue>::Iterator i = batchQueues_.Begin(); i != batchQueues_.End(); ++i)
+    vertexLightQueues_.clear();
+    for (auto i = batchQueues_.begin(); i != batchQueues_.end(); ++i)
         i->second.Clear(maxSortedInstances);
 
     if (hasScenePasses_ && (!cullCamera_ || !octree_))
@@ -682,7 +682,7 @@ void View::SetCameraShaderParameters(Camera* camera)
 void View::SetCommandShaderParameters(const RenderPathCommand& command)
 {
     const HashMap<StringHash, Variant>& parameters = command.shaderParameters_;
-    for (HashMap<StringHash, Variant>::ConstIterator k = parameters.Begin(); k != parameters.End(); ++k)
+    for (auto k = parameters.begin(); k != parameters.end(); ++k)
         graphics_->SetShaderParameter(k->first, k->second);
 }
 
@@ -880,7 +880,7 @@ void View::ProcessLights()
     auto* queue = GetSubsystem<WorkQueue>();
     lightQueryResults_.Resize(lights_.Size());
 
-    for (i32 i = 0; i < lightQueryResults_.Size(); ++i)
+    for (i32 i = 0; i < (i32)lightQueryResults_.Size(); ++i)
     {
         SharedPtr<WorkItem> item = queue->GetFreeItem();
         item->priority_ = WI_MAX_PRIORITY;
@@ -900,7 +900,7 @@ void View::ProcessLights()
 
 void View::GetLightBatches()
 {
-    BatchQueue* alphaQueue = batchQueues_.Contains(alphaPassIndex_) ? &batchQueues_[alphaPassIndex_] : nullptr;
+    BatchQueue* alphaQueue = (batchQueues_.find(alphaPassIndex_) != batchQueues_.end()) ? &batchQueues_[alphaPassIndex_] : nullptr;
 
     // Build light queues and lit batches
     {
@@ -916,7 +916,7 @@ void View::GetLightBatches()
         }
 
         lightQueues_.Resize(numLightQueues);
-        maxLightsDrawables_.Clear();
+        maxLightsDrawables_.clear();
         i32 maxSortedInstances = renderer_->GetMaxSortedInstances();
 
         for (Vector<LightQueryResult>::Iterator i = lightQueryResults_.Begin(); i != lightQueryResults_.End(); ++i)
@@ -958,7 +958,7 @@ void View::GetLightBatches()
                     if (!drawable->GetMaxLights())
                         GetLitBatches(drawable, lightQueue, alphaQueue);
                     else
-                        maxLightsDrawables_.Insert(drawable);
+                        maxLightsDrawables_.insert(drawable);
                 }
 
                 // 2D-only：不处理体积光批次
@@ -977,11 +977,11 @@ void View::GetLightBatches()
     }
 
     // Process drawables with limited per-pixel light count
-    if (maxLightsDrawables_.Size())
+    if (maxLightsDrawables_.size())
     {
         URHO3D_PROFILE(GetMaxLightsBatches);
 
-        for (HashSet<Drawable*>::Iterator i = maxLightsDrawables_.Begin(); i != maxLightsDrawables_.End(); ++i)
+        for (HashSet<Drawable*>::iterator i = maxLightsDrawables_.begin(); i != maxLightsDrawables_.end(); ++i)
         {
             Drawable* drawable = *i;
             drawable->LimitLights();
@@ -1015,7 +1015,7 @@ void View::GetBaseBatches()
         const Vector<SourceBatch>& batches = drawable->GetBatches();
         bool vertexLightsProcessed = false;
 
-        for (i32 j = 0; j < batches.Size(); ++j)
+        for (i32 j = 0; j < (i32)batches.Size(); ++j)
         {
             const SourceBatch& srcBatch = batches[j];
 
@@ -1061,10 +1061,10 @@ void View::GetBaseBatches()
                     {
                         // Find a vertex light queue. If not found, create new
                         hash64 hash = GetVertexLightQueueHash(drawableVertexLights);
-                        HashMap<hash64, LightBatchQueue>::Iterator i = vertexLightQueues_.Find(hash);
-                        if (i == vertexLightQueues_.End())
+                        auto i = vertexLightQueues_.find(hash);
+                        if (i == vertexLightQueues_.end())
                         {
-                            i = vertexLightQueues_.Insert(MakePair(hash, LightBatchQueue()));
+                            i = vertexLightQueues_.insert(eastl::make_pair(hash, LightBatchQueue())).first;
                             i->second.light_ = nullptr;
                             i->second.shadowMap_ = nullptr;
                             i->second.vertexLights_ = drawableVertexLights;
@@ -1194,7 +1194,7 @@ void View::GetLitBatches(Drawable* drawable, LightBatchQueue& lightQueue, BatchQ
         useLitBase_ && !lightQueue.negative_ && light == drawable->GetFirstLight() && drawable->GetVertexLights().Empty() &&
         !zone->GetAmbientGradient();
 
-    for (i32 i = 0; i < batches.Size(); ++i)
+    for (i32 i = 0; i < (i32)batches.Size(); ++i)
     {
         const SourceBatch& srcBatch = batches[i];
 
@@ -1273,14 +1273,14 @@ void View::ExecuteRenderPathCommands()
         usedResolve_ = false;
 
         i32 lastCommandIndex = 0;
-        for (i32 i = 0; i < renderPath_->commands_.Size(); ++i)
+        for (i32 i = 0; i < (i32)renderPath_->commands_.Size(); ++i)
         {
             RenderPathCommand& command = renderPath_->commands_[i];
             if (actualView->IsNecessary(command))
                 lastCommandIndex = i;
         }
 
-        for (i32 i = 0; i < renderPath_->commands_.Size(); ++i)
+        for (i32 i = 0; i < (i32)renderPath_->commands_.Size(); ++i)
         {
             RenderPathCommand& command = renderPath_->commands_[i];
             if (!actualView->IsNecessary(command))
@@ -1389,7 +1389,7 @@ void View::ExecuteRenderPathCommands()
                         graphics_->SetClipPlane(camera_->GetUseClipping(), camera_->GetClipPlane(), camera_->GetView(),
                             camera_->GetGPUProjection());
 
-                        if (command.shaderParameters_.Size())
+                        if (!command.shaderParameters_.empty())
                         {
                             // If pass defines shader parameters, reset parameter sources now to ensure they all will be set
                             // (will be set after camera shader parameters)
@@ -1454,7 +1454,7 @@ void View::SetRenderTargets(RenderPathCommand& command)
     bool useCustomDepth = false;
     bool useViewportOutput = false;
 
-    while (index < command.outputs_.Size())
+    while (index < (i32)command.outputs_.Size())
     {
         if (!command.outputs_[index].first_.Compare("viewport", false))
         {
@@ -1576,7 +1576,7 @@ void View::RenderQuad(RenderPathCommand& command)
             continue;
 
         StringHash nameHash(rtInfo.name_);
-        if (!renderTargets_.Contains(nameHash))
+        if (renderTargets_.find(nameHash) == renderTargets_.end())
             continue;
 
         String invSizeName = rtInfo.name_ + "InvSize";
@@ -1642,7 +1642,7 @@ bool View::CheckPingpong(i32 index)
 
     // If there are commands other than quads that target the viewport, we must keep rendering to the final target and resolving
     // to a viewport texture when necessary instead of pingponging, as a scene pass is not guaranteed to fill the entire viewport
-    for (i32 i = index + 1; i < renderPath_->commands_.Size(); ++i)
+    for (i32 i = index + 1; i < (i32)renderPath_->commands_.Size(); ++i)
     {
         RenderPathCommand& command = renderPath_->commands_[i];
         if (!IsNecessary(command))
@@ -1671,7 +1671,7 @@ void View::AllocateScreenBuffers()
 
     // Check for commands with special meaning: has custom depth, renders a scene pass to other than the destination viewport,
     // read the viewport, or pingpong between viewport textures. These may trigger the need to substitute the destination RT
-    for (i32 i = 0; i < renderPath_->commands_.Size(); ++i)
+    for (i32 i = 0; i < (i32)renderPath_->commands_.Size(); ++i)
     {
         const RenderPathCommand& command = renderPath_->commands_[i];
         if (!actualView->IsNecessary(command))
@@ -2001,7 +2001,7 @@ void View::CheckMaterialForAuxView(Material* material)
 {
     const HashMap<TextureUnit, SharedPtr<Texture>>& textures = material->GetTextures();
 
-    for (HashMap<TextureUnit, SharedPtr<Texture>>::ConstIterator i = textures.Begin(); i != textures.End(); ++i)
+    for (auto i = textures.begin(); i != textures.end(); ++i)
     {
         Texture* texture = i->second.Get();
         if (texture && texture->GetUsage() == TEXTURE_RENDERTARGET)
@@ -2054,8 +2054,8 @@ void View::AddBatchToQueue(BatchQueue& queue, Batch& batch, Technique* tech, boo
     {
         BatchGroupKey key(batch);
 
-        HashMap<BatchGroupKey, BatchGroup>::Iterator i = queue.batchGroups_.Find(key);
-        if (i == queue.batchGroups_.End())
+        auto i = queue.batchGroups_.find(key);
+        if (i == queue.batchGroups_.end())
         {
             // Create a new group based on the batch
             // In case the group remains below the instancing limit, do not enable instancing shaders yet
@@ -2063,7 +2063,7 @@ void View::AddBatchToQueue(BatchQueue& queue, Batch& batch, Technique* tech, boo
             newGroup.geometryType_ = GEOM_STATIC;
             renderer_->SetBatchShaders(newGroup, tech, allowShadows, queue);
             newGroup.CalculateSortKey();
-            i = queue.batchGroups_.Insert(MakePair(key, newGroup));
+            i = queue.batchGroups_.insert(eastl::make_pair(key, newGroup)).first;
         }
 
         int oldSize = i->second.instances_.Size();
@@ -2112,7 +2112,7 @@ void View::PrepareInstancingBuffer()
 
     i32 totalInstances = 0;
 
-    for (HashMap<i32, BatchQueue>::Iterator i = batchQueues_.Begin(); i != batchQueues_.End(); ++i)
+    for (auto i = batchQueues_.begin(); i != batchQueues_.end(); ++i)
         totalInstances += i->second.GetNumInstances();
 
     for (Vector<LightBatchQueue>::Iterator i = lightQueues_.Begin(); i != lightQueues_.End(); ++i)
@@ -2134,7 +2134,7 @@ void View::PrepareInstancingBuffer()
         return;
 
     const i32 stride = instancingBuffer->GetVertexSize();
-    for (HashMap<i32, BatchQueue>::Iterator i = batchQueues_.Begin(); i != batchQueues_.End(); ++i)
+    for (auto i = batchQueues_.begin(); i != batchQueues_.end(); ++i)
         i->second.SetInstancingData(dest, stride, freeIndex);
 
     for (Vector<LightBatchQueue>::Iterator i = lightQueues_.Begin(); i != lightQueues_.End(); ++i)
@@ -2196,7 +2196,7 @@ Texture* View::FindNamedTexture(const String& name, bool isRenderTarget, bool is
 {
     // Check rendertargets first
     StringHash nameHash(name);
-    if (renderTargets_.Contains(nameHash))
+    if (renderTargets_.find(nameHash) != renderTargets_.end())
         return renderTargets_[nameHash];
 
     // Then the resource system

@@ -339,8 +339,8 @@ bool Serializer::WriteStringVector(const StringVector& value)
 bool Serializer::WriteVariantMap(const VariantMap& value)
 {
     bool success = true;
-    success &= WriteVLE(value.Size());
-    for (VariantMap::ConstIterator i = value.Begin(); i != value.End(); ++i)
+    success &= WriteVLE((unsigned)value.size());
+    for (auto i = value.begin(); i != value.end(); ++i)
     {
         WriteStringHash(i->first);
         WriteVariant(i->second);

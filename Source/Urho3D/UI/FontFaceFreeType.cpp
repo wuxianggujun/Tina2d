@@ -112,7 +112,7 @@ bool FontFaceFreeType::Load(const unsigned char* fontData, unsigned fontDataSize
         URHO3D_LOGERROR("Could not create font face");
         return false;
     }
-    error = FT_Set_Char_Size(face, 0, pointSize * 64, oversampling_ * FONT_DPI, FONT_DPI);
+    error = FT_Set_Char_Size(face, 0, (FT_F26Dot6)(pointSize * 64), oversampling_ * FONT_DPI, FONT_DPI);
     if (error)
     {
         FT_Done_Face(face);
@@ -273,8 +273,8 @@ bool FontFaceFreeType::Load(const unsigned char* fontData, unsigned fontDataSize
 
 const FontGlyph* FontFaceFreeType::GetGlyph(c32 c)
 {
-    HashMap<c32, FontGlyph>::Iterator i = glyphMapping_.Find(c);
-    if (i != glyphMapping_.End())
+    auto i = glyphMapping_.find(c);
+    if (i != glyphMapping_.end())
     {
         FontGlyph& glyph = i->second;
         glyph.used_ = true;
@@ -283,8 +283,8 @@ const FontGlyph* FontFaceFreeType::GetGlyph(c32 c)
 
     if (LoadCharGlyph(c))
     {
-        HashMap<c32, FontGlyph>::Iterator i = glyphMapping_.Find(c);
-        if (i != glyphMapping_.End())
+        auto i = glyphMapping_.find(c);
+        if (i != glyphMapping_.end())
         {
             FontGlyph& glyph = i->second;
             glyph.used_ = true;
@@ -401,10 +401,10 @@ bool FontFaceFreeType::LoadCharGlyph(c32 charCode, Image* image)
         // Note: position within texture will be filled later
         fontGlyph.texWidth_ = slot->bitmap.width + oversampling_ - 1;
         fontGlyph.texHeight_ = slot->bitmap.rows;
-        fontGlyph.width_ = slot->bitmap.width + oversampling_ - 1;
-        fontGlyph.height_ = slot->bitmap.rows;
+        fontGlyph.width_ = (float)(slot->bitmap.width + oversampling_ - 1);
+        fontGlyph.height_ = (float)slot->bitmap.rows;
         fontGlyph.offsetX_ = slot->bitmap_left - (oversampling_ - 1) / 2.0f;
-        fontGlyph.offsetY_ = floorf(ascender_ + 0.5f) - slot->bitmap_top;
+        fontGlyph.offsetY_ = (float)(floorf(ascender_ + 0.5f) - slot->bitmap_top);
 
         if (subpixel_ && slot->linearHoriAdvance)
         {

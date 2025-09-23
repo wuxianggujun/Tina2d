@@ -94,9 +94,9 @@ bool Shader::BeginLoad(Deserializer& source)
 bool Shader::EndLoad()
 {
     // If variations had already been created, release them and require recompile
-    for (HashMap<StringHash, SharedPtr<ShaderVariation>>::Iterator i = vsVariations_.Begin(); i != vsVariations_.End(); ++i)
+    for (auto i = vsVariations_.begin(); i != vsVariations_.end(); ++i)
         i->second->Release();
-    for (HashMap<StringHash, SharedPtr<ShaderVariation>>::Iterator i = psVariations_.Begin(); i != psVariations_.End(); ++i)
+    for (auto i = psVariations_.begin(); i != psVariations_.end(); ++i)
         i->second->Release();
 
     return true;
@@ -111,23 +111,23 @@ ShaderVariation* Shader::GetVariation(ShaderType type, const char* defines)
 {
     StringHash definesHash(defines);
     HashMap<StringHash, SharedPtr<ShaderVariation>>& variations(type == VS ? vsVariations_ : psVariations_);
-    HashMap<StringHash, SharedPtr<ShaderVariation>>::Iterator i = variations.Find(definesHash);
-    if (i == variations.End())
+    auto i = variations.find(definesHash);
+    if (i == variations.end())
     {
         // If shader not found, normalize the defines (to prevent duplicates) and check again. In that case make an alias
         // so that further queries are faster
         String normalizedDefines = NormalizeDefines(defines);
         StringHash normalizedHash(normalizedDefines);
 
-        i = variations.Find(normalizedHash);
-        if (i != variations.End())
-            variations.Insert(MakePair(definesHash, i->second));
+        i = variations.find(normalizedHash);
+        if (i != variations.end())
+            variations.insert(eastl::make_pair(definesHash, i->second));
         else
         {
             // No shader variation found. Create new
-            i = variations.Insert(MakePair(normalizedHash, SharedPtr<ShaderVariation>(new ShaderVariation(this, type))));
+            i = variations.insert(eastl::make_pair(normalizedHash, SharedPtr<ShaderVariation>(new ShaderVariation(this, type)))).first;
             if (definesHash != normalizedHash)
-                variations.Insert(MakePair(definesHash, i->second));
+                variations.insert(eastl::make_pair(definesHash, i->second));
 
             i->second->SetName(GetFileName(GetName()));
             i->second->SetDefines(normalizedDefines);

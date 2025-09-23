@@ -57,10 +57,10 @@ bool FontFaceBitmap::Load(const unsigned char* fontData, unsigned fontDataSize, 
 
     XMLElement infoElem = root.GetChild("info");
     if (!infoElem.IsNull())
-        pointSize_ = infoElem.GetI32("size");
+        pointSize_ = (float)infoElem.GetI32("size");
 
     XMLElement commonElem = root.GetChild("common");
-    rowHeight_ = commonElem.GetI32("lineHeight");
+    rowHeight_ = (float)commonElem.GetI32("lineHeight");
     unsigned pages = commonElem.GetU32("pages");
     textures_.Reserve(pages);
 
@@ -171,19 +171,19 @@ bool FontFaceBitmap::Load(FontFace* fontFace, bool usedGlyphs)
     int maxTextureSize = font_->GetSubsystem<UI>()->GetMaxFontTextureSize();
     AreaAllocator allocator(FONT_TEXTURE_MIN_SIZE, FONT_TEXTURE_MIN_SIZE, maxTextureSize, maxTextureSize);
 
-    for (HashMap<c32, FontGlyph>::ConstIterator i = fontFace->glyphMapping_.Begin(); i != fontFace->glyphMapping_.End(); ++i)
+    for (auto i = fontFace->glyphMapping_.begin(); i != fontFace->glyphMapping_.end(); ++i)
     {
         FontGlyph fontGlyph = i->second;
         if (!fontGlyph.used_)
             continue;
 
         int x, y;
-        if (!allocator.Allocate(fontGlyph.width_ + 1, fontGlyph.height_ + 1, x, y))
+        if (!allocator.Allocate((int)fontGlyph.width_ + 1, (int)fontGlyph.height_ + 1, x, y))
         {
             ++numPages;
 
             allocator = AreaAllocator(FONT_TEXTURE_MIN_SIZE, FONT_TEXTURE_MIN_SIZE, maxTextureSize, maxTextureSize);
-            if (!allocator.Allocate(fontGlyph.width_ + 1, fontGlyph.height_ + 1, x, y))
+            if (!allocator.Allocate((int)fontGlyph.width_ + 1, (int)fontGlyph.height_ + 1, x, y))
                 return false;
         }
 
@@ -221,23 +221,23 @@ bool FontFaceBitmap::Load(FontFace* fontFace, bool usedGlyphs)
         newImages[i] = image;
     }
 
-    for (HashMap<c32, FontGlyph>::Iterator i = glyphMapping_.Begin(); i != glyphMapping_.End(); ++i)
+    for (auto i = glyphMapping_.begin(); i != glyphMapping_.end(); ++i)
     {
         FontGlyph& newGlyph = i->second;
         const FontGlyph& oldGlyph = fontFace->glyphMapping_[i->first];
-        Blit(newImages[newGlyph.page_], newGlyph.x_, newGlyph.y_, newGlyph.width_, newGlyph.height_, oldImages[oldGlyph.page_],
-            oldGlyph.x_, oldGlyph.y_, components);
+        Blit(newImages[newGlyph.page_], (int)newGlyph.x_, (int)newGlyph.y_, (int)newGlyph.width_, (int)newGlyph.height_, oldImages[oldGlyph.page_],
+            (int)oldGlyph.x_, (int)oldGlyph.y_, components);
     }
 
     textures_.Resize(newImages.Size());
     for (unsigned i = 0; i < newImages.Size(); ++i)
         textures_[i] = LoadFaceTexture(newImages[i]);
 
-    for (HashMap<u32, float>::ConstIterator i = fontFace->kerningMapping_.Begin(); i != fontFace->kerningMapping_.End(); ++i)
+    for (auto i = fontFace->kerningMapping_.begin(); i != fontFace->kerningMapping_.end(); ++i)
     {
         unsigned first = (i->first) >> 16u;
         unsigned second = (i->first) & 0xffffu;
-        if (glyphMapping_.Find(first) != glyphMapping_.End() && glyphMapping_.Find(second) != glyphMapping_.End())
+        if (glyphMapping_.find(first) != glyphMapping_.end() && glyphMapping_.find(second) != glyphMapping_.end())
             kerningMapping_[i->first] = i->second;
     }
 
@@ -259,7 +259,7 @@ bool FontFaceBitmap::Save(Serializer& dest, int pointSize, const String& indenta
 
     // Common
     childElem = rootElem.CreateChild("common");
-    childElem.SetI32("lineHeight", rowHeight_);
+    childElem.SetI32("lineHeight", (int)rowHeight_);
     unsigned pages = textures_.Size();
     childElem.SetU32("pages", pages);
 
@@ -288,35 +288,35 @@ bool FontFaceBitmap::Save(Serializer& dest, int pointSize, const String& indenta
 
     // Chars and kernings
     XMLElement charsElem = rootElem.CreateChild("chars");
-    unsigned numGlyphs = glyphMapping_.Size();
+    unsigned numGlyphs = (unsigned)glyphMapping_.size();
     charsElem.SetI32("count", numGlyphs);
 
-    for (HashMap<c32, FontGlyph>::ConstIterator i = glyphMapping_.Begin(); i != glyphMapping_.End(); ++i)
+    for (auto i = glyphMapping_.begin(); i != glyphMapping_.end(); ++i)
     {
         // Char
         XMLElement charElem = charsElem.CreateChild("char");
         charElem.SetI32("id", i->first);
 
         const FontGlyph& glyph = i->second;
-        charElem.SetI32("x", glyph.x_);
-        charElem.SetI32("y", glyph.y_);
-        charElem.SetI32("width", glyph.width_);
-        charElem.SetI32("height", glyph.height_);
-        charElem.SetI32("xoffset", glyph.offsetX_);
+        charElem.SetI32("x", (int)glyph.x_);
+        charElem.SetI32("y", (int)glyph.y_);
+        charElem.SetI32("width", (int)glyph.width_);
+        charElem.SetI32("height", (int)glyph.height_);
+        charElem.SetI32("xoffset", (int)glyph.offsetX_);
         charElem.SetI32("yoffset", glyph.offsetY_);
         charElem.SetI32("xadvance", glyph.advanceX_);
         charElem.SetI32("page", glyph.page_);
     }
 
-    if (!kerningMapping_.Empty())
+    if (!kerningMapping_.empty())
     {
         XMLElement kerningsElem = rootElem.CreateChild("kernings");
-        for (HashMap<u32, float>::ConstIterator i = kerningMapping_.Begin(); i != kerningMapping_.End(); ++i)
+        for (auto i = kerningMapping_.begin(); i != kerningMapping_.end(); ++i)
         {
             XMLElement kerningElem = kerningsElem.CreateChild("kerning");
             kerningElem.SetI32("first", i->first >> 16u);
             kerningElem.SetI32("second", i->first & 0xffffu);
-            kerningElem.SetI32("amount", i->second);
+            kerningElem.SetI32("amount", (int)i->second);
         }
     }
 
