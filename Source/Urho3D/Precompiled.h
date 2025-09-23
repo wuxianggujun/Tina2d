@@ -12,6 +12,14 @@
 #include "Container/Sort.h"
 #include "Container/Str.h"
 
+// 在 PCH 中开启“内联全局 new/delete”开关，避免链接顺序导致的覆盖失败
+#ifndef URHO3D_INLINE_GLOBAL_NEWDELETE
+#define URHO3D_INLINE_GLOBAL_NEWDELETE 1
+#endif
+
+// 统一全局 new/delete 到 mimalloc（若启用），避免库链接顺序导致的覆盖失败
+#include "Core/GlobalNewDelete.h"
+
 // SDL 相关：各翻译单元按需直接包含 <SDL3/SDL.h>
 
 #endif

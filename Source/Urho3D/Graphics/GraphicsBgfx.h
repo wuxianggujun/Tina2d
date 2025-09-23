@@ -181,10 +181,11 @@ private:
     bool clipPlaneEnabled_{};
     Vector4 clipPlane_{};
 
-    Urho3D::stl::unordered_map<std::string, unsigned short> samplerCache_;
-    Urho3D::stl::unordered_map<std::string, unsigned short> vec4Cache_;
-    Urho3D::stl::unordered_map<std::string, unsigned short> mat4Cache_;
-    Urho3D::stl::unordered_map<std::string, unsigned short> vec4ArrayCache_;
+    // 统一使用 Urho3D::stl::string 作为 key，避免 std::string 与 EASTL string 混用导致的哈希/相等比较问题
+    Urho3D::stl::unordered_map<Urho3D::stl::string, unsigned short> samplerCache_;
+    Urho3D::stl::unordered_map<Urho3D::stl::string, unsigned short> vec4Cache_;
+    Urho3D::stl::unordered_map<Urho3D::stl::string, unsigned short> mat4Cache_;
+    Urho3D::stl::unordered_map<Urho3D::stl::string, unsigned short> vec4ArrayCache_;
 
     // 全局选项
     bool srgbBackbuffer_{};

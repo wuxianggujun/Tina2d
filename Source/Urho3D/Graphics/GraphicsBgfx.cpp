@@ -7,6 +7,8 @@
 #include "Precompiled.h"
 #include "GraphicsBgfx.h"
 #include "BgfxSDLPlatform.h"
+#include "BgfxMiAllocator.h"
+#include "BgfxCustomAllocator.h"
 
 #ifdef URHO3D_BGFX
     #include <bgfx/bgfx.h>
@@ -58,6 +60,9 @@ bool GraphicsBgfx::Initialize(void* nativeWindowHandle, unsigned width, unsigned
     // 提供原生窗口句柄（由上层获取，例如 SDL_GetProperty 获取 HWND/NSWindow/X11 Window）。
     init.platformData.nwh = nativeWindowHandle; // Win32: HWND, macOS: NSWindow*, X11: Window (cast)
     init.platformData.ndt = nativeDisplayHandle; // X11: Display*
+
+    // 统一注入 mimalloc 分配器（通过 bx::AllocatorI 桥接）
+    init.allocator = Urho3D::GetBgfxAllocator();
 
     if (!bgfx::init(init))
         return false;
@@ -937,7 +942,7 @@ unsigned short GraphicsBgfx::GetOrCreateTexture(Texture2D* tex, ResourceCache* c
                     SharedArrayPtr<unsigned char> fbuf(new unsigned char[fsize]);
                     f->Read(fbuf.Get(), fsize);
 
-                    bx::DefaultAllocator alloc;
+                    BgfxCustomAllocator alloc;
                     bimg::ImageContainer* ic = bimg::imageParse(&alloc, fbuf.Get(), fsize);
                     if (ic)
                     {
@@ -1090,13 +1095,14 @@ void GraphicsBgfx::Set2DLights(const Vector4* posRange, const Vector4* colorInt,
 unsigned short GraphicsBgfx::GetOrCreateSampler(const char* name)
 {
 #ifdef URHO3D_BGFX
-    auto it = samplerCache_.find(name);
+    Urho3D::stl::string key(name);
+    auto it = samplerCache_.find(key);
     if (it != samplerCache_.end())
         return it->second;
     bgfx::UniformHandle h = bgfx::createUniform(name, bgfx::UniformType::Sampler);
     if (!bgfx::isValid(h))
         return bgfx::kInvalidHandle;
-    samplerCache_[name] = h.idx;
+    samplerCache_[key] = h.idx;
     return h.idx;
 #else
     (void)name; return bgfx::kInvalidHandle;
@@ -1106,13 +1112,14 @@ unsigned short GraphicsBgfx::GetOrCreateSampler(const char* name)
 unsigned short GraphicsBgfx::GetOrCreateVec4(const char* name)
 {
 #ifdef URHO3D_BGFX
-    auto it = vec4Cache_.find(name);
+    Urho3D::stl::string key(name);
+    auto it = vec4Cache_.find(key);
     if (it != vec4Cache_.end())
         return it->second;
     bgfx::UniformHandle h = bgfx::createUniform(name, bgfx::UniformType::Vec4);
     if (!bgfx::isValid(h))
         return bgfx::kInvalidHandle;
-    vec4Cache_[name] = h.idx;
+    vec4Cache_[key] = h.idx;
     return h.idx;
 #else
     (void)name; return bgfx::kInvalidHandle;
@@ -1122,13 +1129,14 @@ unsigned short GraphicsBgfx::GetOrCreateVec4(const char* name)
 unsigned short GraphicsBgfx::GetOrCreateMat4(const char* name)
 {
 #ifdef URHO3D_BGFX
-    auto it = mat4Cache_.find(name);
+    Urho3D::stl::string key(name);
+    auto it = mat4Cache_.find(key);
     if (it != mat4Cache_.end())
         return it->second;
     bgfx::UniformHandle h = bgfx::createUniform(name, bgfx::UniformType::Mat4);
     if (!bgfx::isValid(h))
         return bgfx::kInvalidHandle;
-    mat4Cache_[name] = h.idx;
+    mat4Cache_[key] = h.idx;
     return h.idx;
 #else
     (void)name; return bgfx::kInvalidHandle;
@@ -1138,7 +1146,15 @@ unsigned short GraphicsBgfx::GetOrCreateMat4(const char* name)
 unsigned short GraphicsBgfx::GetOrCreateVec4Array(const char* name, unsigned short num)
 {
 #ifdef URHO3D_BGFX
-    std::string key = std::string(name) + "#" + std::to_string((unsigned)num);
+    Urho3D::stl::string key(name);
+    key += '#';
+    char buf[32];
+#if defined(_MSC_VER)
+    _snprintf_s(buf, sizeof(buf), _TRUNCATE, "%u", (unsigned)num);
+#else
+    snprintf(buf, sizeof(buf), "%u", (unsigned)num);
+#endif
+    key += buf;
     auto it = vec4ArrayCache_.find(key);
     if (it != vec4ArrayCache_.end())
         return it->second;

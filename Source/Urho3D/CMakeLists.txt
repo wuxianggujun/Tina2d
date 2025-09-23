@@ -352,7 +352,8 @@ list (APPEND SOURCE_FILES ${GEN_CPP_FILES} ${LUA_GEN_CPP_FILES} librevision.h Ur
 list (APPEND SOURCE_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/Container/STLAdapter.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Core/EASTLNew.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/Core/MemoryHooks.cpp)
+    ${CMAKE_CURRENT_SOURCE_DIR}/Core/MemoryHooks.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Graphics/BgfxMiAllocator.cpp)
 
 # Define dependency libs
 # Add include directories to find the precompiled header, export header, and installed headers from third-party libs
