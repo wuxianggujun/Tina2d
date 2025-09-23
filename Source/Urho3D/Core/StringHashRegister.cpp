@@ -36,7 +36,7 @@ StringHash StringHashRegister::RegisterString(const StringHash& hash, const char
     auto iter = map_.find(hash);
     if (iter == map_.end())
     {
-        map_.emplace(hash, string);
+        map_[hash] = String(string);
     }
     else if (iter->second.Compare(string, false) != 0)
     {
@@ -74,7 +74,7 @@ bool StringHashRegister::Contains(const StringHash& hash) const
     if (mutex_)
         mutex_->Acquire();
 
-    const bool contains = map_.find(hash) != map_.end();
+    const bool contains = (map_.find(hash) != map_.end());
 
     if (mutex_)
         mutex_->Release();
@@ -89,3 +89,4 @@ const String& StringHashRegister::GetString(const StringHash& hash) const
 }
 
 }
+

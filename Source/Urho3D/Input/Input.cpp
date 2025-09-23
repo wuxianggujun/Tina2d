@@ -314,26 +314,26 @@ static bool Win32_ResizingEventWatcher(void* data, SDL_Event* event)
 
 void JoystickState::Initialize(i32 numButtons, i32 numAxes, i32 numHats)
 {
-    buttons_.Resize(numButtons);
-    buttonPress_.Resize(numButtons);
-    axes_.Resize(numAxes);
-    hats_.Resize(numHats);
+    buttons_.resize(numButtons);
+    buttonPress_.resize(numButtons);
+    axes_.resize(numAxes);
+    hats_.resize(numHats);
 
     Reset();
 }
 
 void JoystickState::Reset()
 {
-    for (i32 i = 0; i < buttons_.Size(); ++i)
+    for (i32 i = 0; i < buttons_.size(); ++i)
     {
         buttons_[i] = false;
         buttonPress_[i] = false;
     }
 
-    for (i32 i = 0; i < axes_.Size(); ++i)
+    for (i32 i = 0; i < axes_.size(); ++i)
         axes_[i] = 0.0f;
 
-    for (i32 i = 0; i < hats_.Size(); ++i)
+    for (i32 i = 0; i < hats_.size(); ++i)
         hats_[i] = HAT_CENTER;
 }
 
@@ -1094,11 +1094,11 @@ int Input::AddScreenJoystick(XMLFile* layoutFile, XMLFile* styleFile)
                     keyBindings = keyBinding.Split(' ');    // Attempt to split the text using ' ' as separator
                 else if (keyBinding.Length() == 4)
                 {
-                    keyBindings.Resize(4);      // e.g.: "WSAD"
+                    keyBindings.resize(4);      // e.g.: "WSAD"
                     for (i32 i = 0; i < 4; ++i)
                         keyBindings[i] = keyBinding.Substring(i, 1);
                 }
-                if (keyBindings.Size() == 4)
+                if (keyBindings.size() == 4)
                 {
                     PopulateKeyBindingMap(keyBindingMap);
 
@@ -1571,7 +1571,7 @@ void Input::Initialize()
 
 void Input::ResetJoysticks()
 {
-    joysticks_.Clear();
+    joysticks_.clear();
 
     // Open each detected joystick automatically on startup (SDL3)
     int count = 0;
@@ -1587,14 +1587,14 @@ void Input::ResetJoysticks()
 void Input::ResetInputAccumulation()
 {
     // Reset input accumulation for this frame
-    keyPress_.Clear();
-    scancodePress_.Clear();
+    keyPress_.clear();
+    scancodePress_.clear();
     mouseButtonPress_ = MOUSEB_NONE;
     mouseMove_ = IntVector2::ZERO;
     mouseMoveWheel_ = 0;
     for (HashMap<SDL_JoystickID, JoystickState>::Iterator i = joysticks_.Begin(); i != joysticks_.End(); ++i)
     {
-        for (i32 j = 0; j < i->second_.buttonPress_.Size(); ++j)
+        for (i32 j = 0; j < i->second_.buttonPress_.size(); ++j)
             i->second_.buttonPress_[j] = false;
     }
 
@@ -1653,10 +1653,10 @@ void Input::LoseFocus()
 
 void Input::ResetState()
 {
-    keyDown_.Clear();
-    keyPress_.Clear();
-    scancodeDown_.Clear();
-    scancodePress_.Clear();
+    keyDown_.clear();
+    keyPress_.clear();
+    scancodeDown_.clear();
+    scancodePress_.clear();
 
     /// \todo Check if resetting joystick state on input focus loss is even necessary
     for (HashMap<SDL_JoystickID, JoystickState>::Iterator i = joysticks_.Begin(); i != joysticks_.End(); ++i)
@@ -1689,9 +1689,9 @@ void Input::ResetTouches()
         SendEvent(E_TOUCHEND, eventData);
     }
 
-    touches_.Clear();
-    touchIDMap_.Clear();
-    availableTouchIDs_.Clear();
+    touches_.clear();
+    touchIDMap_.clear();
+    availableTouchIDs_.clear();
     for (int i = 0; i < TOUCHID_MAX; i++)
         availableTouchIDs_.Push(i);
 
@@ -2605,3 +2605,4 @@ void Input::HandleScreenJoystickTouch(StringHash eventType, VariantMap& eventDat
 }
 
 }
+

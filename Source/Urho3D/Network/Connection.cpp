@@ -91,7 +91,8 @@ PacketType Connection::GetPacketType(bool reliable, bool inOrder)
 
 void Connection::SendMessage(int msgID, bool reliable, bool inOrder, const VectorBuffer& msg, unsigned contentID)
 {
-    SendMessage(msgID, reliable, inOrder, msg.GetData(), msg.GetSize(), contentID);
+    // GetSize() 返回 i64，这里显式收窄到协议使用的 32bit 大小
+    SendMessage(msgID, reliable, inOrder, msg.GetData(), (unsigned)msg.GetSize(), contentID);
 }
 
 void Connection::SendMessage(int msgID, bool reliable, bool inOrder, const byte* data, unsigned numBytes,
@@ -249,12 +250,15 @@ void Connection::SendServerUpdate()
     ProcessNode(sceneID);
 
     // Then go through all dirtied nodes
-    nodesToProcess_.Insert(sceneState_.dirtyNodes_);
+    // 原始实现依赖 HashSet::Insert(另一个集合) 接口；在 EASTL 包装下改为逐个插入
+    for (auto it = sceneState_.dirtyNodes_.Begin(); it != sceneState_.dirtyNodes_.End(); ++it)
+        nodesToProcess_.Insert(*it);
     nodesToProcess_.Erase(sceneID); // Do not process the root node twice
 
     while (nodesToProcess_.Size())
     {
-        unsigned nodeID = nodesToProcess_.Front();
+        // HashSet 不提供 Front()；取首个迭代器元素即可
+        unsigned nodeID = *nodesToProcess_.Begin();
         ProcessNode(nodeID);
     }
 }

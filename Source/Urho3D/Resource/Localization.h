@@ -22,7 +22,7 @@ public:
 
     /// Return the number of languages.
     /// @property
-    int GetNumLanguages() const { return (int)languages_.Size(); }
+    int GetNumLanguages() const { return (int)languages_.size(); }
 
     /// Return the index number of current language. The index is determined by the order of loading.
     /// @property

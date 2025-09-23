@@ -106,4 +106,14 @@ template <> inline hash32 MakeHash(const i8& value)
     return value;
 }
 
+// EASTL 自定义哈希适配器：统一通过 Urho3D::MakeHash 生成 hash32，再转为 size_t
+template <class T>
+struct HashAdapter
+{
+    size_t operator()(const T& value) const noexcept
+    {
+        return static_cast<size_t>(MakeHash(value));
+    }
+};
+
 }

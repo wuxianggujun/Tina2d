@@ -9,6 +9,7 @@
 
 #include "Container/HashMap.h"
 #include "Container/HashSet.h"
+#include "Container/Pair.h"
 #include "Container/Sort.h"
 #include "Container/Str.h"
 

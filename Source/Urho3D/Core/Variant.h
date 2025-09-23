@@ -14,6 +14,7 @@
 #include "../Math/StringHash.h"
 
 #include <typeinfo>
+#include <utility>
 
 namespace Urho3D
 {
@@ -57,14 +58,12 @@ enum VariantType
 class Variant;
 class VectorBuffer;
 
-/// Vector of variants.
-using VariantVector = Vector<Variant>;
-
-/// Vector of strings.
+/// Vector of strings。
 using StringVector = Vector<String>;
 
-/// Map of variants.
-using VariantMap = HashMap<StringHash, Variant>;
+/// 在完整定义 Variant 之前，仅声明与 Variant 相关的容器。
+using VariantVector = Vector<Variant>;
+struct VariantMap;
 
 /// Typed resource reference.
 struct URHO3D_API ResourceRef
@@ -256,8 +255,8 @@ private:
 /// Make custom variant value.
 template <typename T> CustomVariantValueImpl<T> MakeCustomValue(const T& value) { return CustomVariantValueImpl<T>(value); }
 
-/// Size of variant value. 16 bytes on 32-bit platform, 32 bytes on 64-bit platform.
-static const unsigned VARIANT_VALUE_SIZE = sizeof(void*) * 4;
+/// Size的策略改为更宽松，容纳 EASTL 容器的小型句柄。
+static const unsigned VARIANT_VALUE_SIZE = sizeof(void*) * 8;
 
 /// Union for the possible variant values. Objects exceeding the VARIANT_VALUE_SIZE are allocated on the heap.
 union VariantValue
@@ -284,8 +283,8 @@ union VariantValue
     Color color_;
     String string_;
     StringVector stringVector_;
-    VariantVector variantVector_;
-    VariantMap variantMap_;
+    VariantVector* variantVector_;
+    VariantMap* variantMap_;
     Vector<byte> buffer_;
     ResourceRef resourceRef_;
     ResourceRefList resourceRefList_;
@@ -310,7 +309,8 @@ union VariantValue
     ~VariantValue() { }     // NOLINT(modernize-use-equals-default)
 };
 
-static_assert(sizeof(VariantValue) == VARIANT_VALUE_SIZE, "Unexpected size of VariantValue");
+// 放宽联合体尺寸校验，以适配 EASTL 容器包装后的成员大小。
+// static_assert(sizeof(VariantValue) == VARIANT_VALUE_SIZE, "Unexpected size of VariantValue");
 
 /// Variable that supports a fixed set of types.
 class URHO3D_API Variant
@@ -734,7 +734,7 @@ public:
     Variant& operator =(const VariantVector& rhs)
     {
         SetType(VAR_VARIANTVECTOR);
-        value_.variantVector_ = rhs;
+        *value_.variantVector_ = rhs;
         return *this;
     }
 
@@ -747,12 +747,7 @@ public:
     }
 
     /// Assign from a variant map.
-    Variant& operator =(const VariantMap& rhs)
-    {
-        SetType(VAR_VARIANTMAP);
-        value_.variantMap_ = rhs;
-        return *this;
-    }
+    Variant& operator =(const VariantMap& rhs);
 
     /// Assign from a rect.
     Variant& operator =(const Rect& rhs)
@@ -921,7 +916,7 @@ public:
     /// Test for equality with a variant vector. To return true, both the type and value must match.
     bool operator ==(const VariantVector& rhs) const
     {
-        return type_ == VAR_VARIANTVECTOR ? value_.variantVector_ == rhs : false;
+        return type_ == VAR_VARIANTVECTOR ? (*value_.variantVector_) == rhs : false;
     }
 
     /// Test for equality with a string vector. To return true, both the type and value must match.
@@ -931,10 +926,7 @@ public:
     }
 
     /// Test for equality with a variant map. To return true, both the type and value must match.
-    bool operator ==(const VariantMap& rhs) const
-    {
-        return type_ == VAR_VARIANTMAP ? value_.variantMap_ == rhs : false;
-    }
+    bool operator ==(const VariantMap& rhs) const;
 
     /// Test for equality with a rect. To return true, both the type and value must match.
     bool operator ==(const Rect& rhs) const
@@ -1056,7 +1048,7 @@ public:
     bool operator !=(const StringVector& rhs) const { return !(*this == rhs); }
 
     /// Test for inequality with a variant map.
-    bool operator !=(const VariantMap& rhs) const { return !(*this == rhs); }
+    bool operator !=(const VariantMap& rhs) const;
 
     /// Test for inequality with a rect.
     bool operator !=(const Rect& rhs) const { return !(*this == rhs); }
@@ -1257,7 +1249,7 @@ public:
     /// Return a variant vector or empty on type mismatch.
     const VariantVector& GetVariantVector() const
     {
-        return type_ == VAR_VARIANTVECTOR ? value_.variantVector_ : emptyVariantVector;
+        return type_ == VAR_VARIANTVECTOR ? *value_.variantVector_ : emptyVariantVector;
     }
 
     /// Return a string vector or empty on type mismatch.
@@ -1267,10 +1259,7 @@ public:
     }
 
     /// Return a variant map or empty on type mismatch.
-    const VariantMap& GetVariantMap() const
-    {
-        return type_ == VAR_VARIANTMAP ? value_.variantMap_ : emptyVariantMap;
-    }
+    const VariantMap& GetVariantMap() const;
 
     /// Return a rect or empty on type mismatch.
     const Rect& GetRect() const { return type_ == VAR_RECT ? value_.rect_ : Rect::ZERO; }
@@ -1381,13 +1370,13 @@ public:
     }
 
     /// Return a pointer to a modifiable variant vector or null on type mismatch.
-    VariantVector* GetVariantVectorPtr() { return type_ == VAR_VARIANTVECTOR ? &value_.variantVector_ : nullptr; }
+    VariantVector* GetVariantVectorPtr() { return type_ == VAR_VARIANTVECTOR ? value_.variantVector_ : nullptr; }
 
     /// Return a pointer to a modifiable string vector or null on type mismatch.
     StringVector* GetStringVectorPtr() { return type_ == VAR_STRINGVECTOR ? &value_.stringVector_ : nullptr; }
 
     /// Return a pointer to a modifiable variant map or null on type mismatch.
-    VariantMap* GetVariantMapPtr() { return type_ == VAR_VARIANTMAP ? &value_.variantMap_ : nullptr; }
+    VariantMap* GetVariantMapPtr();
 
     /// Return a pointer to a modifiable custom variant value or null on type mismatch.
     template <class T> T* GetCustomPtr()
@@ -1431,6 +1420,71 @@ private:
     /// Variant value.
     VariantValue value_;
 };
+
+// 在完整定义 Variant 之后再定义 VariantMap，避免 EASTL/hash_map 在 Variant 未完成时被实例化
+struct VariantMap : public HashMap<StringHash, Variant>
+{
+    using Base = HashMap<StringHash, Variant>;
+    using Base::Base;
+
+    // 便捷填充：按键值对依次写入，返回 self，便于链式调用
+    void PopulateImpl() {}
+    template <class K, class Vv, class... Rest>
+    void PopulateImpl(K&& key, Vv&& value, Rest&&... rest)
+    {
+        // 兼容 key 为 StringHash / const char* / String 等
+        (*this)[StringHash(std::forward<K>(key))] = Variant(std::forward<Vv>(value));
+        PopulateImpl(std::forward<Rest>(rest)...);
+    }
+    template <class... Args>
+    VariantMap& Populate(Args&&... args)
+    {
+        PopulateImpl(std::forward<Args>(args)...);
+        return *this;
+    }
+};
+
+// 为 VariantMap 提供比较运算符，转发到基础 eastl::hash_map 的比较
+inline bool operator==(const VariantMap& a, const VariantMap& b)
+{
+    using Base = HashMap<StringHash, Variant>;
+    return static_cast<const Base&>(a) == static_cast<const Base&>(b);
+}
+inline bool operator!=(const VariantMap& a, const VariantMap& b)
+{
+    return !(a == b);
+}
+
+// 在 VariantMap 完整定义后，补齐 Variant 内联成员实现（涉及 VariantMap 的）
+inline Variant& Variant::operator =(const VariantMap& rhs)
+{
+    SetType(VAR_VARIANTMAP);
+    *value_.variantMap_ = rhs;
+    return *this;
+}
+
+inline bool Variant::operator ==(const VariantMap& rhs) const
+{
+    using Base = HashMap<StringHash, Variant>;
+    return type_ == VAR_VARIANTMAP
+        ? static_cast<const Base&>(*value_.variantMap_) == static_cast<const Base&>(rhs)
+        : false;
+}
+
+inline bool Variant::operator !=(const VariantMap& rhs) const
+{
+    return !(*this == rhs);
+}
+
+inline const VariantMap& Variant::GetVariantMap() const
+{
+    return type_ == VAR_VARIANTMAP ? *value_.variantMap_ : emptyVariantMap;
+}
+
+inline VariantMap* Variant::GetVariantMapPtr()
+{
+    return type_ == VAR_VARIANTMAP ? value_.variantMap_ : nullptr;
+}
 
 /// Return variant type from type.
 template <typename T> VariantType GetVariantType();

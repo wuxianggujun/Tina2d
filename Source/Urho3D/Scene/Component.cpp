@@ -139,7 +139,7 @@ void Component::AddReplicationState(ComponentReplicationState* state)
     if (!networkState_)
         AllocateNetworkState();
 
-    networkState_->replicationStates_.Push(state);
+    networkState_->replicationStates_.push_back(state);
 }
 
 void Component::PrepareNetworkUpdate()
@@ -192,7 +192,7 @@ void Component::CleanupConnection(Connection* connection)
 {
     if (networkState_)
     {
-        for (i32 i = networkState_->replicationStates_.Size() - 1; i >= 0; --i)
+        for (i32 i = networkState_->replicationStates_.size() - 1; i >= 0; --i)
         {
             if (networkState_->replicationStates_[i]->connection_ == connection)
                 networkState_->replicationStates_.Erase(i);
@@ -202,7 +202,7 @@ void Component::CleanupConnection(Connection* connection)
 
 void Component::OnAttributeAnimationAdded()
 {
-    if (attributeAnimationInfos_.Size() == 1)
+    if (attributeAnimationInfos_.size() == 1)
         SubscribeToEvent(GetScene(), E_ATTRIBUTEANIMATIONUPDATE, URHO3D_HANDLER(Component, HandleAttributeAnimationUpdate));
 }
 
@@ -254,7 +254,7 @@ void Component::GetComponents(Vector<Component*>& dest, StringHash type) const
     if (node_)
         node_->GetComponents(dest, type);
     else
-        dest.Clear();
+        dest.clear();
 }
 
 void Component::HandleAttributeAnimationUpdate(StringHash eventType, VariantMap& eventData)
@@ -302,3 +302,4 @@ void Component::DoAutoRemove(AutoRemoveMode mode)
 }
 
 }
+

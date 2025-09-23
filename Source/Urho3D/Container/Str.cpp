@@ -500,7 +500,7 @@ String String::Substring(i32 pos) const
     if (pos < length)
     {
         String ret;
-        ret.Resize(length - pos);
+        ret.resize(length - pos);
         CopyChars(ret.GetBuffer(), GetBuffer() + pos, ret.Length());
 
         return ret;
@@ -518,7 +518,7 @@ String String::Substring(i32 pos, i32 length) const
         String ret;
         if (pos + length > thisLength)
             length = thisLength - pos;
-        ret.Resize(length);
+        ret.resize(length);
         CopyChars(ret.GetBuffer(), GetBuffer() + pos, ret.Length());
 
         return ret;
@@ -1132,14 +1132,14 @@ Vector<String> String::Split(const char* str, char separator, bool keepEmptyStri
         {
             const ptrdiff_t splitLen = splitEnd - str;
             if (splitLen > 0 || keepEmptyStrings)
-                ret.Push(String(str, (i32)splitLen));
+                ret.push_back(String(str, (i32)splitLen));
             str = splitEnd + 1;
         }
     }
 
     const ptrdiff_t splitLen = strEnd - str;
     if (splitLen > 0 || keepEmptyStrings)
-        ret.Push(String(str, (i32)splitLen));
+        ret.push_back(String(str, (i32)splitLen));
 
     return ret;
 }
@@ -1158,11 +1158,11 @@ String String::Joined(const Vector<String>& subStrings, const String& glue)
     if (commonLen)
     {
 
-        joinedString.Reserve(commonLen);
-        joinedString.Resize(commonLen);
+        joinedString.reserve(commonLen);
+        joinedString.resize(commonLen);
         const char* strGlue = glue.GetBuffer();
         char* dest = joinedString.GetBuffer();
-        for (i32 i = 0; i < subStrings.Size(); ++i)
+        for (i32 i = 0; i < subStrings.size(); ++i)
         {
             i32 l = subStrings[i].Length();
             if (l)
@@ -1170,7 +1170,7 @@ String String::Joined(const Vector<String>& subStrings, const String& glue)
                 memcpy(dest, subStrings[i].GetBuffer(), l);
                 dest += l;
             }
-            if (glueLen && i != subStrings.Size() - 1)
+            if (glueLen && i != subStrings.size() - 1)
             {
                 memcpy(dest, strGlue, glueLen);
                 dest += glueLen;
@@ -1410,3 +1410,4 @@ void WString::Resize(i32 newLength)
 }
 
 }
+

@@ -4,11 +4,20 @@
 #pragma once
 
 #include "../Container/Vector.h"
+#include "../Container/HashMap.h"
+#include "../Container/Iter.h"
 #include "../Container/STLAdapter.h"
+#include <EASTL/functional.h>
 
 #include <cstdarg>
 #include <cstring>
 #include <cctype>
+#include <cassert>
+
+// 如果未定义导出宏，则提供空定义，防止在头文件中解析失败
+#ifndef URHO3D_API
+#define URHO3D_API
+#endif
 
 namespace Urho3D
 {
@@ -19,9 +28,10 @@ static const int MATRIX_CONVERSION_BUFFER_LENGTH = 256;
 class WString;
 
 class StringHash;
+class String;
 
 /// Map of strings（经适配器统一为 EASTL + 自定义分配器）
-using StringMap = Urho3D::stl::unordered_map<StringHash, String>;
+using StringMap = Urho3D::HashMap<StringHash, String>;
 
 /// %String class.
 class URHO3D_API String
@@ -589,6 +599,11 @@ private:
 
     /// Replace a substring with another substring.
     void Replace(i32 pos, i32 length, const char* srcStart, i32 srcLength);
+
+public:
+    // 兼容 EASTL 风格的小写接口别名，便于迁移期调用
+    void reserve(unsigned n) { Reserve((i32)n); }
+    void resize(unsigned n) { Resize((i32)n); }
 };
 
 /// Add a string to a C string.
@@ -598,6 +613,8 @@ inline String operator +(const char* lhs, const String& rhs)
     ret += rhs;
     return ret;
 }
+
+// 为 eastl::hash_map / unordered_* 提供 Urho3D::String 的哈希支持（放到全局命名空间，避免变成 Urho3D::eastl）
 
 /// Add a string to a wide char C string.
 inline String operator +(const wchar_t* lhs, const String& rhs)
@@ -667,3 +684,19 @@ private:
 };
 
 }
+
+
+
+// 为 eastl::hash_map / unordered_* 提供 Urho3D::String 的哈希支持（放到全局命名空间，避免变成 Urho3D::eastl）
+namespace eastl
+{
+    template<>
+    struct hash<Urho3D::String>
+    {
+        size_t operator()(const Urho3D::String& v) const noexcept
+        {
+            return static_cast<size_t>(v.ToHash());
+        }
+    };
+}
+

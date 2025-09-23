@@ -48,11 +48,12 @@ public:
     /// Destruct. Free the child blocks.
     virtual ~ProfilerBlock()
     {
-        for (Vector<ProfilerBlock*>::Iterator i = children_.Begin(); i != children_.End(); ++i)
+        for (auto* child : children_)
         {
-            delete *i;
-            *i = nullptr;
+            delete child;
+            child = nullptr;
         }
+        children_.clear();
 
         delete [] name_;
     }
@@ -91,8 +92,8 @@ public:
         maxTime_ = 0;
         count_ = 0;
 
-        for (Vector<ProfilerBlock*>::Iterator i = children_.Begin(); i != children_.End(); ++i)
-            (*i)->EndFrame();
+        for (auto* child : children_)
+            child->EndFrame();
     }
 
     /// Begin new profiling interval.
@@ -102,21 +103,21 @@ public:
         intervalMaxTime_ = 0;
         intervalCount_ = 0;
 
-        for (Vector<ProfilerBlock*>::Iterator i = children_.Begin(); i != children_.End(); ++i)
-            (*i)->BeginInterval();
+        for (auto* child : children_)
+            child->BeginInterval();
     }
 
     /// Return child block with the specified name.
     ProfilerBlock* GetChild(const char* name)
     {
-        for (Vector<ProfilerBlock*>::Iterator i = children_.Begin(); i != children_.End(); ++i)
+        for (auto* ch : children_)
         {
-            if (!String::Compare((*i)->name_, name, true))
-                return *i;
+            if (!String::Compare(ch->name_, name, true))
+                return ch;
         }
 
         auto* newBlock = new ProfilerBlock(this, name);
-        children_.Push(newBlock);
+        children_.push_back(newBlock);
 
         return newBlock;
     }

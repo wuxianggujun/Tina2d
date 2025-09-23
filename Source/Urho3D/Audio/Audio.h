@@ -90,7 +90,7 @@ public:
     const Vector<SoundSource*>& GetSoundSources() const { return soundSources_; }
 
     /// Return whether the specified master gain has been defined.
-    bool HasMasterGain(const String& type) const { return masterGain_.Contains(type); }
+    bool HasMasterGain(const String& type) const { return masterGain_.find(type) != masterGain_.end(); }
 
     /// Add a sound source to keep track of. Called by SoundSource.
     void AddSoundSource(SoundSource* soundSource);

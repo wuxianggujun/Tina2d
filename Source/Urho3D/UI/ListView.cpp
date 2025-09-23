@@ -13,6 +13,7 @@
 #include "../UI/UIEvents.h"
 
 #include "../DebugNew.h"
+#include <EASTL/algorithm.h>
 
 namespace Urho3D
 {
@@ -112,9 +113,9 @@ public:
         if (overlay)
         {
             const Vector<SharedPtr<UIElement>>& children = overlayContainer_->GetChildren();
-            Vector<SharedPtr<UIElement>>::ConstIterator i = children.Find(SharedPtr<UIElement>(overlay));
-            if (i != children.End())
-                listView_->ToggleExpand((i32)(i - children.Begin()));
+            auto it = eastl::find(children.begin(), children.end(), SharedPtr<UIElement>(overlay));
+            if (it != children.end())
+                listView_->ToggleExpand((i32)(it - children.begin()));
         }
     }
 
@@ -412,7 +413,11 @@ void ListView::RemoveItem(UIElement* item, i32 index/* = 0*/)
         if (GetItem(i) == item)
         {
             item->SetSelected(false);
-            selections_.Remove(i);
+            {
+                auto itSel = eastl::find(selections_.begin(), selections_.end(), i);
+                if (itSel != selections_.end())
+                    selections_.erase(itSel);
+            }
 
             i32 removed = 1;
             if (hierarchyMode_)
@@ -429,8 +434,8 @@ void ListView::RemoveItem(UIElement* item, i32 index/* = 0*/)
                         if (childItem->GetIndent() > baseIndent)
                         {
                             childItem->SetSelected(false);
-                            if (j < selections_.Size()) // TODO: Rework?
-                                selections_.Erase(j);
+                            if (j < (i32)selections_.size()) // TODO: Rework?
+                                selections_.erase(selections_.begin() + j);
                             contentElement_->RemoveChildAtIndex(i + 1);
                             overlayContainer_->RemoveChildAtIndex(i + 1);
                             ++removed;
@@ -461,9 +466,9 @@ void ListView::RemoveItem(UIElement* item, i32 index/* = 0*/)
             }
 
             // If necessary, shift the following selections
-            if (!selections_.Empty())
+            if (!selections_.empty())
             {
-                for (i32 j = 0; j < selections_.Size(); ++j)
+                for (i32 j = 0; j < (i32)selections_.size(); ++j)
                 {
                     if (selections_[j] > i)
                         selections_[j] -= removed;
@@ -501,7 +506,7 @@ void ListView::SetSelection(i32 index)
 {
     assert(index >= 0);
     Vector<i32> indices;
-    indices.Push(index);
+    indices.push_back(index);
     SetSelections(indices);
     EnsureItemVisibility(index);
 }
@@ -514,12 +519,12 @@ void ListView::SetSelections(const Vector<i32>& indices)
     i32 numItems = GetNumItems();
 
     // Remove first items that should no longer be selected
-    for (Vector<i32>::Iterator i = selections_.Begin(); i != selections_.End();)
+    for (auto it = selections_.begin(); it != selections_.end();)
     {
-        i32 index = *i;
-        if (!indices.Contains(index))
+        i32 index = *it;
+        if (eastl::find(indices.begin(), indices.end(), index) == indices.end())
         {
-            i = selections_.Erase(i);
+            it = selections_.erase(it);
 
             using namespace ItemSelected;
 
@@ -532,24 +537,23 @@ void ListView::SetSelections(const Vector<i32>& indices)
                 return;
         }
         else
-            ++i;
+            ++it;
     }
 
     bool added = false;
 
     // Then add missing items
-    for (Vector<i32>::ConstIterator i = indices.Begin(); i != indices.End(); ++i)
+    for (const i32& index : indices)
     {
-        i32 index = *i;
         if (index < numItems)
         {
             // In singleselect mode, resend the event even for the same selection
-            bool duplicate = selections_.Contains(index);
+            bool duplicate = eastl::find(selections_.begin(), selections_.end(), index) != selections_.end();
             if (!duplicate || !multiselect_)
             {
                 if (!duplicate)
                 {
-                    selections_.Push(index);
+                    selections_.push_back(index);
                     added = true;
                 }
 
@@ -557,7 +561,7 @@ void ListView::SetSelections(const Vector<i32>& indices)
 
                 VariantMap& eventData = GetEventDataMap();
                 eventData[P_ELEMENT] = this;
-                eventData[P_SELECTION] = *i;
+                eventData[P_SELECTION] = index;
                 SendEvent(E_ITEMSELECTED, eventData);
 
                 if (self.Expired())
@@ -571,7 +575,7 @@ void ListView::SetSelections(const Vector<i32>& indices)
 
     // Re-sort selections if necessary
     if (added)
-        Sort(selections_.Begin(), selections_.End());
+        eastl::sort(selections_.begin(), selections_.end());
 
     UpdateSelectionEffect();
     SendEvent(E_SELECTIONCHANGED);
@@ -591,9 +595,9 @@ void ListView::AddSelection(i32 index)
         if (index >= GetNumItems())
             return;
 
-        if (!selections_.Contains(index))
+        if (eastl::find(selections_.begin(), selections_.end(), index) == selections_.end())
         {
-            selections_.Push(index);
+            selections_.push_back(index);
 
             using namespace ItemSelected;
 
@@ -605,7 +609,7 @@ void ListView::AddSelection(i32 index)
             if (self.Expired())
                 return;
 
-            Sort(selections_.Begin(), selections_.End());
+            eastl::sort(selections_.begin(), selections_.end());
         }
 
         EnsureItemVisibility(index);
@@ -621,7 +625,11 @@ void ListView::RemoveSelection(i32 index)
     if (index >= GetNumItems())
         return;
 
-    if (selections_.Remove(index))
+    {
+        auto itSel = eastl::find(selections_.begin(), selections_.end(), index);
+        if (itSel != selections_.end())
+            selections_.erase(itSel);
+    }
     {
         using namespace ItemSelected;
 
@@ -645,7 +653,7 @@ void ListView::ToggleSelection(i32 index)
     if (index >= numItems)
         return;
 
-    if (selections_.Contains(index))
+    if (eastl::find(selections_.begin(), selections_.end(), index) != selections_.end())
         RemoveSelection(index);
     else
         AddSelection(index);
@@ -654,7 +662,7 @@ void ListView::ToggleSelection(i32 index)
 void ListView::ChangeSelection(int delta, bool additive)
 {
     i32 numItems = GetNumItems();
-    if (selections_.Empty())
+    if (selections_.empty())
     {
         // Select first item if there is no selection yet
         if (numItems > 0)
@@ -666,7 +674,7 @@ void ListView::ChangeSelection(int delta, bool additive)
         additive = false;
 
     // If going downwards, use the last selection as a base. Otherwise use first
-    i32 selection = delta > 0 ? selections_.Back() : selections_.Front();
+    i32 selection = delta > 0 ? selections_.back() : selections_.front();
     int direction = delta > 0 ? 1 : -1;
     i32 newSelection = selection;
     i32 okSelection = selection;
@@ -681,7 +689,7 @@ void ListView::ChangeSelection(int delta, bool additive)
         UIElement* item = GetItem(newSelection);
         if (item->IsVisible())
         {
-            indices.Push(okSelection = newSelection);
+            indices.push_back(okSelection = newSelection);
             delta -= direction;
         }
     }
@@ -862,7 +870,7 @@ i32 ListView::FindItem(UIElement* item) const
     {
         int itemY = item->GetScreenPosition().y_;
         int left = 0;
-        int right = children.Size() - 1;
+        int right = (int)children.size() - 1;
         while (right >= left)
         {
             int mid = (left + right) / 2;
@@ -876,7 +884,7 @@ i32 ListView::FindItem(UIElement* item) const
     }
 
     // Fallback to linear search in case the coordinates/sizes were not yet initialized
-    for (i32 i = 0; i < children.Size(); ++i)
+    for (i32 i = 0; i < (i32)children.size(); ++i)
     {
         if (children[i] == item)
             return i;
@@ -887,10 +895,10 @@ i32 ListView::FindItem(UIElement* item) const
 
 i32 ListView::GetSelection() const
 {
-    if (selections_.Empty())
+    if (selections_.empty())
         return NINDEX;
     else
-        return GetSelections().Front();
+        return selections_.empty() ? NINDEX : selections_[0];
 }
 
 UIElement* ListView::GetSelectedItem() const
@@ -902,11 +910,11 @@ Vector<UIElement*> ListView::GetSelectedItems() const
 {
     Vector<UIElement*> ret;
 
-    for (Vector<i32>::ConstIterator i = selections_.Begin(); i != selections_.End(); ++i)
+    for (const i32 index : selections_)
     {
-        UIElement* item = GetItem(*i);
+        UIElement* item = GetItem(index);
         if (item)
-            ret.Push(item);
+            ret.push_back(item);
     }
 
     return ret;
@@ -916,10 +924,9 @@ void ListView::CopySelectedItemsToClipboard() const
 {
     String selectedText;
 
-    for (Vector<i32>::ConstIterator i = selections_.Begin(); i != selections_.End(); ++i)
+    for (const i32 index : selections_)
     {
-        // Only handle Text UI element
-        auto* text = dynamic_cast<Text*>(GetItem(*i));
+        auto* text = dynamic_cast<Text*>(GetItem(index));
         if (text)
             selectedText.Append(text->GetText()).Append("\n");
     }
@@ -930,7 +937,7 @@ void ListView::CopySelectedItemsToClipboard() const
 bool ListView::IsSelected(i32 index) const
 {
     assert(index >= 0);
-    return selections_.Contains(index);
+    return eastl::find(selections_.begin(), selections_.end(), index) != selections_.end();
 }
 
 bool ListView::IsExpanded(i32 index) const
@@ -990,7 +997,7 @@ void ListView::UpdateSelectionEffect()
     for (i32 i = 0; i < numItems; ++i)
     {
         UIElement* item = GetItem(i);
-        if (highlightMode_ != HM_NEVER && selections_.Contains(i))
+        if (highlightMode_ != HM_NEVER && eastl::find(selections_.begin(), selections_.end(), i) != selections_.end())
             item->SetSelected(highlighted);
         else
             item->SetSelected(false);
@@ -1057,40 +1064,40 @@ void ListView::HandleUIMouseClick(StringHash eventType, VariantMap& eventData)
         {
             if (qualifiers & QUAL_SHIFT)
             {
-                if (selections_.Empty())
+                if (selections_.empty())
                     SetSelection(i);
                 else
                 {
-                    i32 first = selections_.Front();
-                    i32 last = selections_.Back();
+                    i32 first = selections_.front();
+                    i32 last = selections_.back();
                     Vector<i32> newSelections = selections_;
                     if (i == first || i == last)
                     {
                         for (i32 j = first; j <= last; ++j)
-                            newSelections.Push(j);
+                            newSelections.push_back(j);
                     }
                     else if (i < first)
                     {
                         for (i32 j = i; j <= first; ++j)
-                            newSelections.Push(j);
+                            newSelections.push_back(j);
                     }
                     else if (i < last)
                     {
                         if ((abs(i - first)) <= (abs(i - last)))
                         {
                             for (i32 j = first; j <= i; ++j)
-                                newSelections.Push(j);
+                                newSelections.push_back(j);
                         }
                         else
                         {
                             for (i32 j = i; j <= last; ++j)
-                                newSelections.Push(j);
+                                newSelections.push_back(j);
                         }
                     }
                     else if (i > last)
                     {
                         for (i32 j = last; j <= i; ++j)
-                            newSelections.Push(j);
+                            newSelections.push_back(j);
                     }
                     SetSelections(newSelections);
                 }

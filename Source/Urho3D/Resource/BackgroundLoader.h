@@ -5,6 +5,7 @@
 
 #include "../Container/HashMap.h"
 #include "../Container/HashSet.h"
+#include "../Container/Pair.h"
 #include "../Core/Mutex.h"
 #include "../Container/Ptr.h"
 #include "../Container/RefCounted.h"

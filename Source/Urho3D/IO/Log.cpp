@@ -158,7 +158,7 @@ void Log::Write(int level, const String& message)
         if (logInstance)
         {
             MutexLock lock(logInstance->logMutex_);
-            logInstance->threadMessages_.Push(StoredLogMessage(message, level, false));
+            logInstance->threadMessages_.push_back(StoredLogMessage(message, level, false));
         }
 
         return;
@@ -217,7 +217,7 @@ void Log::WriteRaw(const String& message, bool error)
         if (logInstance)
         {
             MutexLock lock(logInstance->logMutex_);
-            logInstance->threadMessages_.Push(StoredLogMessage(message, LOG_RAW, error));
+            logInstance->threadMessages_.push_back(StoredLogMessage(message, LOG_RAW, error));
         }
 
         return;
@@ -298,3 +298,4 @@ void Log::HandleEndFrame(StringHash eventType, VariantMap& eventData)
 }
 
 }
+

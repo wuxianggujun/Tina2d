@@ -632,13 +632,13 @@ void Engine::DumpResources(bool dumpFileName)
     if (dumpFileName)
     {
         URHO3D_LOGRAW("Used resources:\n");
-        for (HashMap<StringHash, ResourceGroup>::ConstIterator i = resourceGroups.Begin(); i != resourceGroups.End(); ++i)
+        for (const auto& rg : resourceGroups)
         {
-            const HashMap<StringHash, SharedPtr<Resource>>& resources = i->second_.resources_;
+            const HashMap<StringHash, SharedPtr<Resource>>& resources = rg.second.resources_;
             if (dumpFileName)
             {
-                for (HashMap<StringHash, SharedPtr<Resource>>::ConstIterator j = resources.Begin(); j != resources.End(); ++j)
-                    URHO3D_LOGRAW(j->second_->GetName() + "\n");
+                for (const auto& res : resources)
+                    URHO3D_LOGRAW(res.second->GetName() + "\n");
             }
         }
     }
@@ -966,14 +966,14 @@ VariantMap Engine::ParseParameters(const Vector<String>& arguments)
 bool Engine::HasParameter(const VariantMap& parameters, const String& parameter)
 {
     StringHash nameHash(parameter);
-    return parameters.Find(nameHash) != parameters.End();
+    return parameters.find(nameHash) != parameters.end();
 }
 
 const Variant& Engine::GetParameter(const VariantMap& parameters, const String& parameter, const Variant& defaultValue)
 {
     StringHash nameHash(parameter);
-    VariantMap::ConstIterator i = parameters.Find(nameHash);
-    return i != parameters.End() ? i->second_ : defaultValue;
+    auto i = parameters.find(nameHash);
+    return i != parameters.end() ? i->second : defaultValue;
 }
 
 void Engine::HandleExitRequested(StringHash eventType, VariantMap& eventData)

@@ -7,6 +7,7 @@
 #include "../Core/StringUtils.h"
 #include "../IO/Log.h"
 #include "../Resource/JSONValue.h"
+#include "../Resource/JSONObject.h"
 
 #include "../DebugNew.h"
 
@@ -186,7 +187,7 @@ void JSONValue::Push(const JSONValue& value)
     // Convert to array type
     SetType(JSON_ARRAY);
 
-    arrayValue_->Push(value);
+    arrayValue_->push_back(value);
 }
 
 void JSONValue::Pop()
@@ -194,7 +195,7 @@ void JSONValue::Pop()
     if (GetValueType() != JSON_ARRAY)
         return;
 
-    arrayValue_->Pop();
+    arrayValue_->pop_back();
 }
 
 void JSONValue::Insert(unsigned pos, const JSONValue& value)
@@ -202,7 +203,7 @@ void JSONValue::Insert(unsigned pos, const JSONValue& value)
     if (GetValueType() != JSON_ARRAY)
         return;
 
-    arrayValue_->Insert(pos, value);
+    arrayValue_->insert(arrayValue_->begin() + pos, value);
 }
 
 void JSONValue::Erase(unsigned pos, unsigned length)
@@ -210,7 +211,7 @@ void JSONValue::Erase(unsigned pos, unsigned length)
     if (GetValueType() != JSON_ARRAY)
         return;
 
-    arrayValue_->Erase(pos, length);
+    arrayValue_->erase(arrayValue_->begin() + pos, arrayValue_->begin() + pos + length);
 }
 
 void JSONValue::Resize(unsigned newSize)
@@ -218,15 +219,15 @@ void JSONValue::Resize(unsigned newSize)
     // Convert to array type
     SetType(JSON_ARRAY);
 
-    arrayValue_->Resize(newSize);
+    arrayValue_->resize(newSize);
 }
 
 unsigned JSONValue::Size() const
 {
     if (GetValueType() == JSON_ARRAY)
-        return arrayValue_->Size();
+        return (unsigned)arrayValue_->size();
     else if (GetValueType() == JSON_OBJECT)
-        return objectValue_->Size();
+        return (unsigned)objectValue_->size();
 
     return 0;
 }
@@ -260,11 +261,11 @@ const JSONValue& JSONValue::Get(const String& key) const
     if (GetValueType() != JSON_OBJECT)
         return EMPTY;
 
-    JSONObject::ConstIterator i = objectValue_->Find(key);
-    if (i == objectValue_->End())
+    auto i = objectValue_->find(key);
+    if (i == objectValue_->end())
         return EMPTY;
 
-    return i->second_;
+    return i->second;
 }
 
 bool JSONValue::Erase(const String& key)
@@ -272,7 +273,7 @@ bool JSONValue::Erase(const String& key)
     if (GetValueType() != JSON_OBJECT)
         return false;
 
-    return objectValue_->Erase(key);
+    return objectValue_->erase(key) > 0;
 }
 
 bool JSONValue::Contains(const String& key) const
@@ -280,47 +281,17 @@ bool JSONValue::Contains(const String& key) const
     if  (GetValueType() != JSON_OBJECT)
         return false;
 
-    return objectValue_->Contains(key);
+    return objectValue_->find(key) != objectValue_->end();
 }
 
-JSONObjectIterator JSONValue::Begin()
-{
-    // Convert to object type.
-    SetType(JSON_OBJECT);
-
-    return objectValue_->Begin();
-}
-
-ConstJSONObjectIterator JSONValue::Begin() const
-{
-    if (GetValueType() != JSON_OBJECT)
-        return emptyObject.Begin();
-
-    return objectValue_->Begin();
-}
-
-JSONObjectIterator JSONValue::End()
-{
-    // Convert to object type.
-    SetType(JSON_OBJECT);
-
-    return objectValue_->End();
-}
-
-ConstJSONObjectIterator JSONValue::End() const
-{
-    if (GetValueType() != JSON_OBJECT)
-        return emptyObject.End();
-
-    return objectValue_->End();
-}
+// Begin/End 迭代器接口移除，JSONValue 内部直接经由 JSONObject 访问
 
 void JSONValue::Clear()
 {
     if (GetValueType() == JSON_ARRAY)
-        arrayValue_->Clear();
+        arrayValue_->clear();
     else if (GetValueType() == JSON_OBJECT)
-        objectValue_->Clear();
+        objectValue_->clear();
 }
 
 void JSONValue::SetType(JSONValueType valueType, JSONNumberType numberType)
@@ -457,8 +428,8 @@ void JSONValue::SetVariantValue(const Variant& variant, Context* context)
     case VAR_STRINGVECTOR:
         {
             const StringVector& vector = variant.GetStringVector();
-            Resize(vector.Size());
-            for (i32 i = 0; i < vector.Size(); ++i)
+            Resize((unsigned)vector.size());
+            for (i32 i = 0; i < (i32)vector.size(); ++i)
                 (*this)[i] = vector[i];
         }
         return;
@@ -505,7 +476,7 @@ Variant JSONValue::GetVariantValue(VariantType type) const
         {
             ResourceRef ref;
             Vector<String> values = GetString().Split(';');
-            if (values.Size() == 2)
+            if (values.size() == 2)
             {
                 ref.type_ = values[0];
                 ref.name_ = values[1];
@@ -518,12 +489,12 @@ Variant JSONValue::GetVariantValue(VariantType type) const
         {
             ResourceRefList refList;
             Vector<String> values = GetString().Split(';', true);
-            if (values.Size() >= 1)
+            if (values.size() >= 1)
             {
                 refList.type_ = values[0];
-                refList.names_.Resize(values.Size() - 1);
-                for (i32 i = 1; i < values.Size(); ++i)
-                    refList.names_[i - 1] = values[i];
+                refList.names_.resize(values.size() - 1);
+                for (i32 i = 1; i < (i32)values.size(); ++i)
+                    refList.names_[(size_t)i - 1] = values[(size_t)i];
             }
             variant = refList;
         }
@@ -533,7 +504,7 @@ Variant JSONValue::GetVariantValue(VariantType type) const
         {
             StringVector vector;
             for (unsigned i = 0; i < Size(); ++i)
-                vector.Push((*this)[i].GetString());
+                vector.push_back((*this)[i].GetString());
             variant = vector;
         }
         break;
@@ -548,8 +519,8 @@ Variant JSONValue::GetVariantValue(VariantType type) const
 void JSONValue::SetVariantMap(const VariantMap& variantMap, Context* context)
 {
     SetType(JSON_OBJECT);
-    for (VariantMap::ConstIterator i = variantMap.Begin(); i != variantMap.End(); ++i)
-        (*this)[i->first_.ToString()].SetVariant(i->second_);
+    for (const auto& kv : variantMap)
+        (*this)[kv.first.ToString()].SetVariant(kv.second);
 }
 
 VariantMap JSONValue::GetVariantMap() const
@@ -561,11 +532,11 @@ VariantMap JSONValue::GetVariantMap() const
         return variantMap;
     }
 
-    for (ConstJSONObjectIterator i = Begin(); i != End(); ++i)
+    for (auto i = objectValue_->begin(); i != objectValue_->end(); ++i)
     {
         /// \todo Ideally this should allow any strings, but for now the convention is that the keys need to be hexadecimal StringHashes
-        StringHash key(ToU32(i->first_, 16));
-        Variant variant = i->second_.GetVariant();
+        StringHash key(ToU32(i->first, 16));
+        Variant variant = i->second.GetVariant();
         variantMap[key] = variant;
     }
 
@@ -575,12 +546,12 @@ VariantMap JSONValue::GetVariantMap() const
 void JSONValue::SetVariantVector(const VariantVector& variantVector, Context* context)
 {
     SetType(JSON_ARRAY);
-    arrayValue_->Reserve(variantVector.Size());
+    arrayValue_->reserve(variantVector.size());
     for (const Variant& var : variantVector)
     {
         JSONValue val;
         val.SetVariant(var, context);
-        arrayValue_->Push(val);
+        arrayValue_->push_back(val);
     }
 }
 
@@ -596,7 +567,7 @@ VariantVector JSONValue::GetVariantVector() const
     for (unsigned i = 0; i < Size(); ++i)
     {
         Variant variant = (*this)[i].GetVariant();
-        variantVector.Push(variant);
+        variantVector.push_back(variant);
     }
 
     return variantVector;

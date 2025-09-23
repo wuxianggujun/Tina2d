@@ -424,12 +424,12 @@ void UI::RenderUpdate()
     }
 
     // Get batches for UI elements rendered into textures. Each element rendered into texture is treated as root element.
-    for (auto it = renderToTexture_.Begin(); it != renderToTexture_.End();)
+    for (auto it = renderToTexture_.begin(); it != renderToTexture_.end();)
     {
-        RenderToTextureData& data = it->second_;
+        RenderToTextureData& data = it->second;
         if (data.rootElement_.Expired())
         {
-            it = renderToTexture_.Erase(it);
+            it = renderToTexture_.erase(it);
             continue;
         }
 
@@ -445,12 +445,12 @@ void UI::RenderUpdate()
             GetBatches(data.batches_, data.vertexData_, element, scissor);
 
             // UIElement does not have anything to show. Insert dummy batch that will clear the texture.
-            if (data.batches_.Empty())
+            if (data.batches_.empty())
             {
                 UIBatch batch(element, BLEND_REPLACE, scissor, nullptr, &data.vertexData_);
                 batch.SetColor(Color::BLACK);
                 batch.AddQuad(scissor.left_, scissor.top_, scissor.right_, scissor.bottom_, 0, 0);
-                data.batches_.Push(batch);
+                data.batches_.push_back(batch);
             }
         }
         ++it;
@@ -490,7 +490,7 @@ void UI::Render(bool renderUICommand)
     {
         for (auto& item : renderToTexture_)
         {
-            RenderToTextureData& data = item.second_;
+            RenderToTextureData& data = item.second;
             if (data.rootElement_->IsEnabled())
             {
                 SetVertexData(data.vertexBuffer_, data.vertexData_);
@@ -509,7 +509,7 @@ void UI::Render(bool renderUICommand)
             }
         }
 
-        if (renderToTexture_.Size())
+        if (!renderToTexture_.empty())
             graphics_->ResetRenderTargets();
     }
 
@@ -536,7 +536,7 @@ void UI::DebugDraw(UIElement* element)
         {
             for (auto& item : renderToTexture_)
             {
-                RenderToTextureData& data = item.second_;
+                RenderToTextureData& data = item.second;
                 if (!data.rootElement_.Expired() && data.rootElement_ == root && data.rootElement_->IsEnabled())
                 {
                     element->GetDebugDrawBatches(data.debugDrawBatches_, data.debugVertexData_, scissor);
@@ -762,11 +762,11 @@ UIElement* UI::GetElementAt(const IntVector2& position, bool enabledOnly, IntVec
         result = GetElementAt(rootElement_, position, enabledOnly);
 
     // Mouse was not hovering UI element. Check elements rendered on 3D objects.
-    if (!result && renderToTexture_.Size())
+    if (!result && !renderToTexture_.empty())
     {
         for (auto& item : renderToTexture_)
         {
-            RenderToTextureData& data = item.second_;
+            RenderToTextureData& data = item.second;
             if (data.rootElement_.Expired() || !data.rootElement_->IsEnabled())
                 continue;
 
@@ -1046,7 +1046,7 @@ void UI::Render(VertexBuffer* buffer, const Vector<UIBatch>& batches, unsigned b
         {
             for (auto& item : renderToTexture_)
             {
-                RenderToTextureData& data = item.second_;
+                RenderToTextureData& data = item.second;
                 if (buffer == data.vertexBuffer_.Get()) { vdata = &data.vertexData_; break; }
                 if (buffer == data.debugVertexBuffer_.Get()) { vdata = &data.debugVertexData_; break; }
             }
@@ -2236,8 +2236,8 @@ void UI::SetElementRenderTexture(UIElement* element, Texture2D* texture)
         return;
     }
 
-    auto it = renderToTexture_.Find(element);
-    if (texture && it == renderToTexture_.End())
+    auto it = renderToTexture_.find(element);
+    if (texture && it == renderToTexture_.end())
     {
         RenderToTextureData data;
         data.texture_ = texture;
@@ -2246,12 +2246,12 @@ void UI::SetElementRenderTexture(UIElement* element, Texture2D* texture)
         data.debugVertexBuffer_ = new VertexBuffer(context_);
         renderToTexture_[element] = data;
     }
-    else if (it != renderToTexture_.End())
+    else if (it != renderToTexture_.end())
     {
         if (texture == nullptr)
-            renderToTexture_.Erase(it);
+            renderToTexture_.erase(it);
         else
-            it->second_.texture_ = texture;
+            it->second.texture_ = texture;
     }
 }
 

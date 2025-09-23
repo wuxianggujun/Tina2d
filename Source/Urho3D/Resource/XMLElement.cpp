@@ -461,12 +461,12 @@ bool XMLElement::SetVariantVector(const VariantVector& value)
     if (!RemoveChildren("variant"))
         return false;
 
-    for (VariantVector::ConstIterator i = value.Begin(); i != value.End(); ++i)
+    for (const Variant& v : value)
     {
         XMLElement variantElem = CreateChild("variant");
         if (!variantElem)
             return false;
-        variantElem.SetVariant(*i);
+        variantElem.SetVariant(v);
     }
 
     return true;
@@ -477,12 +477,12 @@ bool XMLElement::SetStringVector(const StringVector& value)
     if (!RemoveChildren("string"))
         return false;
 
-    for (StringVector::ConstIterator i = value.Begin(); i != value.End(); ++i)
+    for (const String& s : value)
     {
         XMLElement stringElem = CreateChild("string");
         if (!stringElem)
             return false;
-        stringElem.SetAttribute("value", *i);
+        stringElem.SetAttribute("value", s);
     }
 
     return true;
@@ -493,13 +493,13 @@ bool XMLElement::SetVariantMap(const VariantMap& value)
     if (!RemoveChildren("variant"))
         return false;
 
-    for (VariantMap::ConstIterator i = value.Begin(); i != value.End(); ++i)
+    for (const auto& kv : value)
     {
         XMLElement variantElem = CreateChild("variant");
         if (!variantElem)
             return false;
-        variantElem.SetU32("hash", i->first_.Value());
-        variantElem.SetVariant(i->second_);
+        variantElem.SetU32("hash", kv.first.Value());
+        variantElem.SetVariant(kv.second);
     }
 
     return true;
@@ -729,7 +729,7 @@ Vector<String> XMLElement::GetAttributeNames() const
     pugi::xml_attribute attr = node.first_attribute();
     while (!attr.empty())
     {
-        ret.Push(String(attr.name()));
+        ret.push_back(String(attr.name()));
         attr = attr.next_attribute();
     }
 
@@ -860,7 +860,7 @@ ResourceRef XMLElement::GetResourceRef() const
     ResourceRef ret;
 
     Vector<String> values = GetAttribute("value").Split(';');
-    if (values.Size() == 2)
+    if (values.size() == 2)
     {
         ret.type_ = values[0];
         ret.name_ = values[1];
@@ -874,12 +874,12 @@ ResourceRefList XMLElement::GetResourceRefList() const
     ResourceRefList ret;
 
     Vector<String> values = GetAttribute("value").Split(';', true);
-    if (values.Size() >= 1)
+    if (values.size() >= 1)
     {
         ret.type_ = values[0];
-        ret.names_.Resize(values.Size() - 1);
-        for (i32 i = 1; i < values.Size(); ++i)
-            ret.names_[i - 1] = values[i];
+        ret.names_.resize(values.size() - 1);
+        for (i32 i = 1; i < (i32)values.size(); ++i)
+            ret.names_[(size_t)i - 1] = values[(size_t)i];
     }
 
     return ret;
@@ -892,7 +892,7 @@ VariantVector XMLElement::GetVariantVector() const
     XMLElement variantElem = GetChild("variant");
     while (variantElem)
     {
-        ret.Push(variantElem.GetVariant());
+        ret.push_back(variantElem.GetVariant());
         variantElem = variantElem.GetNext("variant");
     }
 
@@ -906,7 +906,7 @@ StringVector XMLElement::GetStringVector() const
     XMLElement stringElem = GetChild("string");
     while (stringElem)
     {
-        ret.Push(stringElem.GetAttributeCString("value"));
+        ret.push_back(stringElem.GetAttributeCString("value"));
         stringElem = stringElem.GetNext("string");
     }
 
@@ -1110,10 +1110,10 @@ bool XPathQuery::SetQuery(const String& queryString, const String& variableStrin
 
         // Parse the variable string having format "name1:type1,name2:type2,..." where type is one of "Bool", "Float", "String", "ResultSet"
         Vector<String> vars = variableString.Split(',');
-        for (Vector<String>::ConstIterator i = vars.Begin(); i != vars.End(); ++i)
+        for (const String& var : vars)
         {
-            Vector<String> tokens = i->Trimmed().Split(':');
-            if (tokens.Size() != 2)
+            Vector<String> tokens = String(var).Trimmed().Split(':');
+            if (tokens.size() != 2)
                 continue;
 
             pugi::xpath_value_type type;
@@ -1192,3 +1192,4 @@ XPathResultSet XPathQuery::Evaluate(const XMLElement& element) const
 }
 
 }
+

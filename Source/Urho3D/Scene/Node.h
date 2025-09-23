@@ -575,7 +575,7 @@ public:
 
     /// Return number of components.
     /// @property
-    i32 GetNumComponents() const { return components_.Size(); }
+    i32 GetNumComponents() const { return (i32)components_.size(); }
 
     /// Return number of non-local components.
     i32 GetNumNetworkComponents() const;
@@ -694,7 +694,7 @@ private:
     /// Recalculate the world transform.
     void UpdateWorldTransform() const;
     /// Remove child node by iterator.
-    void RemoveChild(Vector<SharedPtr<Node>>::Iterator i);
+    void RemoveChild(eastl::vector<SharedPtr<Node>>::iterator i);
     /// Return child nodes recursively.
     void GetChildrenRecursive(Vector<Node*>& dest) const;
     /// Return child nodes with a specific component recursively.
@@ -706,7 +706,7 @@ private:
     /// Clone node recursively.
     Node* CloneRecursive(Node* parent, SceneResolver& resolver, CreateMode mode);
     /// Remove a component from this node with the specified iterator.
-    void RemoveComponent(Vector<SharedPtr<Component>>::Iterator i);
+    void RemoveComponent(eastl::vector<SharedPtr<Component>>::iterator i);
     /// Handle attribute animation update event.
     void HandleAttributeAnimationUpdate(StringHash eventType, VariantMap& eventData);
 
@@ -785,18 +785,18 @@ template <class T> bool Node::HasComponent() const { return HasComponent(T::GetT
 
 template <class T> T* Node::GetDerivedComponent(bool recursive) const
 {
-    for (Vector<SharedPtr<Component>>::ConstIterator i = components_.Begin(); i != components_.End(); ++i)
+    for (const auto& sp : components_)
     {
-        T* component = dynamic_cast<T*>(i->Get());
+        T* component = dynamic_cast<T*>(sp.Get());
         if (component)
             return component;
     }
 
     if (recursive)
     {
-        for (Vector<SharedPtr<Node>>::ConstIterator i = children_.Begin(); i != children_.End(); ++i)
+        for (const auto& sp : children_)
         {
-            T* component = (*i)->GetDerivedComponent<T>(true);
+            T* component = sp->GetDerivedComponent<T>(true);
             if (component)
                 return component;
         }
@@ -825,19 +825,19 @@ template <class T> T* Node::GetParentDerivedComponent(bool fullTraversal) const
 template <class T> void Node::GetDerivedComponents(Vector<T*>& dest, bool recursive, bool clearVector) const
 {
     if (clearVector)
-        dest.Clear();
+        dest.clear();
 
-    for (Vector<SharedPtr<Component>>::ConstIterator i = components_.Begin(); i != components_.End(); ++i)
+    for (const auto& sp : components_)
     {
-        T* component = dynamic_cast<T*>(i->Get());
+        T* component = dynamic_cast<T*>(sp.Get());
         if (component)
-            dest.Push(component);
+            dest.push_back(component);
     }
 
     if (recursive)
     {
-        for (Vector<SharedPtr<Node>>::ConstIterator i = children_.Begin(); i != children_.End(); ++i)
-            (*i)->GetDerivedComponents<T>(dest, true, false);
+        for (const auto& sp : children_)
+            sp->GetDerivedComponents<T>(dest, true, false);
     }
 }
 

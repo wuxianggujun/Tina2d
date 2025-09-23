@@ -7,6 +7,7 @@
 
 #include "../GraphicsAPI/GraphicsDefs.h"
 #include "../Resource/Resource.h"
+#include "../Container/Pair.h"
 
 namespace Urho3D
 {

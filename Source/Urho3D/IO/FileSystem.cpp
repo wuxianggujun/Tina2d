@@ -633,7 +633,7 @@ bool FileSystem::DirExists(const String& pathName) const
             parentPath = assetPath.Substring(0, pos);
             assetPath = assetPath.Substring(pos + 1);
         }
-        assetPath.Resize(assetPath.Length() - 1);
+    assetPath.Resize(assetPath.Length() - 1);
 
         bool exist = false;
         int count;
@@ -984,7 +984,7 @@ String AddTrailingSlash(const String& pathName)
 {
     String ret = pathName.Trimmed();
     ret.Replace('\\', '/');
-    if (!ret.Empty() && ret.Back() != '/')
+    if (!ret.Empty() && ret[ret.Length() - 1] != '/')
         ret += '/';
     return ret;
 }
@@ -993,7 +993,7 @@ String RemoveTrailingSlash(const String& pathName)
 {
     String ret = pathName.Trimmed();
     ret.Replace('\\', '/');
-    if (!ret.Empty() && ret.Back() == '/')
+    if (!ret.Empty() && ret[ret.Length() - 1] == '/')
         ret.Resize(ret.Length() - 1);
     return ret;
 }
@@ -1071,3 +1071,4 @@ String FileSystem::GetTemporaryDir() const
 }
 
 }
+

@@ -4,6 +4,7 @@
 #pragma once
 
 #include "../Core/Context.h"
+#include <EASTL/allocator.h>
 #ifdef URHO3D_HAS_MIMALLOC
 #include <mimalloc.h>
 #endif
@@ -87,3 +88,5 @@ namespace eastl
     }
 }
 #endif
+
+// 不再提供额外包装函数，直接在需要处调用 eastl::GetDefaultAllocator()

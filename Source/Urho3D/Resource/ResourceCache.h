@@ -289,7 +289,7 @@ template <class T> void ResourceCache::GetResources(Vector<T*>& result) const
     GetResources(resources, type);
 
     // Perform conversion of the returned pointers
-    for (i32 i = 0; i < result.Size(); ++i)
+    for (size_t i = 0; i < result.size(); ++i)
     {
         Resource* resource = resources[i];
         result[i] = static_cast<T*>(resource);

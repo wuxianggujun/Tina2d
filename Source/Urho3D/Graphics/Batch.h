@@ -291,3 +291,5 @@ struct LightBatchQueue
 };
 
 }
+
+// 使用容器适配层中的 HashAdapter<K>，不再在此专门特化 eastl::hash<BatchGroupKey>

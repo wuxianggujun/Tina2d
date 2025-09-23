@@ -4,6 +4,7 @@
 #pragma once
 
 #include "../Container/Ptr.h"
+#include "../Container/Str.h"
 #include "../Math/StringHash.h"
 
 #include <memory>

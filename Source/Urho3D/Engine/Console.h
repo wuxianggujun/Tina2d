@@ -4,6 +4,7 @@
 #pragma once
 
 #include "../Core/Object.h"
+#include "../Container/Pair.h"
 
 namespace Urho3D
 {

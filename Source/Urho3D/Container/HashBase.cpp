@@ -3,6 +3,8 @@
 
 #include "../Precompiled.h"
 
+#include "HashBase.h"
+
 #include "../DebugNew.h"
 
 namespace Urho3D

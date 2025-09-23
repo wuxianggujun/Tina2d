@@ -74,7 +74,7 @@ void Renderer2D::RegisterObject(Context* context)
     context->RegisterFactory<Renderer2D>();
 }
 
-static inline bool CompareRayQueryResults(RayQueryResult& lr, RayQueryResult& rr)
+static inline bool CompareRayQueryResults(const RayQueryResult& lr, const RayQueryResult& rr)
 {
     auto* lhs = static_cast<Drawable2D*>(lr.drawable_);
     auto* rhs = static_cast<Drawable2D*>(rr.drawable_);

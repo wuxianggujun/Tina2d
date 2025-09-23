@@ -4,6 +4,9 @@
 #include "../Precompiled.h"
 
 #include "../Container/ListBase.h"
+#include "../Container/VectorBase.h"
+#include "../Container/HashBase.h"
+#include "../Container/Str.h"
 
 namespace Urho3D
 {

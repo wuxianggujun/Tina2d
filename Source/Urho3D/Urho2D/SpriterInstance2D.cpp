@@ -36,7 +36,7 @@ bool SpriterInstance::SetEntity(int index)
     if (!spriterData_)
         return false;
 
-    if (index < (int)spriterData_->entities_.Size())
+    if (index < (int)spriterData_->entities_.size())
     {
         OnSetEntity(spriterData_->entities_[index]);
         return true;
@@ -67,7 +67,7 @@ bool SpriterInstance::SetAnimation(int index, LoopMode loopMode)
     if (!entity_)
         return false;
 
-    if (index < (int)entity_->animations_.Size())
+    if (index < (int)entity_->animations_.size())
     {
         OnSetAnimation(entity_->animations_[index], loopMode);
         return true;
@@ -192,7 +192,7 @@ void SpriterInstance::UpdateTimelineKeys()
         {
             timelineKey->info_ = timelineKey->info_.UnmapFromParent(spatialInfo_);
         }
-        timelineKeys_.Push(timelineKey);
+        timelineKeys_.push_back(timelineKey);
     }
 
     for (Ref* ref : mainlineKey_->objectRefs_)
@@ -210,7 +210,7 @@ void SpriterInstance::UpdateTimelineKeys()
 
         timelineKey->zIndex_ = ref->zIndex_;
 
-        timelineKeys_.Push(timelineKey);
+        timelineKeys_.push_back(timelineKey);
     }
 }
 
@@ -240,13 +240,13 @@ TimelineKey* SpriterInstance::GetTimelineKey(Ref* ref) const
 {
     Timeline* timeline = animation_->timelines_[ref->timeline_];
     TimelineKey* timelineKey = timeline->keys_[ref->key_]->Clone();
-    if (timeline->keys_.Size() == 1 || timelineKey->curveType_ == INSTANT)
+    if (timeline->keys_.size() == 1 || timelineKey->curveType_ == INSTANT)
     {
         return timelineKey;
     }
 
     i32 nextTimelineKeyIndex = ref->key_ + 1;
-    if (nextTimelineKeyIndex >= timeline->keys_.Size())
+    if (nextTimelineKeyIndex >= timeline->keys_.size())
     {
         if (animation_->looping_)
         {
@@ -282,10 +282,11 @@ void SpriterInstance::Clear()
         {
             delete key;
         }
-        timelineKeys_.Clear();
+        timelineKeys_.clear();
     }
 }
 
 } // namespace Spriter
 
 } // namespace Urho3D
+

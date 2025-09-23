@@ -27,6 +27,7 @@
   #include <EASTL/map.h>
   #include <EASTL/set.h>
   #include <EASTL/functional.h>
+  #include <EASTL/algorithm.h>
   namespace Urho3D { namespace stl = eastl; }
 #else
   #include <vector>
@@ -40,4 +41,3 @@
   #include <functional>
   namespace Urho3D { namespace stl = std; }
 #endif
-
