@@ -170,8 +170,14 @@ void Text::GetBatches(Vector<UIBatch>& batches, Vector<float>& vertexData, const
                 sdfMaterials_.Resize(n + 1);
             if (!sdfMaterials_[n])
                 sdfMaterials_[n] = new Material(context_);
-            // 判断贴图通道数用于区分 SDF(A8) 与 MSDF(RGB[A])
-            const bool isMsdf = textures[n]->GetComponents() >= 3;
+            // 通过资源名约定区分 SDF 与 MSDF：文件名包含 "msdf" 则视为 MSDF
+            // 例如：Fonts/BlueHighway_msdf.sdf（图集应为 RGB[A] 存储）
+            bool isMsdf = false;
+            if (font_)
+            {
+                String nameLower = font_->GetName().ToLower();
+                isMsdf = nameLower.Contains("msdf");
+            }
             if (isMsdf)
             {
                 sdfMaterials_[n]->SetShaderParameter("u_isTextMSDF", true);

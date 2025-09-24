@@ -1,0 +1,15 @@
+{
+  "env": {
+    "ANTHROPIC_AUTH_TOKEN": "sk-x5LNOs4miF5VCsymnShoes9BoaPPiGWJ",
+    "ANTHROPIC_BASE_URL": "https://api.packycode.com",
+    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": 1
+  },
+  "permissions": {
+    "allow": [
+    ],
+    "deny": []
+  },
+
+  "apiKeyHelper": "echo 'sk-x5LNOs4miF5VCsymnShoes9BoaPPiGWJ'",
+  "systemPrompt": "请用中文回复所有消息。主动使用MCP工具分析代码和文件结构，在执行操作前明确告知用户将要使用的工具。"
+}
