@@ -7,6 +7,7 @@
 #include <Urho3D/Graphics/Graphics.h>
 #include <Urho3D/UI/UI.h>
 #include <Urho3D/UI/Text.h>
+#include <Urho3D/UI/Font.h>
 #include <Urho3D/UI/UIElement.h>
 #include <Urho3D/Resource/ResourceCache.h>
 #include <Urho3D/Resource/XMLFile.h>
@@ -95,4 +96,3 @@ void MSDFText::CreateTextDemo(bool msdfAvailable)
         uielement_->AddChild(desc);
     }
 }
-

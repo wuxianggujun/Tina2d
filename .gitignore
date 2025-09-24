@@ -35,6 +35,9 @@ build/
 # Compiled shaders
 *.vs?
 *.ps?
+# BGFX compiled shader binaries
+/bin/CoreData/Shaders/BGFX/**/*.bin
+/bin/CoreData/Shaders/BGFX/*.sc.bin
 
 # Compiled AngelScript
 *.asc
