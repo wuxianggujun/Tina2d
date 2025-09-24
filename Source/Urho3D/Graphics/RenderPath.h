@@ -243,7 +243,7 @@ public:
     RenderPathCommand* GetCommand(i32 index)
     {
         assert(index >= 0);
-        return index < commands_.Size() ? &commands_[index] : nullptr;
+        return (unsigned)index < commands_.Size() ? &commands_[index] : nullptr;
     }
 
     /// Return a shader parameter (first appearance in any command).

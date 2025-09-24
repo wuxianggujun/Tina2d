@@ -297,7 +297,7 @@ bool Material::BeginLoadJSON(Deserializer& source)
             JSONObject textureObject = rootVal.Get("textures").GetObject();
             for (JSONObject::ConstIterator it = textureObject.Begin(); it != textureObject.End(); ++it)
             {
-                String name = it->second.GetString();
+                String name = it->second_.GetString();
                 if (GetExtension(name) == ".xml")
                 {
                     StringHash type = ParseTextureTypeXml(cache, name);
@@ -527,8 +527,8 @@ bool Material::Load(const JSONValue& source)
     JSONObject textureObject = source.Get("textures").GetObject();
     for (JSONObject::ConstIterator it = textureObject.Begin(); it != textureObject.End(); ++it)
     {
-        String textureUnit = it->first;
-        String textureName = it->second.GetString();
+        String textureUnit = it->first_;
+        String textureName = it->second_.GetString();
 
         TextureUnit unit = TU_DIFFUSE;
         unit = ParseTextureUnitName(textureUnit);
@@ -566,12 +566,12 @@ bool Material::Load(const JSONValue& source)
 
     for (JSONObject::ConstIterator it = parameterObject.Begin(); it != parameterObject.End(); ++it)
     {
-        String name = it->first;
-        if (it->second.IsString())
-            SetShaderParameter(name, ParseShaderParameterValue(it->second.GetString()));
-        else if (it->second.IsObject())
+        String name = it->first_;
+        if (it->second_.IsString())
+            SetShaderParameter(name, ParseShaderParameterValue(it->second_.GetString()));
+        else if (it->second_.IsObject())
         {
-            JSONObject valueObj = it->second.GetObject();
+            JSONObject valueObj = it->second_.GetObject();
             SetShaderParameter(name, Variant(valueObj["type"].GetString(), valueObj["value"].GetString()));
         }
     }
@@ -581,8 +581,8 @@ bool Material::Load(const JSONValue& source)
     JSONObject paramAnimationsObject = source.Get("shaderParameterAnimations").GetObject();
     for (JSONObject::ConstIterator it = paramAnimationsObject.Begin(); it != paramAnimationsObject.End(); ++it)
     {
-        String name = it->first;
-        JSONValue paramAnimVal = it->second;
+        String name = it->first_;
+        JSONValue paramAnimVal = it->second_;
 
         SharedPtr<ValueAnimation> animation(new ValueAnimation(context_));
         if (!animation->LoadJSON(paramAnimVal))
@@ -864,7 +864,7 @@ void Material::SetTechnique(i32 index, Technique* tech, MaterialQuality qualityL
 {
     assert(index >= 0);
 
-    if (index >= techniques_.Size())
+    if ((unsigned)index >= techniques_.Size())
         return;
 
     techniques_[index] = TechniqueEntry(tech, qualityLevel, lodDistance);
@@ -1074,7 +1074,7 @@ void Material::RemoveShaderParameter(const String& name)
 
 void Material::ReleaseShaders()
 {
-    for (i32 i = 0; i < techniques_.Size(); ++i)
+    for (i32 i = 0; (unsigned)i < techniques_.Size(); ++i)
     {
         Technique* tech = techniques_[i].technique_;
         if (tech)
@@ -1121,19 +1121,19 @@ void Material::MarkForAuxView(i32 frameNumber)
 const TechniqueEntry& Material::GetTechniqueEntry(i32 index) const
 {
     assert(index >= 0);
-    return index < techniques_.Size() ? techniques_[index] : noEntry;
+    return (unsigned)index < techniques_.Size() ? techniques_[index] : noEntry;
 }
 
 Technique* Material::GetTechnique(i32 index) const
 {
     assert(index >= 0);
-    return index < techniques_.Size() ? techniques_[index].technique_ : nullptr;
+    return (unsigned)index < techniques_.Size() ? techniques_[index].technique_ : nullptr;
 }
 
 Pass* Material::GetPass(i32 index, const String& passName) const
 {
     assert(index >= 0);
-    Technique* tech = index < techniques_.Size() ? techniques_[index].technique_ : nullptr;
+    Technique* tech = (unsigned)index < techniques_.Size() ? techniques_[index].technique_ : nullptr;
     return tech ? tech->GetPass(passName) : nullptr;
 }
 
@@ -1238,7 +1238,7 @@ void Material::RefreshShaderParameterHash()
 
     shaderParameterHash_ = 0;
     const byte* data = temp.GetData();
-    unsigned dataSize = temp.GetSize();
+    unsigned dataSize = (unsigned)temp.GetSize();
     for (unsigned i = 0; i < dataSize; ++i)
         shaderParameterHash_ = SDBMHash(shaderParameterHash_, data[i]);
 }
@@ -1313,12 +1313,12 @@ void Material::ApplyShaderDefines(i32 index/* = NINDEX*/)
 
     if (index == NINDEX)
     {
-        for (i32 i = 0; i < techniques_.Size(); ++i)
+        for (i32 i = 0; (unsigned)i < techniques_.Size(); ++i)
             ApplyShaderDefines(i);
         return;
     }
 
-    if (index >= techniques_.Size() || !techniques_[index].original_)
+    if ((unsigned)index >= techniques_.Size() || !techniques_[index].original_)
         return;
 
     if (vertexShaderDefines_.Empty() && pixelShaderDefines_.Empty())

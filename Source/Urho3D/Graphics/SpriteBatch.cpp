@@ -260,7 +260,7 @@ void SpriteBatch::DrawString(const String& text, Font* font, float fontSize, con
         step = -1;
     }
 
-    for (; i >= 0 && i < unicodeText.Size(); i += step)
+    for (; i >= 0 && (unsigned)i < unicodeText.Size(); i += step)
     {
         const FontGlyph* glyph = face->GetGlyph(unicodeText[i]);
         float gx = (float)glyph->x_;

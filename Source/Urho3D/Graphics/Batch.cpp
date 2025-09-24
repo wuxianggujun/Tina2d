@@ -417,7 +417,7 @@ Texture2D* shadowMap = nullptr;
             Vector4 vertexLights[MAX_VERTEX_LIGHTS * 3];
             const Vector<Light*>& lights = lightQueue_->vertexLights_;
 
-            for (i32 i = 0; i < lights.Size(); ++i)
+            for (i32 i = 0; (unsigned)i < lights.Size(); ++i)
             {
                 Light* vertexLight = lights[i];
                 Node* vertexLightNode = vertexLight->GetNode();
@@ -470,7 +470,7 @@ Texture2D* shadowMap = nullptr;
     // Set material-specific shader parameters and textures
     if (material_)
     {
-        if (graphics->NeedParameterUpdate(SP_MATERIAL, reinterpret_cast<const void*>(material_->GetShaderParameterHash())))
+        if (graphics->NeedParameterUpdate(SP_MATERIAL, reinterpret_cast<const void*>((uintptr_t)material_->GetShaderParameterHash())))
         {
             const HashMap<StringHash, MaterialShaderParameter>& parameters = material_->GetShaderParameters();
             for (HashMap<StringHash, MaterialShaderParameter>::ConstIterator i = parameters.Begin(); i != parameters.End(); ++i)
@@ -585,7 +585,7 @@ void BatchQueue::SortBackToFront()
 {
     sortedBatches_.Resize(batches_.Size());
 
-    for (i32 i = 0; i < batches_.Size(); ++i)
+    for (i32 i = 0; (unsigned)i < batches_.Size(); ++i)
         sortedBatches_[i] = &batches_[i];
 
     Sort(sortedBatches_.Begin(), sortedBatches_.End(), CompareBatchesBackToFront);
@@ -611,7 +611,7 @@ void BatchQueue::SortFrontToBack()
     // Sort each group front to back
     for (HashMap<BatchGroupKey, BatchGroup>::Iterator i = batchGroups_.Begin(); i != batchGroups_.End(); ++i)
     {
-        if (i->second_.instances_.Size() <= maxSortedInstances_)
+        if (i->second_.instances_.Size() <= (unsigned)maxSortedInstances_)
         {
             Sort(i->second_.instances_.Begin(), i->second_.instances_.End(), CompareInstancesFrontToBack);
             if (i->second_.instances_.Size())

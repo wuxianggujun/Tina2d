@@ -160,7 +160,7 @@ void Renderer::SetViewport(i32 index, Viewport* viewport)
 {
     assert(index >= 0);
 
-    if (index >= viewports_.Size())
+    if ((unsigned)index >= viewports_.Size())
         viewports_.Resize(index + 1);
 
     viewports_[index] = viewport;
@@ -889,7 +889,7 @@ void Renderer::OptimizeLightByStencil(Light* light, Camera* camera)
 Viewport* Renderer::GetViewport(i32 index) const
 {
     assert(index >= 0);
-    return index < viewports_.Size() ? viewports_[index] : nullptr;
+    return (unsigned)index < viewports_.Size() ? viewports_[index] : nullptr;
 }
 
 Viewport* Renderer::GetViewportForScene(Scene* scene, i32 index) const

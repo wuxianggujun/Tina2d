@@ -518,7 +518,7 @@ void Octree::RaycastSingle(RayOctreeQuery& query) const
         Drawable* drawable = *i;
         if (drawable->GetSortValue() < Min(closestHit, query.maxDistance_))
         {
-            i32 oldSize = query.result_.Size();
+            unsigned oldSize = query.result_.Size();
             drawable->ProcessRayQuery(query, query.result_);
             if (query.result_.Size() > oldSize)
                 closestHit = Min(closestHit, query.result_.Back().distance_);

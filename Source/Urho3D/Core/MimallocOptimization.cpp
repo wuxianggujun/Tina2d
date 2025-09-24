@@ -2,6 +2,7 @@
 // 添加到 MemoryHooks.cpp 中
 
 #ifdef URHO3D_HAS_MIMALLOC
+#include "mimalloc.h"
 void OptimizeMimallocForGame()
 {
     // 针对游戏优化的mimalloc配置
