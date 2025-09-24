@@ -4,7 +4,7 @@
 #pragma once
 
 #include "../Container/Swap.h"
-#include "../Container/VectorBase.h"
+#include "../Container/Iter.h"
 // EASTL 通用排序（用于适配 EASTL 迭代器）
 #include <EASTL/sort.h>
 

@@ -100,6 +100,8 @@ CTestTestfile.cmake
 !/Source/ThirdParty/SDL/cmake/*.cmake
 !/Source/ThirdParty/SDL/include/*cmake
 !/Source/ThirdParty/Assimp/cmake-modules/*cmake
+!/Source/ThirdParty/bgfx.cmake/
+!/Source/ThirdParty/bgfx.cmake/**
 /Docs/**/*.cmake
 
 # Precompiled header files

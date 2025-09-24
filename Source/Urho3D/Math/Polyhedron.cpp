@@ -152,7 +152,7 @@ void Polyhedron::Clip(const Plane& plane)
 
         // Start with the first vertex
         outFace_.push_back(clippedVertices_.front());
-        clippedVertices_.Erase(0u);
+        clippedVertices_.Erase(0);
 
         while (!clippedVertices_.Empty())
         {

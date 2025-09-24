@@ -6,7 +6,6 @@
 #pragma once
 
 #include "../Container/FlagSet.h"
-#include "../Container/HashBase.h"
 #include "../Math/StringHash.h"
 #include "../Math/Vector3.h"
 

@@ -3,7 +3,6 @@
 
 #pragma once
 
-#include "../Container/HashBase.h"
 #include "../Container/RefCounted.h"
 
 #include <cassert>

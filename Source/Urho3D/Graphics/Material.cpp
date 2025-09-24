@@ -297,7 +297,7 @@ bool Material::BeginLoadJSON(Deserializer& source)
             JSONObject textureObject = rootVal.Get("textures").GetObject();
             for (JSONObject::ConstIterator it = textureObject.Begin(); it != textureObject.End(); ++it)
             {
-                String name = it->second_.GetString();
+                String name = it->second.GetString();
                 if (GetExtension(name) == ".xml")
                 {
                     StringHash type = ParseTextureTypeXml(cache, name);
@@ -527,8 +527,8 @@ bool Material::Load(const JSONValue& source)
     JSONObject textureObject = source.Get("textures").GetObject();
     for (JSONObject::ConstIterator it = textureObject.Begin(); it != textureObject.End(); ++it)
     {
-        String textureUnit = it->first_;
-        String textureName = it->second_.GetString();
+        String textureUnit = it->first;
+        String textureName = it->second.GetString();
 
         TextureUnit unit = TU_DIFFUSE;
         unit = ParseTextureUnitName(textureUnit);
@@ -566,12 +566,12 @@ bool Material::Load(const JSONValue& source)
 
     for (JSONObject::ConstIterator it = parameterObject.Begin(); it != parameterObject.End(); ++it)
     {
-        String name = it->first_;
-        if (it->second_.IsString())
-            SetShaderParameter(name, ParseShaderParameterValue(it->second_.GetString()));
-        else if (it->second_.IsObject())
+        String name = it->first;
+        if (it->second.IsString())
+            SetShaderParameter(name, ParseShaderParameterValue(it->second.GetString()));
+        else if (it->second.IsObject())
         {
-            JSONObject valueObj = it->second_.GetObject();
+            JSONObject valueObj = it->second.GetObject();
             SetShaderParameter(name, Variant(valueObj["type"].GetString(), valueObj["value"].GetString()));
         }
     }
@@ -581,8 +581,8 @@ bool Material::Load(const JSONValue& source)
     JSONObject paramAnimationsObject = source.Get("shaderParameterAnimations").GetObject();
     for (JSONObject::ConstIterator it = paramAnimationsObject.Begin(); it != paramAnimationsObject.End(); ++it)
     {
-        String name = it->first_;
-        JSONValue paramAnimVal = it->second_;
+        String name = it->first;
+        JSONValue paramAnimVal = it->second;
 
         SharedPtr<ValueAnimation> animation(new ValueAnimation(context_));
         if (!animation->LoadJSON(paramAnimVal))

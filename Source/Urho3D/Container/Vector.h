@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include "../Base/PrimitiveTypes.h"
 // 以 EASTL::vector 为底层，提供与旧 Urho3D Vector 接口兼容的轻量包装
 #include <EASTL/vector.h>
 #include <EASTL/algorithm.h>
@@ -20,13 +21,13 @@ public:
     using Iterator = typename Base::iterator;
     using ConstIterator = typename Base::const_iterator;
 
-    unsigned Size() const { return (unsigned)Base::size(); }
+    i32 Size() const { return static_cast<i32>(Base::size()); }
     bool Empty() const { return Base::empty(); }
-    unsigned Capacity() const { return (unsigned)Base::capacity(); }
+    i32 Capacity() const { return static_cast<i32>(Base::capacity()); }
 
     void Clear() { Base::clear(); }
-    void Reserve(unsigned n) { Base::reserve(n); }
-    void Resize(unsigned n) { Base::resize(n); }
+    void Reserve(i32 n) { Base::reserve(n); }
+    void Resize(i32 n) { Base::resize(n); }
 
     void Push(const T& value) { Base::push_back(value); }
     void Push(T&& value) { Base::push_back(eastl::move(value)); }
@@ -47,13 +48,13 @@ public:
     Iterator End() { return Base::end(); }
     ConstIterator End() const { return Base::end(); }
 
-    void Insert(unsigned pos, const T& value) { Base::insert(Base::begin() + pos, value); }
+    void Insert(i32 pos, const T& value) { Base::insert(Base::begin() + pos, value); }
     // 迭代器版本插入，方便与 std/EASTL 算法协作（如 upper_bound 的返回值）
     void Insert(Iterator it, const T& value) { Base::insert(it, value); }
     // 范围插入：将 [first, last) 插入到 it 之前
     void Insert(Iterator it, ConstIterator first, ConstIterator last) { Base::insert(it, first, last); }
-    void Erase(unsigned pos) { Base::erase(Base::begin() + pos); }
-    void Erase(unsigned pos, unsigned length) { Base::erase(Base::begin() + pos, Base::begin() + pos + length); }
+    void Erase(i32 pos) { Base::erase(Base::begin() + pos); }
+    void Erase(i32 pos, i32 length) { Base::erase(Base::begin() + pos, Base::begin() + pos + length); }
 
     // 迭代器版本，兼容旧代码中以迭代器调用 Erase 的场景
     Iterator Erase(Iterator it) { return Base::erase(it); }
@@ -72,8 +73,8 @@ public:
     }
 
     // 兼容旧接口名
-    T& At(unsigned i) { return (*this)[i]; }
-    const T& At(unsigned i) const { return (*this)[i]; }
+    T& At(i32 i) { return (*this)[i]; }
+    const T& At(i32 i) const { return (*this)[i]; }
 
     bool operator==(const Vector& rhs) const { return static_cast<const Base&>(*this) == static_cast<const Base&>(rhs); }
     bool operator!=(const Vector& rhs) const { return !(*this == rhs); }

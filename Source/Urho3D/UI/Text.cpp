@@ -171,6 +171,8 @@ void Text::GetBatches(Vector<UIBatch>& batches, Vector<float>& vertexData, const
             if (!sdfMaterials_[n])
                 sdfMaterials_[n] = new Material(context_);
             sdfMaterials_[n]->SetShaderParameter("u_isTextSDF", true);
+            // 缺省 SDF 参数：edge=0.5、softnessScale=1.0，可按需在材质上覆盖
+            sdfMaterials_[n]->SetShaderParameter("u_sdfParams", Vector2(0.5f, 1.0f));
             sdfMaterials_[n]->SetTexture(TU_DIFFUSE, textures[n]);
             pageBatch.customMaterial_ = sdfMaterials_[n];
         }
