@@ -26,7 +26,8 @@ namespace {
             mi_process_init();
             // 启用额外的调试信息来跟踪内存问题
             mi_option_set(mi_option_show_errors, 1);
-            mi_option_set(mi_option_show_stats, 1);
+            // 默认不在进程退出时打印统计，避免噪声；可用环境变量 MIMALLOC_SHOW_STATS=1 打开
+            mi_option_set(mi_option_show_stats, 0);
         }
     };
     // 使用 [[maybe_unused]] 避免编译器警告，并确保变量被实例化
@@ -106,6 +107,63 @@ inline void operator delete[](void* p, std::align_val_t) noexcept
 inline void operator delete(void* p, std::size_t, std::align_val_t) noexcept { operator delete(p, std::align_val_t(alignof(std::max_align_t))); }
 inline void operator delete[](void* p, std::size_t, std::align_val_t) noexcept { operator delete[](p, std::align_val_t(alignof(std::max_align_t))); }
 #endif
+
+#if defined(_MSC_VER) && defined(_DEBUG)
+// MSVC CRT 调试堆：为 new(_NORMAL_BLOCK, __FILE__, __LINE__) 等提供匹配重载，仍路由到 mimalloc。
+// 这样既能保留文件/行号的泄漏定位，又不会与 mimalloc 发生“跨分配器”错配。
+
+// 非对齐（标量/数组）
+inline void* operator new(std::size_t size, int /*blockUse*/, const char* /*file*/, int /*line*/)
+{
+    void* p = mi_malloc(size);
+    if (!p) throw std::bad_alloc();
+    return p;
+}
+
+inline void* operator new[](std::size_t size, int /*blockUse*/, const char* /*file*/, int /*line*/)
+{
+    void* p = mi_malloc(size);
+    if (!p) throw std::bad_alloc();
+    return p;
+}
+
+inline void operator delete(void* p, int /*blockUse*/, const char* /*file*/, int /*line*/) noexcept
+{
+    if (p) mi_free(p);
+}
+
+inline void operator delete[](void* p, int /*blockUse*/, const char* /*file*/, int /*line*/) noexcept
+{
+    if (p) mi_free(p);
+}
+
+#if defined(__cpp_aligned_new) || (defined(_MSC_VER) && _MSC_VER >= 1912)
+// 对齐（标量/数组）
+inline void* operator new(std::size_t size, std::align_val_t al, int /*blockUse*/, const char* /*file*/, int /*line*/)
+{
+    void* p = mi_malloc_aligned(size, (size_t)al);
+    if (!p) throw std::bad_alloc();
+    return p;
+}
+
+inline void* operator new[](std::size_t size, std::align_val_t al, int /*blockUse*/, const char* /*file*/, int /*line*/)
+{
+    void* p = mi_malloc_aligned(size, (size_t)al);
+    if (!p) throw std::bad_alloc();
+    return p;
+}
+
+inline void operator delete(void* p, std::align_val_t /*al*/, int /*blockUse*/, const char* /*file*/, int /*line*/) noexcept
+{
+    if (p) mi_free(p);
+}
+
+inline void operator delete[](void* p, std::align_val_t /*al*/, int /*blockUse*/, const char* /*file*/, int /*line*/) noexcept
+{
+    if (p) mi_free(p);
+}
+#endif // aligned debug new/delete
+#endif // MSVC _DEBUG
 
 #ifdef _MSC_VER
 #pragma warning(pop)

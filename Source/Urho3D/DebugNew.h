@@ -8,7 +8,7 @@
 
 #pragma once
 
-#if defined(_MSC_VER) && defined(_DEBUG) && !defined(URHO3D_USE_MIMALLOC)
+#if defined(_MSC_VER) && defined(_DEBUG)
 
 #define _CRTDBG_MAP_ALLOC
 
