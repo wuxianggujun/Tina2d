@@ -75,7 +75,7 @@ make -j$(nproc)
 ```
 
 ### **CMake Options**
-- `URHO3D_BGFX=ON` (Forced ON, BGFX-only)
+- BGFX-only 渲染后端：已默认启用，无需开关
 - `URHO3D_2D=ON` (2D features enabled)
 - `URHO3D_SAMPLES=ON` (Build sample applications)
 
@@ -101,7 +101,6 @@ See [LICENSE](licenses/urho3d/LICENSE) for more details.
 **Status**: 🎯 **Production Ready** - Complete 2D/2.5D game engine  
 **Version**: BGFX-only v1.0  
 **Last Updated**: 2025-01-22
-
 
 
 

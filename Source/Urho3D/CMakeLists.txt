@@ -56,8 +56,12 @@ if ($ENV{COVERITY_SCAN_BRANCH})
 endif ()
 # Tina2D: 不再依赖 GLEW（OpenGL 后端已停用）
 
-# 启用 bgfx 后端的编译宏（已全面集成，恒定开启）
-add_definitions (-DURHO3D_BGFX)
+# 移除 URHO3D_BGFX 宏：bgfx 路径已成为默认实现，无需条件编译
+
+# 在调试模式下启用 CRT 泄漏检查（可选）
+if (MSVC AND CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_definitions (-DURHO3D_ENABLE_CRT_LEAK_CHECK)
+endif ()
 
 # EASTL：若可用，则将其包含目录透传，并把链接设为 PUBLIC 以便下游可执行自动得到依赖
 if (TARGET EASTL)
@@ -425,6 +429,14 @@ target_link_libraries(${TARGET_NAME} ${MIMALLOC_TARGET})
 
 # 告知代码层：启用 mimalloc 作为全局分配器，避免与 MSVC CRT DebugNew 冲突
 target_compile_definitions(${TARGET_NAME} PUBLIC URHO3D_USE_MIMALLOC=1)
+
+# 选项：MSVC Debug 下启用 CRT 泄漏检查与自动转储
+option(URHO3D_ENABLE_CRT_LEAK_CHECK "启用 MSVC CRT 泄漏检查（Debug）" ON)
+if (MSVC)
+    if (URHO3D_ENABLE_CRT_LEAK_CHECK)
+        target_compile_definitions(${TARGET_NAME} PUBLIC $<$<CONFIG:Debug>:URHO3D_ENABLE_CRT_LEAK_CHECK=1>)
+    endif ()
+endif ()
 
 # SDL 依赖的链接改由 define_dependency_libs() 统一处理，避免混用 target_link_libraries 的不同签名导致配置错误。
 

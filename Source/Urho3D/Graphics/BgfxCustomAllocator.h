@@ -3,7 +3,6 @@
 
 #pragma once
 
-#ifdef URHO3D_BGFX
 #include <bx/allocator.h>
 #include <cstdlib>
 #include <mimalloc.h>
@@ -40,5 +39,3 @@ namespace Urho3D
         }
     };
 }
-
-#endif // URHO3D_BGFX

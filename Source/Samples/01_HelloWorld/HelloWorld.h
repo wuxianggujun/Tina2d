@@ -17,6 +17,9 @@ class HelloWorld : public Sample
 public:
     /// Construct.
     explicit HelloWorld(Context* context);
+    
+    /// Destructor - print final memory stats.
+    ~HelloWorld() override;
 
     /// Setup after engine initialization and before running the main loop.
     void Start() override;
@@ -36,6 +39,4 @@ private:
     void CreateText();
     /// Subscribe to application-wide logic update events.
     void SubscribeToEvents();
-    /// Handle the logic update event.
-    void HandleUpdate(StringHash eventType, VariantMap& eventData);
 };

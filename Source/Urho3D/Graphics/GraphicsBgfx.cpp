@@ -1,8 +1,6 @@
 // 版权声明同项目整体许可证
 //
-// bgfx 渲染后端最小封装实现：
-// - 仅在定义 URHO3D_BGFX 时启用真实实现；
-// - 未启用时提供空实现，确保不影响现有构建与链路。
+// bgfx 渲染后端最小封装实现：Tina2D 默认渲染路径。
 
 #include "Precompiled.h"
 #include "GraphicsBgfx.h"
@@ -10,10 +8,8 @@
 #include "BgfxMiAllocator.h"
 #include "BgfxCustomAllocator.h"
 
-#ifdef URHO3D_BGFX
-    #include <bgfx/bgfx.h>
-    #include <bgfx/platform.h>
-#endif
+#include <bgfx/bgfx.h>
+#include <bgfx/platform.h>
 #include <algorithm>
 #include <vector>
 #include <bimg/decode.h>
@@ -29,7 +25,7 @@
 #include "../Core/Variant.h"
 #include "../Container/Vector.h"
 #include "../IO/Log.h"
-// 这里不重复包含 bgfx 头，避免在未启用 URHO3D_BGFX 时产生依赖
+// bgfx 头在上方已包含
 
 namespace Urho3D
 {
@@ -43,7 +39,6 @@ GraphicsBgfx::~GraphicsBgfx()
 
 bool GraphicsBgfx::Initialize(void* nativeWindowHandle, unsigned width, unsigned height, void* nativeDisplayHandle)
 {
-#ifdef URHO3D_BGFX
     if (initialized_)
         return true;
 
@@ -73,15 +68,10 @@ bool GraphicsBgfx::Initialize(void* nativeWindowHandle, unsigned width, unsigned
 
     initialized_ = true;
     return true;
-#else
-    (void)nativeWindowHandle; (void)width; (void)height;
-    return false; // 未启用 bgfx 时返回失败，供上层判定是否走旧后端。
-#endif
 }
 
 void GraphicsBgfx::Shutdown()
 {
-#ifdef URHO3D_BGFX
     if (!initialized_)
         return;
     // 先销毁我们创建的资源
@@ -155,12 +145,10 @@ void GraphicsBgfx::Shutdown()
     bgfx::shutdown();
     initialized_ = false;
     width_ = height_ = 0;
-#endif
 }
 
 void GraphicsBgfx::Reset(unsigned width, unsigned height)
 {
-#ifdef URHO3D_BGFX
     width_ = width;
     height_ = height;
     if (initialized_)
@@ -168,14 +156,10 @@ void GraphicsBgfx::Reset(unsigned width, unsigned height)
         bgfx::reset(static_cast<uint16_t>(width_), static_cast<uint16_t>(height_), BGFX_RESET_VSYNC | (srgbBackbuffer_ ? BGFX_RESET_SRGB_BACKBUFFER : 0));
         bgfx::setViewRect(0, 0, 0, static_cast<uint16_t>(width_), static_cast<uint16_t>(height_));
     }
-#else
-    (void)width; (void)height;
-#endif
 }
 
 void GraphicsBgfx::BeginFrame()
 {
-#ifdef URHO3D_BGFX
     if (!initialized_)
         return;
     // 确保默认视图与 UI 视图（31）在本帧有效，并设置 UI 视图到 backbuffer
@@ -199,35 +183,26 @@ void GraphicsBgfx::BeginFrame()
         // 关闭裁剪
         bgfx::setScissor(UINT16_MAX);
     }
-#endif
 }
 
 void GraphicsBgfx::EndFrame()
 {
-#ifdef URHO3D_BGFX
     if (!initialized_)
         return;
     bgfx::frame();
-#endif
 }
  
 bool GraphicsBgfx::InitializeFromSDL(void* sdlWindow, unsigned width, unsigned height)
 {
-#ifdef URHO3D_BGFX
     // SDL_Window* 是前置声明，为避免直接包含 SDL 头，这里采用 void* 并在实现中转换。
     auto* window = reinterpret_cast<SDL_Window*>(sdlWindow);
     void* nwh = GetNativeWindowHandleFromSDL(window);
     void* ndt = GetNativeDisplayHandleFromSDL(window);
     return Initialize(nwh, width, height, ndt);
-#else
-    (void)sdlWindow; (void)width; (void)height;
-    return false;
-#endif
 }
 
 void GraphicsBgfx::SetViewport(const IntRect& rect)
 {
-#ifdef URHO3D_BGFX
     if (!initialized_)
         return;
     const uint16_t w = static_cast<uint16_t>(std::max(0, rect.Width()));
@@ -235,9 +210,6 @@ void GraphicsBgfx::SetViewport(const IntRect& rect)
     const uint16_t x = static_cast<uint16_t>(std::max(0, rect.left_));
     const uint16_t y = static_cast<uint16_t>(std::max(0, rect.top_));
     bgfx::setViewRect(0, x, y, w, h);
-#else
-    (void)rect;
-#endif
 }
 
 static inline uint32_t PackRGBA8(const Color& c)
@@ -253,7 +225,6 @@ static inline uint32_t PackRGBA8(const Color& c)
 
 void GraphicsBgfx::Clear(ClearTargetFlags flags, const Color& color, float depth, u32 stencil)
 {
-#ifdef URHO3D_BGFX
     if (!initialized_)
         return;
     uint16_t mask = 0;
@@ -267,23 +238,17 @@ void GraphicsBgfx::Clear(ClearTargetFlags flags, const Color& color, float depth
     bgfx::setViewClear(0, mask, rgba, depth, static_cast<uint8_t>(stencil & 0xFF));
     // 确保本帧至少提交一次 view 0（若调用方仅清屏）
     bgfx::touch(0);
-#else
-    (void)flags; (void)color; (void)depth; (void)stencil;
-#endif
 }
 
 // --- 状态映射 ---
 
 void GraphicsBgfx::ApplyState()
 {
-#ifdef URHO3D_BGFX
     bgfx::setState(state_);
-#endif
 }
 
 void GraphicsBgfx::SetBlendMode(BlendMode mode, bool alphaToCoverage)
 {
-#ifdef URHO3D_BGFX
     lastBlendMode_ = mode;
     // 清除所有混合位
     state_ &= ~BGFX_STATE_BLEND_MASK;
@@ -315,26 +280,18 @@ void GraphicsBgfx::SetBlendMode(BlendMode mode, bool alphaToCoverage)
         break; // 近似：以 srcAlpha 权重相减
     default: break;
     }
-#else
-    (void)mode; (void)alphaToCoverage;
-#endif
 }
 
 void GraphicsBgfx::SetColorWrite(bool enable)
 {
-#ifdef URHO3D_BGFX
     // 先清除颜色写入位
     state_ &= ~(BGFX_STATE_WRITE_R | BGFX_STATE_WRITE_G | BGFX_STATE_WRITE_B | BGFX_STATE_WRITE_A);
     if (enable)
         state_ |= (BGFX_STATE_WRITE_R | BGFX_STATE_WRITE_G | BGFX_STATE_WRITE_B | BGFX_STATE_WRITE_A);
-#else
-    (void)enable;
-#endif
 }
 
 void GraphicsBgfx::SetCullMode(CullMode mode)
 {
-#ifdef URHO3D_BGFX
     state_ &= ~(BGFX_STATE_CULL_CW | BGFX_STATE_CULL_CCW);
     switch (mode)
     {
@@ -343,14 +300,10 @@ void GraphicsBgfx::SetCullMode(CullMode mode)
     case CULL_CCW: state_ |= BGFX_STATE_CULL_CCW; break;
     default: break;
     }
-#else
-    (void)mode;
-#endif
 }
 
 void GraphicsBgfx::SetDepthTest(CompareMode mode)
 {
-#ifdef URHO3D_BGFX
     state_ &= ~BGFX_STATE_DEPTH_TEST_MASK;
     switch (mode)
     {
@@ -363,26 +316,18 @@ void GraphicsBgfx::SetDepthTest(CompareMode mode)
     case CMP_GREATEREQUAL: state_ |= BGFX_STATE_DEPTH_TEST_GEQUAL; break;
     default: break;
     }
-#else
-    (void)mode;
-#endif
 }
 
 void GraphicsBgfx::SetDepthWrite(bool enable)
 {
-#ifdef URHO3D_BGFX
     if (enable)
         state_ |= BGFX_STATE_WRITE_Z;
     else
         state_ &= ~BGFX_STATE_WRITE_Z;
-#else
-    (void)enable;
-#endif
 }
 
 void GraphicsBgfx::SetScissor(bool enable, const IntRect& rect)
 {
-#ifdef URHO3D_BGFX
     scissorEnabled_ = enable;
     scissorRect_ = rect;
     if (initialized_)
@@ -400,15 +345,11 @@ void GraphicsBgfx::SetScissor(bool enable, const IntRect& rect)
             bgfx::setScissor(UINT16_MAX);
         }
     }
-#else
-    (void)enable; (void)rect;
-#endif
 }
 
 void GraphicsBgfx::SetStencilTest(bool enable, CompareMode mode, StencilOp pass, StencilOp fail, StencilOp zFail,
                         unsigned stencilRef, unsigned compareMask, unsigned writeMask)
 {
-#ifdef URHO3D_BGFX
     stencilEnabled_ = enable;
     stencilFunc_ = mode;
     stencilPass_ = pass;
@@ -488,27 +429,19 @@ void GraphicsBgfx::SetStencilTest(bool enable, CompareMode mode, StencilOp pass,
     // 写掩码在当前 bgfx 版本未提供独立宏，忽略之以维持 2D-only 行为
 
     bgfx::setStencil(flags);
-#else
-    (void)enable; (void)mode; (void)pass; (void)fail; (void)zFail; (void)stencilRef; (void)compareMask; (void)writeMask;
-#endif
 }
 
 void GraphicsBgfx::SetFillMode(FillMode mode)
 {
-#ifdef URHO3D_BGFX
     // bgfx 无全局多边形模式切换（线框/点渲染需使用特殊顶点/着色器或线段/点拓扑），
     // 2D-only 场景下保留记录并静默忽略非 FILL_SOLID。
     fillMode_ = mode;
     if (mode != FILL_SOLID)
         URHO3D_LOGDEBUG("BGFX: 非 FILL_SOLID 模式在 2D-only 路径下被忽略（如需线框请在上层使用调试/自定义着色器）。");
-#else
-    (void)mode;
-#endif
 }
 
 void GraphicsBgfx::SetDepthBias(float constantBias, float slopeScaledBias)
 {
-#ifdef URHO3D_BGFX
     // 通用深度偏移不在 bgfx 通用状态集合中，通常通过着色器/渲染目标方案实现。
     // 2D-only 中保留记录，默认忽略。
     depthBiasConst_ = constantBias;
@@ -521,14 +454,10 @@ void GraphicsBgfx::SetDepthBias(float constantBias, float slopeScaledBias)
             once = true;
         }
     }
-#else
-    (void)constantBias; (void)slopeScaledBias;
-#endif
 }
 
 void GraphicsBgfx::SetLineAntiAlias(bool enable)
 {
-#ifdef URHO3D_BGFX
     lineAA_ = enable;
     {
         static bool once = false;
@@ -538,14 +467,10 @@ void GraphicsBgfx::SetLineAntiAlias(bool enable)
             once = true;
         }
     }
-#else
-    (void)enable;
-#endif
 }
 
 void GraphicsBgfx::SetClipPlane(bool enable, const Vector4& clipPlane)
 {
-#ifdef URHO3D_BGFX
     clipPlaneEnabled_ = enable;
     clipPlane_ = clipPlane;
     {
@@ -556,14 +481,10 @@ void GraphicsBgfx::SetClipPlane(bool enable, const Vector4& clipPlane)
             once = true;
         }
     }
-#else
-    (void)enable; (void)clipPlane;
-#endif
 }
 
 bool GraphicsBgfx::LoadUIPrograms(ResourceCache* cache)
 {
-#ifdef URHO3D_BGFX
     if (!initialized_ || !cache)
         return false;
     if (ui_.ready)
@@ -720,14 +641,10 @@ bool GraphicsBgfx::LoadUIPrograms(ResourceCache* cache)
     else
         URHO3D_LOGINFOF("BGFX UI programs loaded for profile: %s", profile.CString());
     return ui_.ready;
-#else
-    (void)cache; return false;
-#endif
 }
 
 void GraphicsBgfx::DebugDrawHello()
 {
-#ifdef URHO3D_BGFX
     if (!initialized_ || !ui_.ready)
         return;
 
@@ -774,7 +691,6 @@ void GraphicsBgfx::DebugDrawHello()
     bgfx::setIndexBuffer(&tib);
     bgfx::ProgramHandle ph2; ph2.idx = ui_.programDiff;
     bgfx::submit(0, ph2);
-#endif
 }
 
 static uint64_t GetBgfxSamplerFlagsFromTexture(const Texture2D* tex)
@@ -831,7 +747,6 @@ static uint64_t GetBgfxSamplerFlagsFromTexture(const Texture2D* tex)
 
 unsigned short GraphicsBgfx::GetOrCreateTexture(Texture2D* tex, ResourceCache* cache)
 {
-#ifdef URHO3D_BGFX
     if (!tex)
     {
         URHO3D_LOGDEBUG("GetOrCreateTexture: tex is null, returning white texture");
@@ -1010,14 +925,10 @@ unsigned short GraphicsBgfx::GetOrCreateTexture(Texture2D* tex, ResourceCache* c
     URHO3D_LOGDEBUGF("GetOrCreateTexture: Successfully created bgfx texture for %s (handle=%u)", tex->GetName().CString(), th.idx);
     textureCache_[tex] = th.idx;
     return th.idx;
-#else
-    (void)tex; return 0xFFFF;
-#endif
 }
 
 bool GraphicsBgfx::LoadUrho2DPrograms(ResourceCache* cache)
 {
-#ifdef URHO3D_BGFX
     if (!initialized_ || !cache)
         return false;
     if (u2d_.ready)
@@ -1096,14 +1007,10 @@ bool GraphicsBgfx::LoadUrho2DPrograms(ResourceCache* cache)
     u2d_.ready = bgfx::isValid(bgfx::ProgramHandle{u2d_.programUnlit}) &&
                  bgfx::isValid(bgfx::UniformHandle{u2d_.u_mvp});
     return u2d_.ready;
-#else
-    (void)cache; return false;
-#endif
 }
 
 void GraphicsBgfx::Set2DLights(const Vector4* posRange, const Vector4* colorInt, int count, float ambient)
 {
-#ifdef URHO3D_BGFX
     u2d_count_ = Min(count, MAX_U2D_LIGHTS);
     u2d_ambient_ = ambient;
     for (int i = 0; i < u2d_count_; ++i)
@@ -1111,15 +1018,11 @@ void GraphicsBgfx::Set2DLights(const Vector4* posRange, const Vector4* colorInt,
         u2d_posRange_[i] = posRange[i];
         u2d_colorInt_[i] = colorInt[i];
     }
-#else
-    (void)posRange; (void)colorInt; (void)count; (void)ambient;
-#endif
 }
 
 
 unsigned short GraphicsBgfx::GetOrCreateSampler(const char* name)
 {
-#ifdef URHO3D_BGFX
     Urho3D::stl::string key(name);
     auto it = samplerCache_.find(key);
     if (it != samplerCache_.end())
@@ -1129,14 +1032,10 @@ unsigned short GraphicsBgfx::GetOrCreateSampler(const char* name)
         return bgfx::kInvalidHandle;
     samplerCache_[key] = h.idx;
     return h.idx;
-#else
-    (void)name; return bgfx::kInvalidHandle;
-#endif
 }
 
 unsigned short GraphicsBgfx::GetOrCreateVec4(const char* name)
 {
-#ifdef URHO3D_BGFX
     Urho3D::stl::string key(name);
     auto it = vec4Cache_.find(key);
     if (it != vec4Cache_.end())
@@ -1146,14 +1045,10 @@ unsigned short GraphicsBgfx::GetOrCreateVec4(const char* name)
         return bgfx::kInvalidHandle;
     vec4Cache_[key] = h.idx;
     return h.idx;
-#else
-    (void)name; return bgfx::kInvalidHandle;
-#endif
 }
 
 unsigned short GraphicsBgfx::GetOrCreateMat4(const char* name)
 {
-#ifdef URHO3D_BGFX
     Urho3D::stl::string key(name);
     auto it = mat4Cache_.find(key);
     if (it != mat4Cache_.end())
@@ -1163,14 +1058,10 @@ unsigned short GraphicsBgfx::GetOrCreateMat4(const char* name)
         return bgfx::kInvalidHandle;
     mat4Cache_[key] = h.idx;
     return h.idx;
-#else
-    (void)name; return bgfx::kInvalidHandle;
-#endif
 }
 
 unsigned short GraphicsBgfx::GetOrCreateVec4Array(const char* name, unsigned short num)
 {
-#ifdef URHO3D_BGFX
     Urho3D::stl::string key(name);
     key += '#';
     char buf[32];
@@ -1188,14 +1079,10 @@ unsigned short GraphicsBgfx::GetOrCreateVec4Array(const char* name, unsigned sho
         return bgfx::kInvalidHandle;
     vec4ArrayCache_[key] = h.idx;
     return h.idx;
-#else
-    (void)name; (void)num; return bgfx::kInvalidHandle;
-#endif
 }
 
 void GraphicsBgfx::SetUniformByVariant(const char* name, const Variant& v)
 {
-#ifdef URHO3D_BGFX
     switch (v.GetType())
     {
     case VAR_BOOL:
@@ -1251,14 +1138,10 @@ void GraphicsBgfx::SetUniformByVariant(const char* name, const Variant& v)
     default:
         break;
     }
-#else
-    (void)name; (void)v;
-#endif
 }
 
 void GraphicsBgfx::ReleaseTexture(Texture2D* tex)
 {
-#ifdef URHO3D_BGFX
     if (!tex)
         return;
     auto it = textureCache_.find(tex);
@@ -1291,14 +1174,10 @@ void GraphicsBgfx::ReleaseTexture(Texture2D* tex)
         else
             ++fbIt;
     }
-#else
-    (void)tex;
-#endif
 }
 
 bool GraphicsBgfx::DrawQuads(const void* qvertices, int numVertices, Texture2D* texture, ResourceCache* cache, const Matrix4& mvp)
 {
-#ifdef URHO3D_BGFX
     if (!initialized_)
         return false;
     if (!LoadUIPrograms(cache))
@@ -1401,14 +1280,10 @@ bool GraphicsBgfx::DrawQuads(const void* qvertices, int numVertices, Texture2D* 
     bgfx::setIndexBuffer(&tib);
     bgfx::submit(0, ph);
     return true;
-#else
-    (void)qvertices; (void)numVertices; (void)texture; (void)cache; return false;
-#endif
 }
 
 bool GraphicsBgfx::DrawTriangles(const void* tvertices, int numVertices, ResourceCache* cache, const Matrix4& mvp)
 {
-#ifdef URHO3D_BGFX
     if (!initialized_)
         return false;
     if (!LoadUIPrograms(cache))
@@ -1473,14 +1348,10 @@ bool GraphicsBgfx::DrawTriangles(const void* tvertices, int numVertices, Resourc
     bgfx::setIndexBuffer(&tib);
     bgfx::submit(0, ph);
     return true;
-#else
-    (void)tvertices; (void)numVertices; (void)cache; return false;
-#endif
 }
 
 bool GraphicsBgfx::DrawUITriangles(const float* vertices, int numVertices, Texture2D* texture, ResourceCache* cache, const Matrix4& mvp)
 {
-#ifdef URHO3D_BGFX
     if (!initialized_)
         return false;
     if (!LoadUIPrograms(cache))
@@ -1578,14 +1449,10 @@ bool GraphicsBgfx::DrawUITriangles(const float* vertices, int numVertices, Textu
     bgfx::setIndexBuffer(&tib);
     bgfx::submit(0, ph);
     return true;
-#else
-    (void)vertices; (void)numVertices; (void)texture; (void)cache; (void)mvp; return false;
-#endif
 }
 
 bool GraphicsBgfx::CreateTextureFromImage(Texture2D* tex, Image* image, bool useAlpha)
 {
-#ifdef URHO3D_BGFX
     if (!tex || !image)
         return false;
 
@@ -1657,14 +1524,10 @@ bool GraphicsBgfx::CreateTextureFromImage(Texture2D* tex, Image* image, bool use
 
     textureCache_[tex] = th.idx;
     return true;
-#else
-    (void)tex; (void)image; (void)useAlpha; return false;
-#endif
 }
 
 bool GraphicsBgfx::DrawColored(PrimitiveType prim, const float* vertices, int numVertices, const Matrix4& mvp)
 {
-#ifdef URHO3D_BGFX
     if (!initialized_ || !vertices || numVertices <= 0)
         return false;
     // 使用 UI 程序集中的 Diff 程序 + 白纹理实现无纹理彩色绘制。
@@ -1770,14 +1633,10 @@ bool GraphicsBgfx::DrawColored(PrimitiveType prim, const float* vertices, int nu
         remaining -= (int)batch;
     }
     return true;
-#else
-    (void)prim; (void)vertices; (void)numVertices; (void)mvp; return false;
-#endif
 }
 
 bool GraphicsBgfx::DrawFullscreenTexture(Texture2D* texture, ResourceCache* cache)
 {
-#ifdef URHO3D_BGFX
     if (!initialized_)
         return false;
     if (!LoadUIPrograms(cache))
@@ -1837,14 +1696,10 @@ bool GraphicsBgfx::DrawFullscreenTexture(Texture2D* texture, ResourceCache* cach
     bgfx::setIndexBuffer(&tib);
     bgfx::submit(0, ph);
     return true;
-#else
-    (void)texture; (void)cache; return false;
-#endif
 }
 
 bool GraphicsBgfx::DrawUIWithMaterial(const float* vertices, int numVertices, Material* material, ResourceCache* cache, const Matrix4& mvp)
 {
-#ifdef URHO3D_BGFX
     if (!initialized_)
         return false;
     if (!LoadUIPrograms(cache))
@@ -2012,14 +1867,10 @@ bool GraphicsBgfx::DrawUIWithMaterial(const float* vertices, int numVertices, Ma
     bgfx::setIndexBuffer(&tib);
     bgfx::submit(0, ph);
     return true;
-#else
-    (void)vertices; (void)numVertices; (void)material; (void)cache; (void)mvp; return false;
-#endif
 }
 
 bool GraphicsBgfx::UpdateTextureRegion(Texture2D* tex, int x, int y, int width, int height, const void* data, unsigned level)
 {
-#ifdef URHO3D_BGFX
     if (!initialized_ || !tex || !data || width <= 0 || height <= 0)
         return false;
 
@@ -2074,14 +1925,10 @@ bool GraphicsBgfx::UpdateTextureRegion(Texture2D* tex, int x, int y, int width, 
     const bgfx::Memory* mem = bgfx::copy(src, (uint32_t)height * pitch);
     bgfx::updateTexture2D(th, 0 /*layer*/, (uint8_t)level, (uint16_t)x, (uint16_t)y, (uint16_t)width, (uint16_t)height, mem, pitch);
     return true;
-#else
-    (void)tex; (void)x; (void)y; (void)width; (void)height; (void)data; (void)level; return false;
-#endif
 }
 
 bool GraphicsBgfx::ReadRenderTargetToImage(Texture2D* color, Image& dest)
 {
-#ifdef URHO3D_BGFX
     if (!initialized_ || !color)
         return false;
 
@@ -2110,14 +1957,10 @@ bool GraphicsBgfx::ReadRenderTargetToImage(Texture2D* color, Image& dest)
         return false;
     dest.SetData(cpu.data());
     return true;
-#else
-    (void)color; (void)dest; return false;
-#endif
 }
 
 bool GraphicsBgfx::Blit(Texture2D* dst, Texture2D* src, const IntRect* rect)
 {
-#ifdef URHO3D_BGFX
     if (!initialized_ || !dst || !src)
         return false;
     auto itS = textureCache_.find(src);
@@ -2144,14 +1987,10 @@ bool GraphicsBgfx::Blit(Texture2D* dst, Texture2D* src, const IntRect* rect)
     const uint16_t depth = 1;
     bgfx::blit(blitView, hd, dstMip, dstX, dstY, dstZ, hs, srcMip, x, y, z, w, h, depth);
     return true;
-#else
-    (void)dst; (void)src; (void)rect; return false;
-#endif
 }
 
 bool GraphicsBgfx::SetFrameBuffer(Texture2D* color, Texture2D* depth)
 {
-#ifdef URHO3D_BGFX
     // 构造 key 并查询缓存（若存在旧的 FB，先销毁以防尺寸或句柄变化导致无效引用）
     FBKey key{color, depth};
     auto it = fbCache_.find(key);
@@ -2200,20 +2039,13 @@ bool GraphicsBgfx::SetFrameBuffer(Texture2D* color, Texture2D* depth)
     if (texW > 0 && texH > 0)
         bgfx::setViewRect(0, 0, 0, (uint16_t)texW, (uint16_t)texH);
     return true;
-#else
-    (void)color; (void)depth; return false;
-#endif
 }
 
 bool GraphicsBgfx::ResetFrameBuffer()
 {
-#ifdef URHO3D_BGFX
     bgfx::setViewFrameBuffer(0, BGFX_INVALID_HANDLE);
     // 回到默认 backbuffer 尺寸
     bgfx::setViewRect(0, 0, 0, static_cast<uint16_t>(width_), static_cast<uint16_t>(height_));
     return true;
-#else
-    return false;
-#endif
 }
 } // namespace Urho3D

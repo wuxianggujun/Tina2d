@@ -3,16 +3,13 @@
 #include "Precompiled.h"
 #include "BgfxSDLPlatform.h"
 
-#ifdef URHO3D_BGFX
-#   include <SDL3/SDL.h>
-#endif
+#include <SDL3/SDL.h>
 
 namespace Urho3D
 {
 
 void* GetNativeWindowHandleFromSDL(SDL_Window* window)
 {
-#ifdef URHO3D_BGFX
     if (!window)
         return nullptr;
 #   if defined(SDL_PLATFORM_ANDROID)
@@ -43,15 +40,10 @@ void* GetNativeWindowHandleFromSDL(SDL_Window* window)
     // 其他平台按需扩展：Android/iOS/Wayland 等
     return nullptr;
 #   endif
-#else
-    (void)window;
-    return nullptr;
-#endif
 }
 
 void* GetNativeDisplayHandleFromSDL(SDL_Window* window)
 {
-#ifdef URHO3D_BGFX
     if (!window)
         return nullptr;
 #   if defined(SDL_PLATFORM_LINUX)
@@ -64,10 +56,6 @@ void* GetNativeDisplayHandleFromSDL(SDL_Window* window)
 #   else
     return nullptr;
 #   endif
-#else
-    (void)window;
-    return nullptr;
-#endif
 }
 
 } // namespace Urho3D

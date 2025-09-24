@@ -639,10 +639,8 @@ void Graphics::OnScreenModeChanged()
     eventData[P_REFRESHRATE] = screenParams_.refreshRate_;
     SendEvent(E_SCREENMODE, eventData);
 
-#ifdef URHO3D_BGFX
     if (bgfx_ && bgfx_->IsInitialized())
         bgfx_->Reset((unsigned)width_, (unsigned)height_);
-#endif
 }
 
 Graphics::Graphics(Context* context, GAPI gapi)
@@ -650,26 +648,21 @@ Graphics::Graphics(Context* context, GAPI gapi)
 {
     Graphics::gapi = gapi;
 
-#ifdef URHO3D_BGFX
     bgfx_ = new GraphicsBgfx();
-#endif
 }
 
 Graphics::~Graphics()
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_BGFX
     delete bgfx_;
     bgfx_ = nullptr;
-#endif
 }
 
 bool Graphics::SetScreenMode(int width, int height, const ScreenModeParams& params, bool maximize)
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_BGFX
     if (gapi == GAPI_BGFX)
     {
         // 简化版的窗口创建/调整，仅为 bgfx 后端提供 SDL 窗口
@@ -722,18 +715,13 @@ bool Graphics::SetScreenMode(int width, int height, const ScreenModeParams& para
         height_ = newHeight;
         screenParams_ = params;
 
-#ifdef URHO3D_BGFX
         // 确保在广播屏幕模式事件前完成 bgfx 初始化，使 Input::Initialize() 能顺利通过 IsInitialized 判定
         if (bgfx_ && !bgfx_->IsInitialized())
             bgfx_->InitializeFromSDL(window_, (unsigned)width_, (unsigned)height_);
-#endif
 
         OnScreenModeChanged();
         return true;
     }
-#endif
-
-
     return {}; // Prevent warning
 }
 
@@ -741,7 +729,6 @@ void Graphics::SetSRGB(bool enable)
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_BGFX
     if (bgfx_ && gapi == GAPI_BGFX)
     {
         bgfx_->SetSRGBBackbuffer(enable);
@@ -751,7 +738,6 @@ void Graphics::SetSRGB(bool enable)
         sRGB_ = enable;
         return;
     }
-#endif
     (void)enable; (void)gapi;
 }
 
@@ -783,7 +769,6 @@ bool Graphics::TakeScreenShot(Image& destImage)
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_BGFX
     if (bgfx_ && gapi == GAPI_BGFX)
     {
         // 默认 2D 路径：使用内置离屏 RT 作为截图源
@@ -796,7 +781,6 @@ bool Graphics::TakeScreenShot(Image& destImage)
         URHO3D_LOGWARNING("BGFX TakeScreenShot: 未启用内置离屏且无外部 RT，无法截图");
         return false;
     }
-#endif
     (void)gapi; (void)destImage; return false;
 }
 
@@ -804,8 +788,7 @@ bool Graphics::BeginFrame()
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_BGFX
-    // 宏开关：当启用 bgfx 时，以 bgfx 为主进行帧提交，便于与原管线对比。
+    // 以 bgfx 为主进行帧提交
     if (bgfx_)
     {
         // 若启用内置离屏 RT，确保尺寸匹配
@@ -822,7 +805,6 @@ bool Graphics::BeginFrame()
             return true;
         }
     }
-#endif
 
     (void)gapi; return false;
 }
@@ -831,7 +813,6 @@ void Graphics::EndFrame()
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_BGFX
     if (bgfx_ && bgfx_->IsInitialized())
     {
         // 若启用内置离屏渲染，将其呈现到 backbuffer
@@ -846,7 +827,6 @@ void Graphics::EndFrame()
         bgfx_->EndFrame();
         return;
     }
-#endif
 
     (void)gapi;
 }
@@ -855,10 +835,8 @@ void Graphics::Clear(ClearTargetFlags flags, const Color& color, float depth, un
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_BGFX
     if (bgfx_ && bgfx_->IsInitialized())
         return bgfx_->Clear(flags, color, depth, stencil);
-#endif
 
     (void)gapi; (void)flags; (void)color; (void)depth; (void)stencil;
 }
@@ -867,7 +845,6 @@ bool Graphics::ResolveToTexture(Texture2D* destination, const IntRect& viewport)
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_BGFX
     if (bgfx_ && gapi == GAPI_BGFX)
     {
         // 简化：仅当当前绑定了离屏 RT 时，支持从当前颜色附件 blit 到目标纹理。
@@ -881,7 +858,6 @@ bool Graphics::ResolveToTexture(Texture2D* destination, const IntRect& viewport)
         URHO3D_LOGWARNING("BGFX ResolveToTexture: 当前未绑定离屏颜色目标，无法从 backbuffer 解析");
         return false;
     }
-#endif
     (void)gapi; (void)destination; (void)viewport; return false;
 }
 
@@ -897,7 +873,6 @@ void Graphics::Draw(PrimitiveType type, unsigned vertexStart, unsigned vertexCou
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_BGFX
     if (gapi == GAPI_BGFX)
     {
         static bool warned1 = false;
@@ -908,14 +883,12 @@ void Graphics::Draw(PrimitiveType type, unsigned vertexStart, unsigned vertexCou
         }
         return;
     }
-#endif
 }
 
 void Graphics::Draw(PrimitiveType type, unsigned indexStart, unsigned indexCount, unsigned minVertex, unsigned vertexCount)
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_BGFX
     if (gapi == GAPI_BGFX)
     {
         static bool warned2 = false;
@@ -926,14 +899,12 @@ void Graphics::Draw(PrimitiveType type, unsigned indexStart, unsigned indexCount
         }
         return;
     }
-#endif
 }
 
 void Graphics::Draw(PrimitiveType type, unsigned indexStart, unsigned indexCount, unsigned baseVertexIndex, unsigned minVertex, unsigned vertexCount)
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_BGFX
     if (gapi == GAPI_BGFX)
     {
         static bool warned3 = false;
@@ -944,14 +915,12 @@ void Graphics::Draw(PrimitiveType type, unsigned indexStart, unsigned indexCount
         }
         return;
     }
-#endif
 }
 
 void Graphics::DrawInstanced(PrimitiveType type, unsigned indexStart, unsigned indexCount, unsigned minVertex, unsigned vertexCount, unsigned instanceCount)
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_BGFX
     if (gapi == GAPI_BGFX)
     {
         static bool warned4 = false;
@@ -962,7 +931,6 @@ void Graphics::DrawInstanced(PrimitiveType type, unsigned indexStart, unsigned i
         }
         return;
     }
-#endif
 }
 
 void Graphics::DrawInstanced(PrimitiveType type, unsigned indexStart, unsigned indexCount, unsigned baseVertexIndex, unsigned minVertex,
@@ -970,7 +938,6 @@ void Graphics::DrawInstanced(PrimitiveType type, unsigned indexStart, unsigned i
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_BGFX
     if (gapi == GAPI_BGFX)
     {
         static bool warned5 = false;
@@ -981,7 +948,6 @@ void Graphics::DrawInstanced(PrimitiveType type, unsigned indexStart, unsigned i
         }
         return;
     }
-#endif
 }
 
 void Graphics::SetVertexBuffer(VertexBuffer* buffer)
@@ -1136,7 +1102,6 @@ void Graphics::SetDefaultTextureFilterMode(TextureFilterMode mode)
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_BGFX
     if (bgfx_ && gapi == GAPI_BGFX)
     {
         // 与各向异性一起统一下发
@@ -1144,28 +1109,24 @@ void Graphics::SetDefaultTextureFilterMode(TextureFilterMode mode)
         defaultTextureFilterMode_ = mode;
         return;
     }
-#endif
 }
 
 void Graphics::SetDefaultTextureAnisotropy(unsigned level)
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_BGFX
     if (bgfx_ && gapi == GAPI_BGFX)
     {
         bgfx_->SetDefaultSampler(GetDefaultTextureFilterMode(), level);
         defaultTextureAnisotropy_ = level;
         return;
     }
-#endif
 }
 
 void Graphics::ResetRenderTargets()
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_BGFX
     if (bgfx_ && bgfx_->IsInitialized())
     {
         if (useOffscreen_ && offscreenColor_.NotNull())
@@ -1189,14 +1150,12 @@ void Graphics::ResetRenderTargets()
         }
         return;
     }
-#endif
 }
 
 void Graphics::ResetRenderTarget(unsigned index)
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_BGFX
     if (bgfx_ && bgfx_->IsInitialized())
     {
         if (index == 0)
@@ -1204,28 +1163,24 @@ void Graphics::ResetRenderTarget(unsigned index)
         bgfx_->SetFrameBuffer(bgfxColorRT_, bgfxDepthRT_);
         return;
     }
-#endif
 }
 
 void Graphics::ResetDepthStencil()
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_BGFX
     if (bgfx_ && bgfx_->IsInitialized())
     {
         bgfxDepthRT_ = nullptr;
         bgfx_->SetFrameBuffer(bgfxColorRT_, bgfxDepthRT_);
         return;
     }
-#endif
 }
 
 void Graphics::SetRenderTarget(unsigned index, RenderSurface* renderTarget)
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_BGFX
     if (bgfx_ && bgfx_->IsInitialized())
     {
         // 简化：Urho3D 的 RenderSurface 基于 Texture2D，转换指向的父纹理
@@ -1235,14 +1190,12 @@ void Graphics::SetRenderTarget(unsigned index, RenderSurface* renderTarget)
         bgfx_->SetFrameBuffer(bgfxColorRT_, bgfxDepthRT_);
         return;
     }
-#endif
 }
 
 void Graphics::SetRenderTarget(unsigned index, Texture2D* texture)
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_BGFX
     if (bgfx_ && bgfx_->IsInitialized())
     {
         if (index == 0)
@@ -1250,14 +1203,12 @@ void Graphics::SetRenderTarget(unsigned index, Texture2D* texture)
         bgfx_->SetFrameBuffer(bgfxColorRT_, bgfxDepthRT_);
         return;
     }
-#endif
 }
 
 void Graphics::SetDepthStencil(RenderSurface* depthStencil)
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_BGFX
     if (bgfx_ && bgfx_->IsInitialized())
     {
         Texture2D* tex = depthStencil ? static_cast<Texture2D*>(depthStencil->GetParentTexture()) : nullptr;
@@ -1265,31 +1216,26 @@ void Graphics::SetDepthStencil(RenderSurface* depthStencil)
         bgfx_->SetFrameBuffer(bgfxColorRT_, bgfxDepthRT_);
         return;
     }
-#endif
 }
 
 void Graphics::SetDepthStencil(Texture2D* texture)
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_BGFX
     if (bgfx_ && bgfx_->IsInitialized())
     {
         bgfxDepthRT_ = texture;
         bgfx_->SetFrameBuffer(bgfxColorRT_, bgfxDepthRT_);
         return;
     }
-#endif
 }
 
 void Graphics::SetViewport(const IntRect& rect)
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_BGFX
     if (bgfx_ && bgfx_->IsInitialized())
         return bgfx_->SetViewport(rect);
-#endif
 
 }
 
@@ -1315,10 +1261,8 @@ void Graphics::SetDepthBias(float constantBias, float slopeScaledBias)
 {
     GAPI gapi = Graphics::GetGAPI();
 
-#ifdef URHO3D_BGFX
     if (bgfx_ && bgfx_->IsInitialized())
         return bgfx_->SetDepthBias(constantBias, slopeScaledBias);
-#endif
 
 }
 
@@ -1390,11 +1334,8 @@ bool Graphics::IsBgfxActive() const
 
 void Graphics::DebugDrawBgfxHello()
 {
-    if (!bgfx_)
-        return;
-    auto* cache = GetSubsystem<ResourceCache>();
-    if (cache && bgfx_->LoadUIPrograms(cache))
-        bgfx_->DebugDrawHello();
+    // 已移除绿色矩形测试绘制，保持函数为空以兼容旧调用
+    (void)0;
 }
 
 bool Graphics::BgfxDrawQuads(const void* qvertices, int numVertices, Texture2D* texture, const Matrix4& mvp)
@@ -1611,21 +1552,18 @@ RenderSurface* Graphics::GetRenderTarget(unsigned /*index*/) const
 IntVector2 Graphics::GetRenderTargetDimensions() const
 {
     GAPI gapi = Graphics::GetGAPI();
-#ifdef URHO3D_BGFX
     if (bgfx_ && gapi == GAPI_BGFX)
     {
         if (bgfxColorRT_)
             return IntVector2(bgfxColorRT_->GetWidth(), bgfxColorRT_->GetHeight());
         return IntVector2(width_, height_);
     }
-#endif
     return IntVector2(width_, height_);
 }
 
 void Graphics::OnWindowResized()
 {
     GAPI gapi = Graphics::GetGAPI();
-#ifdef URHO3D_BGFX
     if (bgfx_ && gapi == GAPI_BGFX)
     {
         // 读取窗口新尺寸并重置 bgfx backbuffer
@@ -1639,19 +1577,16 @@ void Graphics::OnWindowResized()
         }
         return;
     }
-#endif
 }
 
 void Graphics::OnWindowMoved()
 {
     GAPI gapi = Graphics::GetGAPI();
-#ifdef URHO3D_BGFX
     if (bgfx_ && gapi == GAPI_BGFX)
     {
         // 无需特殊处理，保留占位
         return;
     }
-#endif
 }
 
 ConstantBuffer* Graphics::GetOrCreateConstantBuffer(ShaderType type, unsigned index, unsigned size)
@@ -1780,5 +1715,3 @@ void RegisterGraphicsLibrary(Context* context)
 }
 
 }
-
-

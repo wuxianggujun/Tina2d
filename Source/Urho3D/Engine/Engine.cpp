@@ -142,9 +142,7 @@ bool Engine::Initialize(const VariantMap& parameters)
     GAPI gapi = GAPI_NONE;
 
     // Try to set any possible graphics API as default（优先 bgfx）
-#ifdef URHO3D_BGFX
     gapi = GAPI_BGFX;
-#endif
 #ifdef URHO3D_OPENGL
     if (gapi == GAPI_NONE)
         gapi = GAPI_OPENGL;

@@ -15,6 +15,9 @@
 
 #ifdef _MSC_VER
 #   include <malloc.h>
+#   ifdef _DEBUG
+#       include <crtdbg.h>
+#   endif
 #endif
 
 #include <mimalloc.h>
@@ -28,6 +31,22 @@ namespace {
             mi_option_set(mi_option_show_errors, 1);
             // 默认不在进程退出时打印统计，避免噪声；可用环境变量 MIMALLOC_SHOW_STATS=1 打开
             mi_option_set(mi_option_show_stats, 0);
+
+#if defined(_MSC_VER) && defined(_DEBUG)
+            // 可选：启用 MSVC CRT 泄漏检查与在退出时自动转储
+#   if defined(URHO3D_ENABLE_CRT_LEAK_CHECK)
+            int flags = _CrtSetDbgFlag(_CRTDBG_REPORT_FLAG);
+            flags |= _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF;
+            _CrtSetDbgFlag(flags);
+            // 输出到调试器窗口
+            _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_DEBUG);
+            _CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_DEBUG);
+            _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_DEBUG);
+            // 如需输出到控制台：
+            // _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_DEBUG | _CRTDBG_MODE_FILE);
+            // _CrtSetReportFile(_CRT_WARN, _CRTDBG_FILE_STDOUT);
+#   endif
+#endif
         }
     };
     // 使用 [[maybe_unused]] 避免编译器警告，并确保变量被实例化

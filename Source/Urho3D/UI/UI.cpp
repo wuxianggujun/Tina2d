@@ -1013,7 +1013,6 @@ void UI::Render(VertexBuffer* buffer, const Vector<UIBatch>& batches, unsigned b
     graphics_->SetFillMode(FILL_SOLID);
     graphics_->SetStencilTest(false);
     // bgfx 路径：使用 UI 顶点数组直接提交
-#ifdef URHO3D_BGFX
     if (graphics_->IsBgfxActive())
     {
         // 计算目标尺寸（支持离屏 RT）并交由后端绑定 RT + 设置视口
@@ -1084,7 +1083,6 @@ void UI::Render(VertexBuffer* buffer, const Vector<UIBatch>& batches, unsigned b
             return;
         }
     }
-#endif
 
     graphics_->SetVertexBuffer(buffer);
 

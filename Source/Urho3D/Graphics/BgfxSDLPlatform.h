@@ -1,7 +1,7 @@
 // 版权同工程 License
 //
 // SDL3 原生窗口句柄适配：为 bgfx 提供平台相关的 nwh/ndt 等句柄。
-// 仅在启用 URHO3D_BGFX 时使用；未启用时不产生额外依赖。
+// bgfx 已作为默认渲染路径，本适配始终启用。
 
 #pragma once
 

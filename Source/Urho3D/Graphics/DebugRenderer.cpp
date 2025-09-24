@@ -543,7 +543,6 @@ void DebugRenderer::Render()
     unsigned start = 0;
     unsigned count = 0;
 
-#ifdef URHO3D_BGFX
     if (graphics->IsBgfxActive())
     {
         // 组装 pos3+abgr 的打包数组（float[4]）以供 BGFX 提交
@@ -595,7 +594,6 @@ void DebugRenderer::Render()
         }
     }
     else
-#endif
     {
         if (lines_.Size())
         {
