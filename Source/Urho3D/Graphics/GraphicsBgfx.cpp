@@ -133,6 +133,21 @@ void GraphicsBgfx::Shutdown()
         bgfx::ProgramHandle ph; ph.idx = ui_.programMask; if (bgfx::isValid(ph)) bgfx::destroy(ph);
         ui_.programMask = bgfx::kInvalidHandle;
     }
+    if (ui_.programTextSDF != bgfx::kInvalidHandle)
+    {
+        bgfx::ProgramHandle ph; ph.idx = ui_.programTextSDF; if (bgfx::isValid(ph)) bgfx::destroy(ph);
+        ui_.programTextSDF = bgfx::kInvalidHandle;
+    }
+    if (ui_.programTextMSDF != bgfx::kInvalidHandle)
+    {
+        bgfx::ProgramHandle ph; ph.idx = ui_.programTextMSDF; if (bgfx::isValid(ph)) bgfx::destroy(ph);
+        ui_.programTextMSDF = bgfx::kInvalidHandle;
+    }
+    if (ui_.programCopy != bgfx::kInvalidHandle)
+    {
+        bgfx::ProgramHandle ph; ph.idx = ui_.programCopy; if (bgfx::isValid(ph)) bgfx::destroy(ph);
+        ui_.programCopy = bgfx::kInvalidHandle;
+    }
     // 动态 uniform/sampler 缓存
     for (auto& kv : samplerCache_){ bgfx::UniformHandle u{kv.second}; if (bgfx::isValid(u)) bgfx::destroy(u);} samplerCache_.clear();
     for (auto& kv : vec4Cache_){ bgfx::UniformHandle u{kv.second}; if (bgfx::isValid(u)) bgfx::destroy(u);} vec4Cache_.clear();
@@ -626,6 +641,7 @@ bool GraphicsBgfx::LoadUIPrograms(ResourceCache* cache)
     auto [sv_mask, sf_mask] = findPair("Basic_DiffAlphaMask_VC");
     // 可选：Text SDF 与 CopyFramebuffer
     auto [sv_text, sf_text] = findPair("Text_SDF_VC");
+    auto [sv_msdf, sf_msdf] = findPair("Text_MSDF_VC");
     auto [sv_copy, sf_copy] = findPair("CopyFramebuffer");
     // 至少需要 Diff 版本
     if (!sv_diff || !sf_diff)
@@ -662,6 +678,15 @@ bool GraphicsBgfx::LoadUIPrograms(ResourceCache* cache)
         auto fsh_text = loadShader(sf_text);
         if (bgfx::isValid(vsh_text) && bgfx::isValid(fsh_text))
             ui_.programTextSDF = bgfx::createProgram(vsh_text, fsh_text, true).idx;
+    }
+
+    // Text MSDF（可选）
+    if (sv_msdf && sf_msdf)
+    {
+        auto vsh_msdf = loadShader(sv_msdf);
+        auto fsh_msdf = loadShader(sf_msdf);
+        if (bgfx::isValid(vsh_msdf) && bgfx::isValid(fsh_msdf))
+            ui_.programTextMSDF = bgfx::createProgram(vsh_msdf, fsh_msdf, true).idx;
     }
 
     // CopyFramebuffer（可选）
@@ -1934,15 +1959,25 @@ bool GraphicsBgfx::DrawUIWithMaterial(const float* vertices, int numVertices, Ma
 
     // 程序选择
     unsigned short programIdx = ui_.programDiff;
-    // 优先：若材质声明为 Text SDF，则使用 Text_SDF 程序（需要材质中设置参数 u_isTextSDF=true）
+    // 优先：MSDF -> SDF -> 其他
     if (material)
     {
-        const Variant& v = material->GetShaderParameter("u_isTextSDF");
-        if (v.GetType() != VAR_NONE)
+        const Variant& vmsdf = material->GetShaderParameter("u_isTextMSDF");
+        if (vmsdf.GetType() != VAR_NONE)
         {
-            const bool isSdf = (v.GetType()==VAR_BOOL ? v.GetBool() : (v.GetType()==VAR_INT ? (v.GetI32()!=0) : false));
-            if (isSdf && ui_.programTextSDF != bgfx::kInvalidHandle)
-                programIdx = ui_.programTextSDF;
+            const bool isMsdf = (vmsdf.GetType()==VAR_BOOL ? vmsdf.GetBool() : (vmsdf.GetType()==VAR_INT ? (vmsdf.GetI32()!=0) : false));
+            if (isMsdf && ui_.programTextMSDF != bgfx::kInvalidHandle)
+                programIdx = ui_.programTextMSDF;
+        }
+        if (programIdx == ui_.programDiff)
+        {
+            const Variant& vsdf = material->GetShaderParameter("u_isTextSDF");
+            if (vsdf.GetType() != VAR_NONE)
+            {
+                const bool isSdf = (vsdf.GetType()==VAR_BOOL ? vsdf.GetBool() : (vsdf.GetType()==VAR_INT ? (vsdf.GetI32()!=0) : false));
+                if (isSdf && ui_.programTextSDF != bgfx::kInvalidHandle)
+                    programIdx = ui_.programTextSDF;
+            }
         }
     }
     // 其次：按纹理格式与混合模式选择像素程序

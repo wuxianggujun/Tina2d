@@ -163,16 +163,27 @@ void Text::GetBatches(Vector<UIBatch>& batches, Vector<float>& vertexData, const
     {
         // One batch per texture/page
         UIBatch pageBatch(this, BLEND_ALPHA, currentScissor, textures[n], &vertexData);
-        // SDF 字体：改用自定义材质以触发 BGFX Text_SDF 程序
+        // SDF/MSDF 字体：改用自定义材质以触发 BGFX Text_* 程序
         if (font_ && font_->IsSDFFont())
         {
             if (sdfMaterials_.Size() <= n)
                 sdfMaterials_.Resize(n + 1);
             if (!sdfMaterials_[n])
                 sdfMaterials_[n] = new Material(context_);
-            sdfMaterials_[n]->SetShaderParameter("u_isTextSDF", true);
-            // 缺省 SDF 参数：edge=0.5、softnessScale=1.0，可按需在材质上覆盖
-            sdfMaterials_[n]->SetShaderParameter("u_sdfParams", Vector2(0.5f, 1.0f));
+            // 判断贴图通道数用于区分 SDF(A8) 与 MSDF(RGB[A])
+            const bool isMsdf = textures[n]->GetComponents() >= 3;
+            if (isMsdf)
+            {
+                sdfMaterials_[n]->SetShaderParameter("u_isTextMSDF", true);
+                // 缺省 MSDF 参数：edge=0.5、softnessScale=1.0，可按需覆盖
+                sdfMaterials_[n]->SetShaderParameter("u_msdfParams", Vector2(0.5f, 1.0f));
+            }
+            else
+            {
+                sdfMaterials_[n]->SetShaderParameter("u_isTextSDF", true);
+                // 缺省 SDF 参数：edge=0.5、softnessScale=1.0，可按需覆盖
+                sdfMaterials_[n]->SetShaderParameter("u_sdfParams", Vector2(0.5f, 1.0f));
+            }
             sdfMaterials_[n]->SetTexture(TU_DIFFUSE, textures[n]);
             pageBatch.customMaterial_ = sdfMaterials_[n];
         }

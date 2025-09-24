@@ -137,6 +137,7 @@ private:
         unsigned short programAlpha{0xFFFF};  // Basic+ALPHAMAP+VERTEXCOLOR（字体）
         unsigned short programMask{0xFFFF};   // Basic+DIFFMAP+ALPHAMASK+VERTEXCOLOR
         unsigned short programTextSDF{0xFFFF};   // Text_SDF_VC（SDF 文本）
+        unsigned short programTextMSDF{0xFFFF};  // Text_MSDF_VC（MSDF 文本）
         unsigned short programCopy{0xFFFF};      // CopyFramebuffer（全屏拷贝/呈现）
         unsigned short u_mvp{0xFFFF};
         // s_tex 约定为 s_texColor（主采样器），s_texAlt 兼容 Basic2D 等使用 s_tex 的着色器
