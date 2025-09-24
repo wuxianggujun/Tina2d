@@ -5,7 +5,9 @@
 #include <chrono>
 #include <iostream>
 #include "EASTLAllocator.h"
+#include "../Container/Vector.h"
 #include <EASTL/allocator.h>
+#include <EASTL/vector.h>
 
 #ifdef URHO3D_HAS_MIMALLOC
 #include <mimalloc.h>
@@ -18,6 +20,9 @@ void TestAllocatorPerformance()
     const size_t SIZE = 1024;
     
     auto start = std::chrono::high_resolution_clock::now();
+    // 为避免在未定义 URHO3D_HAS_MIMALLOC 时变量未声明，提前声明复用的计时变量
+    auto end   = start;
+    std::chrono::microseconds duration{0};
     
     // 测试1: 直接mimalloc
 #ifdef URHO3D_HAS_MIMALLOC
@@ -27,8 +32,8 @@ void TestAllocatorPerformance()
         void* p = mi_malloc(SIZE);
         mi_free(p);
     }
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+    end = std::chrono::high_resolution_clock::now();
+    duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
     std::cout << "Direct mimalloc: " << duration.count() << " microseconds" << std::endl;
 #endif
     
@@ -115,4 +120,3 @@ void TestAlignedAllocation()
     auto duration2 = std::chrono::duration_cast<std::chrono::microseconds>(end2 - start2);
     std::cout << "EASTL aligned allocator: " << duration2.count() << " microseconds" << std::endl;
 }
-
