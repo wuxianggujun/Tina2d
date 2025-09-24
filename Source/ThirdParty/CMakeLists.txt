@@ -141,52 +141,50 @@ endif ()
 # Возможно вместо этого стоит использовать GLOBAL property в качестве глобальной переменной
 set (STATIC_LIBRARY_TARGETS ${STATIC_LIBRARY_TARGETS} PARENT_SCOPE)
 
-# 可选引入 bgfx（本地优先且仅本地）：要求存在目录 Source/ThirdParty/bgfx.cmake
-if (URHO3D_BGFX)
-    if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/bgfx.cmake/CMakeLists.txt)
-        message (STATUS "Using local bgfx.cmake at ThirdParty/bgfx.cmake (no FetchContent)")
-        # 关闭 bgfx 的示例构建，保留工具（shaderc 等）以用于着色器编译
-        set (BGFX_BUILD_EXAMPLES OFF CACHE BOOL "Disable bgfx examples" FORCE)
-        set (BGFX_BUILD_TESTS    OFF CACHE BOOL "Disable bgfx tests"    FORCE)
-        set (BGFX_BUILD_TOOLS    ON  CACHE BOOL "Build bgfx tools"       FORCE)
-        # 仅需 shaderc，禁用纹理工具链，避免 iqa 等 C 依赖在非开发者命令行下找不到 SDK 头
-        set (BGFX_BUILD_TOOLS_TEXTURE OFF CACHE BOOL "Disable bgfx texture tools" FORCE)
-        set (BGFX_BUILD_TOOLS_GEOMETRY OFF CACHE BOOL "Disable bgfx geometry tools" FORCE)
-        set (BGFX_BUILD_TOOLS_BIN2C OFF CACHE BOOL "Disable bgfx bin2c tool" FORCE)
-        add_subdirectory (bgfx.cmake)
-        # 将 bgfx 工具 (shaderc/texturec 等) 拷贝到引擎惯用的 tool 目录
-        # 注意：add_custom_command(TARGET ...) 只能作用于当前目录创建的目标，因此
-        # 这里采用独立的自定义目标 copy_bgfx_tools，并为其添加依赖与拷贝命令。
-        set (BGFX_TOOLS_DIR ${CMAKE_BINARY_DIR}/bin/tool)
-        file (MAKE_DIRECTORY ${BGFX_TOOLS_DIR})
+# 引入 bgfx（本地优先且仅本地）：要求存在目录 Source/ThirdParty/bgfx.cmake
+if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/bgfx.cmake/CMakeLists.txt)
+    message (STATUS "Using local bgfx.cmake at ThirdParty/bgfx.cmake (no FetchContent)")
+    # 关闭 bgfx 的示例构建，保留工具（shaderc 等）以用于着色器编译
+    set (BGFX_BUILD_EXAMPLES OFF CACHE BOOL "Disable bgfx examples" FORCE)
+    set (BGFX_BUILD_TESTS    OFF CACHE BOOL "Disable bgfx tests"    FORCE)
+    set (BGFX_BUILD_TOOLS    ON  CACHE BOOL "Build bgfx tools"       FORCE)
+    # 仅需 shaderc，禁用纹理工具链，避免 iqa 等 C 依赖在非开发者命令行下找不到 SDK 头
+    set (BGFX_BUILD_TOOLS_TEXTURE OFF CACHE BOOL "Disable bgfx texture tools" FORCE)
+    set (BGFX_BUILD_TOOLS_GEOMETRY OFF CACHE BOOL "Disable bgfx geometry tools" FORCE)
+    set (BGFX_BUILD_TOOLS_BIN2C OFF CACHE BOOL "Disable bgfx bin2c tool" FORCE)
+    add_subdirectory (bgfx.cmake)
+    # 将 bgfx 工具 (shaderc/texturec 等) 拷贝到引擎惯用的 tool 目录
+    # 注意：add_custom_command(TARGET ...) 只能作用于当前目录创建的目标，因此
+    # 这里采用独立的自定义目标 copy_bgfx_tools，并为其添加依赖与拷贝命令。
+    set (BGFX_TOOLS_DIR ${CMAKE_BINARY_DIR}/bin/tool)
+    file (MAKE_DIRECTORY ${BGFX_TOOLS_DIR})
 
-        # 收集可用的工具目标（不同平台/配置可能并非全部可用）
-        set (_BGFX_TOOL_CANDIDATES shaderc texturec geometryc texturev shaderbin2c)
-        set (_BGFX_TOOL_TARGETS)
-        foreach (TGT ${_BGFX_TOOL_CANDIDATES})
-            if (TARGET ${TGT})
-                list (APPEND _BGFX_TOOL_TARGETS ${TGT})
-            endif ()
+    # 收集可用的工具目标（不同平台/配置可能并非全部可用）
+    set (_BGFX_TOOL_CANDIDATES shaderc texturec geometryc texturev shaderbin2c)
+    set (_BGFX_TOOL_TARGETS)
+    foreach (TGT ${_BGFX_TOOL_CANDIDATES})
+        if (TARGET ${TGT})
+            list (APPEND _BGFX_TOOL_TARGETS ${TGT})
+        endif ()
+    endforeach ()
+
+    if (_BGFX_TOOL_TARGETS)
+        add_custom_target (copy_bgfx_tools ALL
+            COMMAND ${CMAKE_COMMAND} -E make_directory ${BGFX_TOOLS_DIR}
+            COMMENT "Copying bgfx tools to ${BGFX_TOOLS_DIR}")
+        foreach (TGT ${_BGFX_TOOL_TARGETS})
+            add_dependencies (copy_bgfx_tools ${TGT})
+            add_custom_command (TARGET copy_bgfx_tools POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:${TGT}> ${BGFX_TOOLS_DIR}
+                COMMENT "Copy bgfx tool: ${TGT}")
         endforeach ()
-
-        if (_BGFX_TOOL_TARGETS)
-            add_custom_target (copy_bgfx_tools ALL
-                COMMAND ${CMAKE_COMMAND} -E make_directory ${BGFX_TOOLS_DIR}
-                COMMENT "Copying bgfx tools to ${BGFX_TOOLS_DIR}")
-            foreach (TGT ${_BGFX_TOOL_TARGETS})
-                add_dependencies (copy_bgfx_tools ${TGT})
-                add_custom_command (TARGET copy_bgfx_tools POST_BUILD
-                    COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:${TGT}> ${BGFX_TOOLS_DIR}
-                    COMMENT "Copy bgfx tool: ${TGT}")
-            endforeach ()
-        endif ()
-
-        # 兼容 ShaderUtils.cmake：该模块期望存在可执行目标 bgfx::shaderc
-        # 标准 bgfx.cmake 定义的工具目标名为 shaderc，这里创建一个别名以便统一调用
-        if (TARGET shaderc AND NOT TARGET bgfx::shaderc)
-            add_executable(bgfx::shaderc ALIAS shaderc)
-        endif ()
-    else ()
-        message (FATAL_ERROR "URHO3D_BGFX=ON 但未找到本地 ThirdParty/bgfx.cmake。请先将 bgfx.cmake 克隆到 Source/ThirdParty/bgfx.cmake 再配置构建。")
     endif ()
+
+    # 兼容 ShaderUtils.cmake：该模块期望存在可执行目标 bgfx::shaderc
+    # 标准 bgfx.cmake 定义的工具目标名为 shaderc，这里创建一个别名以便统一调用
+    if (TARGET shaderc AND NOT TARGET bgfx::shaderc)
+        add_executable(bgfx::shaderc ALIAS shaderc)
+    endif ()
+else ()
+    message (FATAL_ERROR "未找到本地 ThirdParty/bgfx.cmake。请先将 bgfx.cmake 克隆到 Source/ThirdParty/bgfx.cmake 再配置构建。")
 endif ()

@@ -40,11 +40,9 @@ set (CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/Modules)
 # Include UrhoCommon.cmake module after setting project name
 include (UrhoCommon)
 
-# 若启用 bgfx，提前声明一个占位自定义目标供示例工程依赖，
+# 提前声明一个占位自定义目标供示例工程依赖，
 # 稍后在真正创建完 shaders 目标后再把依赖关系补上。
-if (URHO3D_BGFX)
-    add_custom_target(tina2d_bgfx_shaders)
-endif ()
+add_custom_target(tina2d_bgfx_shaders)
 
 # 2D-only 构建：在加入 Source 子目录前，统一关闭 3D/脚本系统以避免引用 3D 头和符号
 set (URHO3D_TOOLS            OFF CACHE BOOL "Disable tools for 2D-only build" FORCE)
@@ -58,9 +56,7 @@ set (URHO3D_PHYSICS          OFF CACHE BOOL "Disable 3D Physics in 2D-only build
 set (URHO3D_OPENGL           OFF CACHE BOOL "Disable OpenGL backend for 2D-only build" FORCE)
 set (URHO3D_D3D11            OFF CACHE BOOL "Disable Direct3D11 backend for 2D-only build" FORCE)
 
-# 强制启用：bgfx 渲染后端（BGFX-only）。
-# 项目已默认使用 bgfx，保持变量存在但恒为 ON，便于兼容现有条件分支与第三方脚本。
-set(URHO3D_BGFX ON CACHE BOOL "启用 bgfx 渲染后端（强制开启）" FORCE)
+# 已全面集成 bgfx 渲染后端，不再通过开关变量控制。
 
 # Setup SDK install destinations
 set (PATH_SUFFIX Urho3D)
@@ -219,33 +215,31 @@ add_compile_definitions(TINA2D_DISABLE_3D)
 add_subdirectory (Source)
 
 # 编译 bgfx 着色器（放在 Source 之后确保 bgfx 工具可用）
-if (URHO3D_BGFX)
-    include(${CMAKE_SOURCE_DIR}/cmake/Modules/ShaderUtils.cmake)
-    
-    # 编译 CoreData 中的 BGFX 着色器
-    # 说明：按目录中现有 *.sc（vs/fs 成对）列出基名，ShaderUtils.cmake 会为各 profile 生成 .bin
-    set(BGFX_SHADER_DIR "${CMAKE_SOURCE_DIR}/bin/CoreData/Shaders/BGFX")
-    add_shader_compile_dir(
-        ${BGFX_SHADER_DIR}
-        Basic2D
-        Basic_VC
-        Basic_Diff_VC
-        Basic_Alpha_VC
-        Basic_DiffAlphaMask_VC
-        TriangleBatch_VC
-        Urho2D_VC
-        Urho2D_Diff_VC
-        Urho2D_Lit2D_Diff_VC
-        # 新增：高质量文本/后处理/无光照材质
-        Text_SDF_VC
-        Text_MSDF_VC
-        CopyFramebuffer
-            )
-        # 让占位目标依赖实际的 shaders 目标，这样示例中的依赖会按需触发编译
-        if (TARGET tina2d_bgfx_shaders AND TARGET shaders)
-            add_dependencies(tina2d_bgfx_shaders shaders)
-        endif ()
-endif()
+include(${CMAKE_SOURCE_DIR}/cmake/Modules/ShaderUtils.cmake)
+
+# 编译 CoreData 中的 BGFX 着色器
+# 说明：按目录中现有 *.sc（vs/fs 成对）列出基名，ShaderUtils.cmake 会为各 profile 生成 .bin
+set(BGFX_SHADER_DIR "${CMAKE_SOURCE_DIR}/bin/CoreData/Shaders/BGFX")
+add_shader_compile_dir(
+    ${BGFX_SHADER_DIR}
+    Basic2D
+    Basic_VC
+    Basic_Diff_VC
+    Basic_Alpha_VC
+    Basic_DiffAlphaMask_VC
+    TriangleBatch_VC
+    Urho2D_VC
+    Urho2D_Diff_VC
+    Urho2D_Lit2D_Diff_VC
+    # 新增：高质量文本/后处理/无光照材质
+    Text_SDF_VC
+    Text_MSDF_VC
+    CopyFramebuffer
+        )
+# 让占位目标依赖实际的 shaders 目标，这样示例中的依赖会按需触发编译
+if (TARGET tina2d_bgfx_shaders AND TARGET shaders)
+    add_dependencies(tina2d_bgfx_shaders shaders)
+endif ()
 
 # Urho3D documentation
 add_subdirectory (Docs)
