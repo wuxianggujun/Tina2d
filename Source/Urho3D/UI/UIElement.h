@@ -926,7 +926,8 @@ private:
     /// Flag whether node should send child added / removed events by itself.
     bool elementEventSender_{};
     /// XPath query for selecting UI-style.
-    static XPathQuery styleXPathQuery_;
+    /// 用于样式查询的 XPath（使用函数局部静态，避免跨单元初始化顺序问题）
+    static XPathQuery& GetStyleXPathQuery();
     /// Tag list.
     StringVector tags_;
 };

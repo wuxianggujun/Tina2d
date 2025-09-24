@@ -72,7 +72,11 @@ static bool CompareUIElements(const UIElement* lhs, const UIElement* rhs)
     return lhs->GetPriority() < rhs->GetPriority();
 }
 
-XPathQuery UIElement::styleXPathQuery_("/elements/element[@type=$typeName]", "typeName:String");
+XPathQuery& UIElement::GetStyleXPathQuery()
+{
+    static XPathQuery q("/elements/element[@type=$typeName]", "typeName:String");
+    return q;
+}
 
 UIElement::UIElement(Context* context) :
     Animatable(context),
@@ -474,11 +478,14 @@ bool UIElement::FilterAttributes(XMLElement& dest) const
         String style = dest.GetAttribute("style");
         if (!style.Empty() && style != "none")
         {
-            if (styleXPathQuery_.SetVariable("typeName", style))
             {
-                XMLElement styleElem = GetDefaultStyle()->GetRoot().SelectSinglePrepared(styleXPathQuery_);
-                if (styleElem && !FilterUIStyleAttributes(dest, styleElem))
-                    return false;
+                auto& styleXPathQuery = GetStyleXPathQuery();
+                if (styleXPathQuery.SetVariable("typeName", style))
+                {
+                    XMLElement styleElem = GetDefaultStyle()->GetRoot().SelectSinglePrepared(styleXPathQuery);
+                    if (styleElem && !FilterUIStyleAttributes(dest, styleElem))
+                        return false;
+                }
             }
         }
     }
@@ -998,8 +1005,9 @@ bool UIElement::SetStyle(const String& styleName, XMLFile* file)
     // Remember the effectively applied style file, either custom or default
     appliedStyleFile_ = file;
 
-    styleXPathQuery_.SetVariable("typeName", actualStyleName);
-    XMLElement styleElem = file->GetRoot().SelectSinglePrepared(styleXPathQuery_);
+    auto& styleXPathQuery = GetStyleXPathQuery();
+    styleXPathQuery.SetVariable("typeName", actualStyleName);
+    XMLElement styleElem = file->GetRoot().SelectSinglePrepared(styleXPathQuery);
     return styleElem && SetStyle(styleElem);
 }
 
