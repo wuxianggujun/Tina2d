@@ -417,11 +417,14 @@ if (TARGET EASTL)
     target_link_libraries(${TARGET_NAME} EASTL)
 endif ()
 
-# 若启用 mimalloc，则链接并打开编译宏以在代码中启用 mimalloc 注入路径
-if (DEFINED MIMALLOC_TARGET)
-    target_link_libraries(${TARGET_NAME} ${MIMALLOC_TARGET})
-    add_definitions(-DURHO3D_HAS_MIMALLOC)
+# 强制链接 mimalloc（该工程已将 mimalloc 作为默认分配器）
+if (NOT DEFINED MIMALLOC_TARGET)
+    message(FATAL_ERROR "MIMALLOC_TARGET 未定义。请确保 ThirdParty/mimalloc 被正确引入并构建")
 endif ()
+target_link_libraries(${TARGET_NAME} ${MIMALLOC_TARGET})
+
+# 告知代码层：启用 mimalloc 作为全局分配器，避免与 MSVC CRT DebugNew 冲突
+target_compile_definitions(${TARGET_NAME} PUBLIC URHO3D_USE_MIMALLOC=1)
 
 # SDL 依赖的链接改由 define_dependency_libs() 统一处理，避免混用 target_link_libraries 的不同签名导致配置错误。
 

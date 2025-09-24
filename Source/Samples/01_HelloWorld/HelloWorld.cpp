@@ -1,6 +1,7 @@
 // Copyright (c) 2008-2023 the Urho3D project
 // License: MIT
 
+#include <Urho3D/Precompiled.h>
 #include <Urho3D/Core/CoreEvents.h>
 #include <Urho3D/Core/ProcessUtils.h>
 #include <Urho3D/Input/Input.h>

@@ -3,6 +3,8 @@
 
 #include "../Precompiled.h"
 
+#include "EASTLAllocator.h"
+
 // 注意：全局 new/delete 重载现在统一在 GlobalNewDelete.h 中以内联形式提供
 // 本文件仅保留 EASTL 专用的调试版本和对齐版本重载，避免符号冲突
 
@@ -14,9 +16,7 @@
     #include <malloc.h>
 #endif
 
-#ifdef URHO3D_HAS_MIMALLOC
     #include <mimalloc.h>
-#endif
 
 // EASTL 自定义 new/delete 钩子实现。
 // 目的：当 EASTL 以带调试信息的"placement new 风格"调用这些符号时，
@@ -26,55 +26,22 @@ namespace
 {
     inline void* AllocRaw(size_t size)
     {
-#ifdef URHO3D_HAS_MIMALLOC
         return mi_malloc(size);
-#else
-        return std::malloc(size);
-#endif
     }
 
     inline void  FreeRaw(void* p) noexcept
     {
-#ifdef URHO3D_HAS_MIMALLOC
-        mi_free(p);
-#else
-        std::free(p);
-#endif
+        if (p) mi_free(p);
     }
 
     inline void* AllocAligned(size_t size, size_t alignment)
     {
-#ifdef URHO3D_HAS_MIMALLOC
         return mi_malloc_aligned(size, alignment);
-#else
-    #ifdef _MSC_VER
-        return _aligned_malloc(size, alignment);
-    #else
-        // C11 aligned_alloc 要求 size 为 alignment 的倍数
-        #if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L)
-            size_t padded = (size + alignment - 1) / alignment * alignment;
-            return aligned_alloc(alignment, padded);
-        #else
-            void* p = nullptr;
-            if (posix_memalign(&p, alignment, size) != 0)
-                return nullptr;
-            return p;
-        #endif
-    #endif
-#endif
     }
 
     inline void  FreeAligned(void* p) noexcept
     {
-#ifdef URHO3D_HAS_MIMALLOC
-        mi_free(p);
-#else
-    #ifdef _MSC_VER
-        _aligned_free(p);
-    #else
-        std::free(p);
-    #endif
-#endif
+        if (p) mi_free(p);
     }
 }
 

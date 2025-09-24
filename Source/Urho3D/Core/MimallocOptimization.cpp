@@ -1,7 +1,4 @@
-// 可选的 mimalloc 性能调优配置
-// 注意：仅在启用了 URHO3D_HAS_MIMALLOC 时生效
-
-#ifdef URHO3D_HAS_MIMALLOC
+// mimalloc 性能调优配置（默认启用 mimalloc）
 #include <mimalloc.h>
 
 void OptimizeMimallocForGame()
@@ -27,4 +24,3 @@ void OptimizeMimallocForGame()
     // 5. 针对特定内存模式优化（可选）
     // mi_option_set(mi_option_large_os_pages, 1);   // 大内存应用可启用
 }
-#endif

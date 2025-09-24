@@ -6,10 +6,7 @@
 #ifdef URHO3D_BGFX
 #include <bx/allocator.h>
 #include <cstdlib>
-
-#ifdef URHO3D_HAS_MIMALLOC
 #include <mimalloc.h>
-#endif
 
 namespace Urho3D 
 {
@@ -28,30 +25,18 @@ namespace Urho3D
             {
                 if (_ptr)
                 {
-#ifdef URHO3D_HAS_MIMALLOC
                     mi_free(_ptr);
-#else
-                    free(_ptr);
-#endif
                 }
                 return nullptr;
             }
             
             if (!_ptr)
             {
-#ifdef URHO3D_HAS_MIMALLOC
                 return _align <= 8 ? mi_malloc(_size) : mi_malloc_aligned(_size, _align);
-#else
-                return _align <= 8 ? malloc(_size) : nullptr; // 简化处理
-#endif
             }
             
-#ifdef URHO3D_HAS_MIMALLOC
-            return _align <= 8 ? mi_realloc(_ptr, _size) : nullptr; // mimalloc没有对齐realloc
-#else
-            // 调用 C 运行时的 ::realloc，而不是递归调用自身方法
-            return ::realloc(_ptr, _size);
-#endif
+            // 重新分配：按对齐选择 API
+            return _align <= 8 ? mi_realloc(_ptr, _size) : mi_realloc_aligned(_ptr, _size, _align);
         }
     };
 }

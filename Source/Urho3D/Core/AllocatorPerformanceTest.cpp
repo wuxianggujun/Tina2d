@@ -9,9 +9,7 @@
 #include <EASTL/allocator.h>
 #include <EASTL/vector.h>
 
-#ifdef URHO3D_HAS_MIMALLOC
 #include <mimalloc.h>
-#endif
 
 // 测试不同分配器的性能
 void TestAllocatorPerformance()
@@ -25,7 +23,7 @@ void TestAllocatorPerformance()
     std::chrono::microseconds duration{0};
     
     // 测试1: 直接mimalloc
-#ifdef URHO3D_HAS_MIMALLOC
+    // 直接 mimalloc
     std::cout << "Testing direct mimalloc..." << std::endl;
     start = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < NUM_ALLOCS; ++i) {
@@ -35,7 +33,6 @@ void TestAllocatorPerformance()
     end = std::chrono::high_resolution_clock::now();
     duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
     std::cout << "Direct mimalloc: " << duration.count() << " microseconds" << std::endl;
-#endif
     
     // 测试2: 通过全局new/delete重载
     std::cout << "Testing global new/delete overrides..." << std::endl;
@@ -98,7 +95,6 @@ void TestAlignedAllocation()
     
     std::cout << "\nTesting aligned allocation..." << std::endl;
     
-#ifdef URHO3D_HAS_MIMALLOC
     auto start = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < NUM_ALLOCS; ++i) {
         void* p = mi_malloc_aligned(SIZE, ALIGNMENT);
@@ -107,7 +103,6 @@ void TestAlignedAllocation()
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
     std::cout << "Direct mimalloc aligned: " << duration.count() << " microseconds" << std::endl;
-#endif
     
     // 通过EASTL分配器的对齐分配
     auto start2 = std::chrono::high_resolution_clock::now();

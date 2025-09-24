@@ -5,25 +5,22 @@
 
 #include "MemoryHooks.h"
 
-#ifdef URHO3D_HAS_MIMALLOC
     #include <mimalloc.h>
     #ifndef MINI_URHO
         #include <SDL3/SDL.h>
     #endif
-#endif
 
 namespace Urho3D
 {
 
 void InstallMimallocAllocator()
 {
-#ifdef URHO3D_HAS_MIMALLOC
     // 对于 Windows 动态覆盖，确保链接并触发 mimalloc 初始化：
     // 参见 mimalloc 文档：需在运行时确保对 mimalloc 的显式引用。
     (void)mi_version();
 
     // 若使用 SDL，则将其内存接口也切换到 mimalloc，避免跨边界错配
-#ifndef MINI_URHO
+    #ifndef MINI_URHO
     #if defined(SDL_MEMORY_FUNCTIONS) || 1
         // SDL3 暴露 SDL_SetMemoryFunctions；SDL2 也有该 API
         auto s_malloc  = +[](size_t n)               -> void* { return mi_malloc(n); };
@@ -32,10 +29,7 @@ void InstallMimallocAllocator()
         auto s_free    = +[](void* p)                      { if (p) mi_free(p); };
         SDL_SetMemoryFunctions(s_malloc, s_calloc, s_realloc, s_free);
     #endif
-#endif
-#else
-    // 无操作：回退到 CRT 分配器
-#endif
+    #endif
 }
 
 }

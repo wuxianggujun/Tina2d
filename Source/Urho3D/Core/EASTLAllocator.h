@@ -5,9 +5,7 @@
 
 #include "../Core/Context.h"
 #include <EASTL/allocator.h>
-#ifdef URHO3D_HAS_MIMALLOC
 #include <mimalloc.h>
-#endif
 
 // 自定义EASTL分配器，确保与项目内存管理统一
 // 
@@ -26,37 +24,18 @@ namespace Urho3D
         
         void* allocate(size_t n, int /*flags*/ = 0)
         {
-#ifdef URHO3D_HAS_MIMALLOC
             return mi_malloc(n);
-#else
-            return std::malloc(n);
-#endif
         }
         
         void* allocate(size_t n, size_t alignment, size_t /*offset*/, int /*flags*/ = 0)
         {
-#ifdef URHO3D_HAS_MIMALLOC
             return mi_malloc_aligned(n, alignment);
-#else
-#ifdef _MSC_VER
-            return _aligned_malloc(n, alignment);
-#else
-            void* p = nullptr;
-            if (posix_memalign(&p, alignment, n) != 0)
-                return nullptr;
-            return p;
-#endif
-#endif
         }
         
         void deallocate(void* p, size_t /*n*/)
         {
             if (!p) return;
-#ifdef URHO3D_HAS_MIMALLOC
             mi_free(p);
-#else
-            std::free(p);
-#endif
         }
         
         const char* get_name() const { return name_; }
@@ -67,7 +46,7 @@ namespace Urho3D
     };
 }
 
-// 如果要启用自定义EASTL分配器，取消下面的注释
+// 先暂时禁用自定义EASTL分配器，避免符号冲突
 // #define EASTL_USER_DEFINED_ALLOCATOR
 
 #ifdef EASTL_USER_DEFINED_ALLOCATOR

@@ -5,14 +5,11 @@
 
 #include "BgfxMiAllocator.h"
 
-#ifdef URHO3D_HAS_MIMALLOC
 #   include <mimalloc.h>
-#endif
 
 namespace Urho3D
 {
 
-#ifdef URHO3D_HAS_MIMALLOC
 class BgfxMiAllocator final : public bx::AllocatorI
 {
 public:
@@ -42,18 +39,11 @@ public:
         }
     }
 };
-#endif
 
 bx::AllocatorI* GetBgfxAllocator()
 {
-#ifdef URHO3D_HAS_MIMALLOC
     static BgfxMiAllocator gMiAllocator;
     return &gMiAllocator;
-#else
-    static bx::DefaultAllocator gDefault;
-    return &gDefault;
-#endif
 }
 
 } // namespace Urho3D
-

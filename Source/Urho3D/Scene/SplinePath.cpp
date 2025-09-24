@@ -14,11 +14,15 @@ namespace Urho3D
 extern const char* interpolationModeNames[];
 extern const char* LOGIC_CATEGORY;
 
-static const StringVector controlPointsStructureElementNames =
+// 延迟初始化，避免跨单元静态初始化次序 + 分配器混配
+static const StringVector& GetControlPointsStructureElementNames()
 {
-    "Control Point Count",
-    "   NodeID"
-};
+    static StringVector names{
+        String("Control Point Count"),
+        String("   NodeID")
+    };
+    return names;
+}
 
 SplinePath::SplinePath(Context* context) :
     Component(context),
@@ -45,7 +49,7 @@ void SplinePath::RegisterObject(Context* context)
     URHO3D_ACCESSOR_ATTRIBUTE("Controlled", GetControlledIdAttr, SetControlledIdAttr, 0, AM_FILE | AM_NODEID);
     URHO3D_ACCESSOR_ATTRIBUTE("Control Points", GetControlPointIdsAttr, SetControlPointIdsAttr,
         Variant::emptyVariantVector, AM_FILE | AM_NODEIDVECTOR)
-        .SetMetadata(AttributeMetadata::P_VECTOR_STRUCT_ELEMENTS, controlPointsStructureElementNames);
+        .SetMetadata(AttributeMetadata::P_VECTOR_STRUCT_ELEMENTS, GetControlPointsStructureElementNames());
 }
 
 void SplinePath::ApplyAttributes()

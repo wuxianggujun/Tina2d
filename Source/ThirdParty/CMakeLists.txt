@@ -75,31 +75,40 @@ if (URHO3D_TRACY_PROFILING)
     add_subdirectory (Tracy)
 endif ()
 
-# 高性能分配器：mimalloc 深度集成（仅使用本地 ThirdParty），默认尝试启用；
-# 若本地不存在或当前工具链无法编译 C/Windows SDK 头，则静默跳过并退回 CRT。
-if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/mimalloc/CMakeLists.txt)
+# 高性能分配器：mimalloc 深度集成（仅使用本地依赖目录，支持自定义根）。
+# 优先使用用户提供的 MIMALLOC_ROOT（指向 mimalloc 源码根，含 CMakeLists.txt），
+# 否则使用默认路径 Source/ThirdParty/mimalloc。
+
+set(_MIMALLOC_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mimalloc")
+if (DEFINED MIMALLOC_ROOT)
+    set(_MIMALLOC_SRC_DIR "${MIMALLOC_ROOT}")
+endif ()
+
+if (EXISTS ${_MIMALLOC_SRC_DIR}/CMakeLists.txt)
     include(CheckCSourceCompiles)
     set(CMAKE_REQUIRED_QUIET TRUE)
     check_c_source_compiles("#include <stddef.h>\n#ifdef _WIN32\n#include <windows.h>\n#endif\nint main(void){return 0;}" CAN_BUILD_C_SDK)
-    if (CAN_BUILD_C_SDK)
-        set (MI_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-        add_subdirectory (mimalloc)
-        if (TARGET mimalloc-static)
-            set (MIMALLOC_TARGET mimalloc-static)
-        elseif (TARGET mimalloc)
-            set (MIMALLOC_TARGET mimalloc)
-        endif ()
-        # 将变量提升到父作用域，便于上层目标链接并打开宏
-        if (DEFINED MIMALLOC_TARGET)
-            set (MIMALLOC_TARGET ${MIMALLOC_TARGET} PARENT_SCOPE)
-        endif ()
-        set (HAVE_MIMALLOC ON)
-        set (HAVE_MIMALLOC ON PARENT_SCOPE)
-    else ()
-        message (STATUS "mimalloc: 检测到当前工具链环境缺少标准/SDK 头，已跳过本地 mimalloc 构建（回退 CRT）")
+    if (NOT CAN_BUILD_C_SDK)
+        message(FATAL_ERROR "mimalloc: 无法编译（缺少标准/SDK 头）。请修复工具链后重试")
     endif ()
+    set (MI_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set (MI_BUILD_SHARED OFF CACHE BOOL "" FORCE)
+    # 使用指定源码目录；为避免目标名冲突，单独指定构建输出目录名
+    if (_MIMALLOC_SRC_DIR STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}/mimalloc")
+        add_subdirectory (mimalloc)
+    else ()
+        add_subdirectory (${_MIMALLOC_SRC_DIR} ${CMAKE_CURRENT_BINARY_DIR}/mimalloc-local)
+    endif ()
+    if (TARGET mimalloc-static)
+        set (MIMALLOC_TARGET mimalloc-static)
+    elseif (TARGET mimalloc)
+        set (MIMALLOC_TARGET mimalloc)
+    else ()
+        message(FATAL_ERROR "mimalloc: 未找到可用目标（mimalloc 或 mimalloc-static）")
+    endif ()
+    set (MIMALLOC_TARGET ${MIMALLOC_TARGET} PARENT_SCOPE)
 else ()
-    message (STATUS "mimalloc: 未发现 Source/ThirdParty/mimalloc，已跳过（回退 CRT）")
+    message(FATAL_ERROR "未发现本地 mimalloc：\n - 指定路径: ${_MIMALLOC_SRC_DIR}\n - 若你本地依赖在其它目录，请在 CMake 配置时设置 -DMIMALLOC_ROOT=你的路径（该路径下需包含 mimalloc 的 CMakeLists.txt）。\n - 或将 mimalloc 放到 Source/ThirdParty/mimalloc 后重试。")
 endif ()
 
 # EASTL / EABase：构建并整库链接（推荐）。
