@@ -237,7 +237,7 @@ public:
     bool HasPass(i32 passIndex) const
     {
         assert(passIndex >= 0);
-        return (unsigned)passIndex < passes_.Size() && passes_[passIndex].Get() != nullptr;
+        return passIndex < (i32)passes_.Size() && passes_[passIndex].Get() != nullptr;
     }
 
     /// Return whether has a pass by name. This overload should not be called in time-critical rendering loops; use a pre-acquired pass index instead.
@@ -247,7 +247,7 @@ public:
     Pass* GetPass(i32 passIndex) const
     {
         assert(passIndex >= 0);
-        return (unsigned)passIndex < passes_.Size() ? passes_[passIndex].Get() : nullptr;
+        return passIndex < (i32)passes_.Size() ? passes_[passIndex].Get() : nullptr;
     }
 
     /// Return a pass by name, or null if not found. This overload should not be called in time-critical rendering loops; use a pre-acquired pass index instead.
@@ -257,7 +257,7 @@ public:
     Pass* GetSupportedPass(i32 passIndex) const
     {
         assert(passIndex >= 0);
-        Pass* pass = (unsigned)passIndex < passes_.Size() ? passes_[passIndex].Get() : nullptr;
+        Pass* pass = passIndex < (i32)passes_.Size() ? passes_[passIndex].Get() : nullptr;
         return pass && (!pass->IsDesktop() || desktopSupport_) ? pass : nullptr;
     }
 

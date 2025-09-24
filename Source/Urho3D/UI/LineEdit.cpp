@@ -88,7 +88,7 @@ void LineEdit::Update(float timeStep)
     if (text_->GetFont() != lastFont_ || text_->GetFontSize() != lastFontSize_)
     {
         lastFont_ = text_->GetFont();
-        lastFontSize_ = text_->GetFontSize();
+        lastFontSize_ = (int)text_->GetFontSize();
         UpdateCursor();
     }
 
@@ -147,7 +147,7 @@ bool LineEdit::OnDragDropTest(UIElement* source)
 {
     if (source && editable_)
     {
-        if (source->GetVars().Contains(VAR_DRAGDROPCONTENT))
+        if (source->GetVars().find(VAR_DRAGDROPCONTENT) != source->GetVars().end())
             return true;
         StringHash sourceType = source->GetType();
         return sourceType == LineEdit::GetTypeStatic() || sourceType == Text::GetTypeStatic();
@@ -161,7 +161,7 @@ bool LineEdit::OnDragDropFinish(UIElement* source)
     if (source && editable_)
     {
         // If the UI element in question has a drag-and-drop content string defined, use it instead of element text
-        if (source->GetVars().Contains(VAR_DRAGDROPCONTENT))
+        if (source->GetVars().find(VAR_DRAGDROPCONTENT) != source->GetVars().end())
         {
             SetText(source->GetVar(VAR_DRAGDROPCONTENT).GetString());
             return true;
@@ -585,11 +585,11 @@ void LineEdit::UpdateText()
 
 void LineEdit::UpdateCursor()
 {
-    i32 x = text_->GetCharPosition(cursorPosition_).x_;
+    i32 x = (i32)text_->GetCharPosition(cursorPosition_).x_;
 
     text_->SetPosition(GetIndentWidth() + clipBorder_.left_, clipBorder_.top_);
     cursor_->SetPosition(text_->GetPosition() + IntVector2(x, 0));
-    cursor_->SetSize(cursor_->GetWidth(), text_->GetRowHeight());
+    cursor_->SetSize(cursor_->GetWidth(), (int)text_->GetRowHeight());
 
     IntVector2 screenPosition = ElementToScreen(cursor_->GetPosition());
     SDL_Rect rect = {screenPosition.x_, screenPosition.y_, cursor_->GetSize().x_, cursor_->GetSize().y_};

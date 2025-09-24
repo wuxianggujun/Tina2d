@@ -122,11 +122,11 @@ void DebugHud::Update()
             renderer->GetNumViews(),
             renderer->GetNumLights(true));
 
-        if (!appStats_.Empty())
+        if (!appStats_.empty())
         {
             stats.Append("\n");
-            for (HashMap<String, String>::ConstIterator i = appStats_.Begin(); i != appStats_.End(); ++i)
-                stats.AppendWithFormat("\n%s %s", i->first_.CString(), i->second_.CString());
+            for (auto i = appStats_.begin(); i != appStats_.end(); ++i)
+                stats.AppendWithFormat("\n%s %s", i->first.CString(), i->second.CString());
         }
 
         statsText_->SetText(stats);
@@ -256,20 +256,23 @@ void DebugHud::SetAppStats(const String& label, const Variant& stats)
 
 void DebugHud::SetAppStats(const String& label, const String& stats)
 {
-    bool newLabel = !appStats_.Contains(label);
+    bool newLabel = appStats_.find(label) == appStats_.end();
     appStats_[label] = stats;
-    if (newLabel)
-        appStats_.Sort();
+    (void)newLabel; // EASTL::hash_map 无排序
 }
 
 bool DebugHud::ResetAppStats(const String& label)
 {
-    return appStats_.Erase(label);
+    auto it = appStats_.find(label);
+    if (it == appStats_.end())
+        return false;
+    appStats_.erase(it);
+    return true;
 }
 
 void DebugHud::ClearAppStats()
 {
-    appStats_.Clear();
+    appStats_.clear();
 }
 
 void DebugHud::HandlePostUpdate(StringHash eventType, VariantMap& eventData)

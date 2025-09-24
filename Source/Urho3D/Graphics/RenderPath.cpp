@@ -221,7 +221,7 @@ void RenderPathCommand::SetShaderParameter(const String& name, const Variant& va
 
 void RenderPathCommand::RemoveShaderParameter(const String& name)
 {
-    shaderParameters_.Erase(name);
+    shaderParameters_.erase(name);
 }
 
 void RenderPathCommand::SetNumOutputs(i32 num)
@@ -234,27 +234,27 @@ void RenderPathCommand::SetNumOutputs(i32 num)
 void RenderPathCommand::SetOutput(i32 index, const String& name, CubeMapFace face)
 {
     assert(index >= 0);
-    if ((unsigned)index < outputs_.Size())
+    if (index < (i32)outputs_.Size())
         outputs_[index] = MakePair(name, face);
-    else if (index == outputs_.Size() && index < MAX_RENDERTARGETS)
+    else if (index == (i32)outputs_.Size() && index < MAX_RENDERTARGETS)
         outputs_.Push(MakePair(name, face));
 }
 
 void RenderPathCommand::SetOutputName(i32 index, const String& name)
 {
     assert(index >= 0);
-    if ((unsigned)index < outputs_.Size())
+    if (index < (i32)outputs_.Size())
         outputs_[index].first_ = name;
-    else if (index == outputs_.Size() && index < MAX_RENDERTARGETS)
+    else if (index == (i32)outputs_.Size() && index < MAX_RENDERTARGETS)
         outputs_.Push(MakePair(name, FACE_POSITIVE_X));
 }
 
 void RenderPathCommand::SetOutputFace(i32 index, CubeMapFace face)
 {
     assert(index >= 0);
-    if ((unsigned)index < outputs_.Size())
+    if (index < (i32)outputs_.Size())
         outputs_[index].second_ = face;
-    else if (index == outputs_.Size() && index < MAX_RENDERTARGETS)
+    else if (index == (i32)outputs_.Size() && index < MAX_RENDERTARGETS)
         outputs_.Push(MakePair(String::EMPTY, face));
 }
 
@@ -271,20 +271,20 @@ const String& RenderPathCommand::GetTextureName(TextureUnit unit) const
 
 const Variant& RenderPathCommand::GetShaderParameter(const String& name) const
 {
-    HashMap<StringHash, Variant>::ConstIterator i = shaderParameters_.Find(name);
-    return i != shaderParameters_.End() ? i->second_ : Variant::EMPTY;
+    auto i = shaderParameters_.find(name);
+    return i != shaderParameters_.end() ? i->second : Variant::EMPTY;
 }
 
 const String& RenderPathCommand::GetOutputName(i32 index) const
 {
     assert(index >= 0);
-    return (unsigned)index < outputs_.Size() ? outputs_[index].first_ : String::EMPTY;
+    return index < (i32)outputs_.Size() ? outputs_[index].first_ : String::EMPTY;
 }
 
 CubeMapFace RenderPathCommand::GetOutputFace(i32 index) const
 {
     assert(index >= 0);
-    return (unsigned)index < outputs_.Size() ? outputs_[index].second_ : FACE_POSITIVE_X;
+    return index < (i32)outputs_.Size() ? outputs_[index].second_ : FACE_POSITIVE_X;
 }
 
 RenderPath::RenderPath() = default;
@@ -343,13 +343,13 @@ bool RenderPath::Append(XMLFile* file)
 
 void RenderPath::SetEnabled(const String& tag, bool active)
 {
-    for (i32 i = 0; (unsigned)i < renderTargets_.Size(); ++i)
+    for (i32 i = 0; i < (i32)renderTargets_.Size(); ++i)
     {
         if (!renderTargets_[i].tag_.Compare(tag, false))
             renderTargets_[i].enabled_ = active;
     }
 
-    for (i32 i = 0; (unsigned)i < commands_.Size(); ++i)
+    for (i32 i = 0; i < (i32)commands_.Size(); ++i)
     {
         if (!commands_[i].tag_.Compare(tag, false))
             commands_[i].enabled_ = active;
@@ -358,13 +358,13 @@ void RenderPath::SetEnabled(const String& tag, bool active)
 
 bool RenderPath::IsEnabled(const String& tag) const
 {
-    for (i32 i = 0; (unsigned)i < renderTargets_.Size(); ++i)
+    for (i32 i = 0; i < (i32)renderTargets_.Size(); ++i)
     {
         if (!renderTargets_[i].tag_.Compare(tag, false) && renderTargets_[i].enabled_)
             return true;
     }
 
-    for (i32 i = 0; (unsigned)i < commands_.Size(); ++i)
+    for (i32 i = 0; i < (i32)commands_.Size(); ++i)
     {
         if (!commands_[i].tag_.Compare(tag, false) && commands_[i].enabled_)
             return true;
@@ -375,13 +375,13 @@ bool RenderPath::IsEnabled(const String& tag) const
 
 bool RenderPath::IsAdded(const String& tag) const
 {
-    for (i32 i = 0; (unsigned)i < renderTargets_.Size(); ++i)
+    for (i32 i = 0; i < (i32)renderTargets_.Size(); ++i)
     {
         if (!renderTargets_[i].tag_.Compare(tag, false))
             return true;
     }
 
-    for (i32 i = 0; (unsigned)i < commands_.Size(); ++i)
+    for (i32 i = 0; i < (i32)commands_.Size(); ++i)
     {
         if (!commands_[i].tag_.Compare(tag, false))
             return true;
@@ -392,13 +392,13 @@ bool RenderPath::IsAdded(const String& tag) const
 
 void RenderPath::ToggleEnabled(const String& tag)
 {
-    for (i32 i = 0; (unsigned)i < renderTargets_.Size(); ++i)
+    for (i32 i = 0; i < (i32)renderTargets_.Size(); ++i)
     {
         if (!renderTargets_[i].tag_.Compare(tag, false))
             renderTargets_[i].enabled_ = !renderTargets_[i].enabled_;
     }
 
-    for (i32 i = 0; (unsigned)i < commands_.Size(); ++i)
+    for (i32 i = 0; i < (i32)commands_.Size(); ++i)
     {
         if (!commands_[i].tag_.Compare(tag, false))
             commands_[i].enabled_ = !commands_[i].enabled_;
@@ -407,9 +407,9 @@ void RenderPath::ToggleEnabled(const String& tag)
 
 void RenderPath::SetRenderTarget(unsigned index, const RenderTargetInfo& info)
 {
-    if ((unsigned)index < renderTargets_.Size())
+    if (index < (i32)renderTargets_.Size())
         renderTargets_[index] = info;
-    else if (index == renderTargets_.Size())
+    else if (index == (i32)renderTargets_.Size())
         AddRenderTarget(info);
 }
 
@@ -425,7 +425,7 @@ void RenderPath::RemoveRenderTarget(unsigned index)
 
 void RenderPath::RemoveRenderTarget(const String& name)
 {
-    for (i32 i = 0; (unsigned)i < renderTargets_.Size(); ++i)
+    for (i32 i = 0; i < (i32)renderTargets_.Size(); ++i)
     {
         if (!renderTargets_[i].name_.Compare(name, false))
         {
@@ -437,7 +437,7 @@ void RenderPath::RemoveRenderTarget(const String& name)
 
 void RenderPath::RemoveRenderTargets(const String& tag)
 {
-    for (i32 i = renderTargets_.Size() - 1; i >= 0; --i)
+    for (i32 i = (i32)renderTargets_.Size() - 1; i >= 0; --i)
     {
         if (!renderTargets_[i].tag_.Compare(tag, false))
             renderTargets_.Erase(i);
@@ -446,9 +446,9 @@ void RenderPath::RemoveRenderTargets(const String& tag)
 
 void RenderPath::SetCommand(unsigned index, const RenderPathCommand& command)
 {
-    if ((unsigned)index < commands_.Size())
+    if (index < (i32)commands_.Size())
         commands_[index] = command;
-    else if (index == commands_.Size())
+    else if (index == (i32)commands_.Size())
         AddCommand(command);
 }
 
@@ -469,7 +469,7 @@ void RenderPath::RemoveCommand(unsigned index)
 
 void RenderPath::RemoveCommands(const String& tag)
 {
-    for (i32 i = commands_.Size() - 1; i >= 0; --i)
+    for (i32 i = (i32)commands_.Size() - 1; i >= 0; --i)
     {
         if (!commands_[i].tag_.Compare(tag, false))
             commands_.Erase(i);
@@ -480,11 +480,11 @@ void RenderPath::SetShaderParameter(const String& name, const Variant& value)
 {
     StringHash nameHash(name);
 
-    for (i32 i = 0; (unsigned)i < commands_.Size(); ++i)
+    for (i32 i = 0; i < (i32)commands_.Size(); ++i)
     {
-        HashMap<StringHash, Variant>::Iterator j = commands_[i].shaderParameters_.Find(nameHash);
-        if (j != commands_[i].shaderParameters_.End())
-            j->second_ = value;
+        auto j = commands_[i].shaderParameters_.find(nameHash);
+        if (j != commands_[i].shaderParameters_.end())
+            j->second = value;
     }
 }
 
@@ -492,11 +492,11 @@ const Variant& RenderPath::GetShaderParameter(const String& name) const
 {
     StringHash nameHash(name);
 
-    for (i32 i = 0; (unsigned)i < commands_.Size(); ++i)
+    for (i32 i = 0; i < (i32)commands_.Size(); ++i)
     {
-        HashMap<StringHash, Variant>::ConstIterator j = commands_[i].shaderParameters_.Find(nameHash);
-        if (j != commands_[i].shaderParameters_.End())
-            return j->second_;
+        auto j = commands_[i].shaderParameters_.find(nameHash);
+        if (j != commands_[i].shaderParameters_.end())
+            return j->second;
     }
 
     return Variant::EMPTY;

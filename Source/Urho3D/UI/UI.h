@@ -359,7 +359,7 @@ private:
     /// Handle a file being drag-dropped into the application window.
     void HandleDropFile(StringHash eventType, VariantMap& eventData);
     /// Remove drag data and return next iterator.
-    HashMap<WeakPtr<UIElement>, DragData*>::Iterator DragElementErase(HashMap<WeakPtr<UIElement>, DragData*>::Iterator i);
+    HashMap<WeakPtr<UIElement>, DragData*>::iterator DragElementErase(HashMap<WeakPtr<UIElement>, DragData*>::iterator i);
     /// Handle clean up on a drag cancel.
     void ProcessDragCancel();
     /// Sum touch positions and return the begin position ready to send.

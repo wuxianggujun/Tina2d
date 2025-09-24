@@ -115,14 +115,14 @@ void Renderer2D::UpdateBatches(const FrameInfo& frame)
 void Renderer2D::UpdateGeometry(const FrameInfo& frame)
 {
     unsigned indexCount = 0;
-    for (HashMap<Camera*, ViewBatchInfo2D>::ConstIterator i = viewBatchInfos_.Begin(); i != viewBatchInfos_.End(); ++i)
+    for (auto i = viewBatchInfos_.begin(); i != viewBatchInfos_.end(); ++i)
         {
-        if (i->second_.batchUpdatedFrameNumber_ == frame_.frameNumber_)
-            indexCount = Max(indexCount, i->second_.indexCount_);
+        if (i->second.batchUpdatedFrameNumber_ == frame_.frameNumber_)
+            indexCount = Max(indexCount, i->second.indexCount_);
     }
 
     // Fill index buffer
-    if (indexBuffer_->GetIndexCount() < indexCount || indexBuffer_->IsDataLost())
+    if ((u32)indexBuffer_->GetIndexCount() < indexCount || indexBuffer_->IsDataLost())
     {
         bool largeIndices = (indexCount * 4 / 6) > 0xffff;
         indexBuffer_->SetSize(indexCount, largeIndices);
@@ -178,7 +178,7 @@ void Renderer2D::UpdateGeometry(const FrameInfo& frame)
     {
         unsigned vertexCount = viewBatchInfo.vertexCount_;
         VertexBuffer* vertexBuffer = viewBatchInfo.vertexBuffer_;
-        if (vertexBuffer->GetVertexCount() < vertexCount)
+        if ((u32)vertexBuffer->GetVertexCount() < vertexCount)
             vertexBuffer->SetSize(vertexCount, MASK_VERTEX2D, true);
 
         if (vertexCount)
@@ -289,18 +289,18 @@ Material* Renderer2D::GetMaterial(Texture2D* texture, BlendMode blendMode)
     if (!texture)
         return material_;
 
-    HashMap<Texture2D*, HashMap<int, SharedPtr<Material>>>::Iterator t = cachedMaterials_.Find(texture);
-    if (t == cachedMaterials_.End())
+    auto t = cachedMaterials_.find(texture);
+    if (t == cachedMaterials_.end())
     {
         SharedPtr<Material> newMaterial = CreateMaterial(texture, blendMode);
         cachedMaterials_[texture][blendMode] = newMaterial;
         return newMaterial;
     }
 
-    HashMap<int, SharedPtr<Material>>& materials = t->second_;
-    HashMap<int, SharedPtr<Material>>::Iterator b = materials.Find(blendMode);
-    if (b != materials.End())
-        return b->second_;
+    HashMap<int, SharedPtr<Material>>& materials = t->second;
+    auto b = materials.find(blendMode);
+    if (b != materials.end())
+        return b->second;
 
     SharedPtr<Material> newMaterial = CreateMaterial(texture, blendMode);
     materials[blendMode] = newMaterial;
@@ -328,8 +328,8 @@ SharedPtr<Material> Renderer2D::CreateMaterial(Texture2D* texture, BlendMode ble
 {
     SharedPtr<Material> newMaterial = material_->Clone();
 
-    HashMap<int, SharedPtr<Technique>>::Iterator techIt = cachedTechniques_.Find((int)blendMode);
-    if (techIt == cachedTechniques_.End())
+    auto techIt = cachedTechniques_.find((int)blendMode);
+    if (techIt == cachedTechniques_.end())
     {
         SharedPtr<Technique> tech(new Technique(context_));
         Pass* pass = tech->CreatePass("alpha");
@@ -339,10 +339,11 @@ SharedPtr<Material> Renderer2D::CreateMaterial(Texture2D* texture, BlendMode ble
         pass->SetDepthWrite(true);
         pass->SetDepthTestMode(CMP_LESSEQUAL);
         pass->SetBlendMode(blendMode);
-        techIt = cachedTechniques_.Insert(MakePair((int)blendMode, tech));
+        cachedTechniques_[(int)blendMode] = tech;
+        techIt = cachedTechniques_.find((int)blendMode);
     }
 
-    newMaterial->SetTechnique(0, techIt->second_.Get());
+    newMaterial->SetTechnique(0, techIt->second.Get());
     newMaterial->SetName(texture->GetName() + "_" + blendModeNames[blendMode]);
     newMaterial->SetTexture(TU_DIFFUSE, texture);
 

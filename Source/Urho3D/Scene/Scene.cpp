@@ -68,10 +68,10 @@ Scene::~Scene()
     RemoveAllChildren();
 
     // Remove scene reference and owner from all nodes that still exist
-    for (HashMap<NodeId, Node*>::Iterator i = replicatedNodes_.Begin(); i != replicatedNodes_.End(); ++i)
-        i->second_->ResetScene();
-    for (HashMap<NodeId, Node*>::Iterator i = localNodes_.Begin(); i != localNodes_.End(); ++i)
-        i->second_->ResetScene();
+    for (auto i = replicatedNodes_.begin(); i != replicatedNodes_.end(); ++i)
+        i->second->ResetScene();
+    for (auto i = localNodes_.begin(); i != localNodes_.end(); ++i)
+        i->second->ResetScene();
 }
 
 void Scene::RegisterObject(Context* context)
@@ -191,8 +191,8 @@ void Scene::AddReplicationState(NodeReplicationState* state)
     Node::AddReplicationState(state);
 
     // This is the first update for a new connection. Mark all replicated nodes dirty
-    for (HashMap<NodeId, Node*>::ConstIterator i = replicatedNodes_.Begin(); i != replicatedNodes_.End(); ++i)
-        state->sceneState_->dirtyNodes_.Insert(i->first_);
+    for (auto i = replicatedNodes_.begin(); i != replicatedNodes_.end(); ++i)
+        state->sceneState_->dirtyNodes_.insert(i->first);
 }
 
 bool Scene::LoadXML(Deserializer& source)
@@ -321,7 +321,7 @@ bool Scene::LoadAsync(File* file, LoadMode mode)
     asyncProgress_.file_ = file;
     asyncProgress_.mode_ = mode;
     asyncProgress_.loadedNodes_ = asyncProgress_.totalNodes_ = asyncProgress_.loadedResources_ = asyncProgress_.totalResources_ = 0;
-    asyncProgress_.resources_.Clear();
+    asyncProgress_.resources_.clear();
 
     if (mode > LOAD_RESOURCES_ONLY)
     {
@@ -385,7 +385,7 @@ bool Scene::LoadAsyncXML(File* file, LoadMode mode)
     asyncProgress_.file_ = file;
     asyncProgress_.mode_ = mode;
     asyncProgress_.loadedNodes_ = asyncProgress_.totalNodes_ = asyncProgress_.loadedResources_ = asyncProgress_.totalResources_ = 0;
-    asyncProgress_.resources_.Clear();
+    asyncProgress_.resources_.clear();
 
     if (mode > LOAD_RESOURCES_ONLY)
     {
@@ -454,7 +454,7 @@ bool Scene::LoadAsyncJSON(File* file, LoadMode mode)
     asyncProgress_.file_ = file;
     asyncProgress_.mode_ = mode;
     asyncProgress_.loadedNodes_ = asyncProgress_.totalNodes_ = asyncProgress_.loadedResources_ = asyncProgress_.totalResources_ = 0;
-    asyncProgress_.resources_.Clear();
+    asyncProgress_.resources_.clear();
 
     if (mode > LOAD_RESOURCES_ONLY)
     {
@@ -502,7 +502,7 @@ void Scene::StopAsyncLoading()
     asyncProgress_.jsonFile_.Reset();
     asyncProgress_.xmlElement_ = XMLElement::EMPTY;
     asyncProgress_.jsonIndex_ = 0;
-    asyncProgress_.resources_.Clear();
+    asyncProgress_.resources_.clear();
     resolver_.Reset();
 }
 
@@ -666,7 +666,7 @@ void Scene::AddRequiredPackageFile(PackageFile* package)
 
 void Scene::ClearRequiredPackageFiles()
 {
-    requiredPackageFiles_.Clear();
+    requiredPackageFiles_.clear();
 }
 
 void Scene::RegisterVar(const String& name)
@@ -676,35 +676,35 @@ void Scene::RegisterVar(const String& name)
 
 void Scene::UnregisterVar(const String& name)
 {
-    varNames_.Erase(name);
+    varNames_.erase(name);
 }
 
 void Scene::UnregisterAllVars()
 {
-    varNames_.Clear();
+    varNames_.clear();
 }
 
 Node* Scene::GetNode(NodeId id) const
 {
     if (IsReplicatedID(id))
     {
-        HashMap<NodeId, Node*>::ConstIterator i = replicatedNodes_.Find(id);
-        return i != replicatedNodes_.End() ? i->second_ : nullptr;
+        auto i = replicatedNodes_.find(id);
+        return i != replicatedNodes_.end() ? i->second : nullptr;
     }
     else
     {
-        HashMap<NodeId, Node*>::ConstIterator i = localNodes_.Find(id);
-        return i != localNodes_.End() ? i->second_ : nullptr;
+        auto i = localNodes_.find(id);
+        return i != localNodes_.end() ? i->second : nullptr;
     }
 }
 
 bool Scene::GetNodesWithTag(Vector<Node*>& dest, const String& tag) const
 {
     dest.Clear();
-    HashMap<StringHash, Vector<Node*>>::ConstIterator it = taggedNodes_.Find(tag);
-    if (it != taggedNodes_.End())
+    auto it = taggedNodes_.find(tag);
+    if (it != taggedNodes_.end())
     {
-        dest = it->second_;
+        dest = it->second;
         return true;
     }
     else
@@ -715,13 +715,13 @@ Component* Scene::GetComponent(ComponentId id) const
 {
     if (IsReplicatedID(id))
     {
-        HashMap<ComponentId, Component*>::ConstIterator i = replicatedComponents_.Find(id);
-        return i != replicatedComponents_.End() ? i->second_ : nullptr;
+        auto i = replicatedComponents_.find(id);
+        return i != replicatedComponents_.end() ? i->second : nullptr;
     }
     else
     {
-        HashMap<ComponentId, Component*>::ConstIterator i = localComponents_.Find(id);
-        return i != localComponents_.End() ? i->second_ : nullptr;
+        auto i = localComponents_.find(id);
+        return i != localComponents_.end() ? i->second : nullptr;
     }
 }
 
@@ -734,8 +734,8 @@ float Scene::GetAsyncProgress() const
 
 const String& Scene::GetVarName(StringHash hash) const
 {
-    HashMap<StringHash, String>::ConstIterator i = varNames_.Find(hash);
-    return i != varNames_.End() ? i->second_ : String::EMPTY;
+    auto i2 = varNames_.find(hash);
+    return i2 != varNames_.end() ? i2->second : String::EMPTY;
 }
 
 void Scene::Update(float timeStep)
@@ -810,7 +810,7 @@ void Scene::EndThreadedUpdate()
 
         for (Vector<Component*>::ConstIterator i = delayedDirtyComponents_.Begin(); i != delayedDirtyComponents_.End(); ++i)
             (*i)->OnMarkedDirty((*i)->GetNode());
-        delayedDirtyComponents_.Clear();
+        delayedDirtyComponents_.clear();
     }
 }
 
@@ -832,7 +832,7 @@ NodeId Scene::GetFreeNodeID(CreateMode mode)
             else
                 replicatedNodeID_ = FIRST_REPLICATED_ID;
 
-            if (!replicatedNodes_.Contains(ret))
+            if (replicatedNodes_.find(ret) == replicatedNodes_.end())
                 return ret;
         }
     }
@@ -846,7 +846,7 @@ NodeId Scene::GetFreeNodeID(CreateMode mode)
             else
                 localNodeID_ = FIRST_LOCAL_ID;
 
-            if (!localNodes_.Contains(ret))
+            if (localNodes_.find(ret) == localNodes_.end())
                 return ret;
         }
     }
@@ -864,7 +864,7 @@ ComponentId Scene::GetFreeComponentID(CreateMode mode)
             else
                 replicatedComponentID_ = FIRST_REPLICATED_ID;
 
-            if (!replicatedComponents_.Contains(ret))
+            if (replicatedComponents_.find(ret) == replicatedComponents_.end())
                 return ret;
         }
     }
@@ -878,7 +878,7 @@ ComponentId Scene::GetFreeComponentID(CreateMode mode)
             else
                 localComponentID_ = FIRST_LOCAL_ID;
 
-            if (!localComponents_.Contains(ret))
+            if (localComponents_.find(ret) == localComponents_.end())
                 return ret;
         }
     }
@@ -907,11 +907,11 @@ void Scene::NodeAdded(Node* node)
     // If node with same ID exists, remove the scene reference from it and overwrite with the new node
     if (IsReplicatedID(id))
     {
-        HashMap<NodeId, Node*>::Iterator i = replicatedNodes_.Find(id);
-        if (i != replicatedNodes_.End() && i->second_ != node)
+        auto i = replicatedNodes_.find(id);
+        if (i != replicatedNodes_.end() && i->second != node)
         {
             URHO3D_LOGWARNING("Overwriting node with ID " + String(id));
-            NodeRemoved(i->second_);
+            NodeRemoved(i->second);
         }
 
         replicatedNodes_[id] = node;
@@ -921,11 +921,11 @@ void Scene::NodeAdded(Node* node)
     }
     else
     {
-        HashMap<NodeId, Node*>::Iterator i = localNodes_.Find(id);
-        if (i != localNodes_.End() && i->second_ != node)
+        auto i = localNodes_.find(id);
+        if (i != localNodes_.end() && i->second != node)
         {
             URHO3D_LOGWARNING("Overwriting node with ID " + String(id));
-            NodeRemoved(i->second_);
+            NodeRemoved(i->second);
         }
         localNodes_[id] = node;
     }
@@ -965,11 +965,11 @@ void Scene::NodeRemoved(Node* node)
     NodeId id = node->GetID();
     if (Scene::IsReplicatedID(id))
     {
-        replicatedNodes_.Erase(id);
+        replicatedNodes_.erase(id);
         MarkReplicationDirty(node);
     }
     else
-        localNodes_.Erase(id);
+        localNodes_.erase(id);
 
     node->ResetScene();
 
@@ -1006,22 +1006,22 @@ void Scene::ComponentAdded(Component* component)
 
     if (IsReplicatedID(id))
     {
-        HashMap<ComponentId, Component*>::Iterator i = replicatedComponents_.Find(id);
-        if (i != replicatedComponents_.End() && i->second_ != component)
+        auto i = replicatedComponents_.find(id);
+        if (i != replicatedComponents_.end() && i->second != component)
         {
             URHO3D_LOGWARNING("Overwriting component with ID " + String(id));
-            ComponentRemoved(i->second_);
+            ComponentRemoved(i->second);
         }
 
         replicatedComponents_[id] = component;
     }
     else
     {
-        HashMap<ComponentId, Component*>::Iterator i = localComponents_.Find(id);
-        if (i != localComponents_.End() && i->second_ != component)
+        auto i = localComponents_.find(id);
+        if (i != localComponents_.end() && i->second != component)
         {
             URHO3D_LOGWARNING("Overwriting component with ID " + String(id));
-            ComponentRemoved(i->second_);
+            ComponentRemoved(i->second);
         }
 
         localComponents_[id] = component;
@@ -1037,9 +1037,9 @@ void Scene::ComponentRemoved(Component* component)
 
     ComponentId id = component->GetID();
     if (Scene::IsReplicatedID(id))
-        replicatedComponents_.Erase(id);
+        replicatedComponents_.erase(id);
     else
-        localComponents_.Erase(id);
+        localComponents_.erase(id);
 
     component->SetID(0);
     component->OnSceneSet(nullptr);
@@ -1049,7 +1049,7 @@ void Scene::SetVarNamesAttr(const String& value)
 {
     Vector<String> varNames = value.Split(';');
 
-    varNames_.Clear();
+    varNames_.clear();
     for (Vector<String>::ConstIterator i = varNames.Begin(); i != varNames.End(); ++i)
         varNames_[*i] = *i;
 }
@@ -1058,10 +1058,10 @@ String Scene::GetVarNamesAttr() const
 {
     String ret;
 
-    if (!varNames_.Empty())
+    if (!varNames_.empty())
     {
-        for (HashMap<StringHash, String>::ConstIterator i = varNames_.Begin(); i != varNames_.End(); ++i)
-            ret += i->second_ + ";";
+        for (auto i = varNames_.begin(); i != varNames_.end(); ++i)
+            ret += i->second + ";";
 
         ret.Resize(ret.Length() - 1);
     }
@@ -1071,33 +1071,33 @@ String Scene::GetVarNamesAttr() const
 
 void Scene::PrepareNetworkUpdate()
 {
-    for (HashSet<NodeId>::Iterator i = networkUpdateNodes_.Begin(); i != networkUpdateNodes_.End(); ++i)
+    for (HashSet<NodeId>::iterator i = networkUpdateNodes_.begin(); i != networkUpdateNodes_.end(); ++i)
     {
         Node* node = GetNode(*i);
         if (node)
             node->PrepareNetworkUpdate();
     }
 
-    for (HashSet<ComponentId>::Iterator i = networkUpdateComponents_.Begin(); i != networkUpdateComponents_.End(); ++i)
+    for (HashSet<ComponentId>::iterator i = networkUpdateComponents_.begin(); i != networkUpdateComponents_.end(); ++i)
     {
         Component* component = GetComponent(*i);
         if (component)
             component->PrepareNetworkUpdate();
     }
 
-    networkUpdateNodes_.Clear();
-    networkUpdateComponents_.Clear();
+    networkUpdateNodes_.clear();
+    networkUpdateComponents_.clear();
 }
 
 void Scene::CleanupConnection(Connection* connection)
 {
     Node::CleanupConnection(connection);
 
-    for (HashMap<NodeId, Node*>::Iterator i = replicatedNodes_.Begin(); i != replicatedNodes_.End(); ++i)
-        i->second_->CleanupConnection(connection);
+    for (auto i = replicatedNodes_.begin(); i != replicatedNodes_.end(); ++i)
+        i->second->CleanupConnection(connection);
 
-    for (HashMap<ComponentId, Component*>::Iterator i = replicatedComponents_.Begin(); i != replicatedComponents_.End(); ++i)
-        i->second_->CleanupConnection(connection);
+    for (auto i = replicatedComponents_.begin(); i != replicatedComponents_.end(); ++i)
+        i->second->CleanupConnection(connection);
 }
 
 void Scene::MarkNetworkUpdate(Node* node)
@@ -1105,11 +1105,11 @@ void Scene::MarkNetworkUpdate(Node* node)
     if (node)
     {
         if (!threadedUpdate_)
-            networkUpdateNodes_.Insert(node->GetID());
+            networkUpdateNodes_.insert(node->GetID());
         else
         {
             MutexLock lock(sceneMutex_);
-            networkUpdateNodes_.Insert(node->GetID());
+            networkUpdateNodes_.insert(node->GetID());
         }
     }
 }
@@ -1119,11 +1119,11 @@ void Scene::MarkNetworkUpdate(Component* component)
     if (component)
     {
         if (!threadedUpdate_)
-            networkUpdateComponents_.Insert(component->GetID());
+            networkUpdateComponents_.insert(component->GetID());
         else
         {
             MutexLock lock(sceneMutex_);
-            networkUpdateComponents_.Insert(component->GetID());
+            networkUpdateComponents_.insert(component->GetID());
         }
     }
 }
@@ -1137,7 +1137,7 @@ void Scene::MarkReplicationDirty(Node* node)
              i != networkState_->replicationStates_.End(); ++i)
         {
             auto* nodeState = static_cast<NodeReplicationState*>(*i);
-            nodeState->sceneState_->dirtyNodes_.Insert(id);
+            nodeState->sceneState_->dirtyNodes_.insert(id);
         }
     }
 }
@@ -1158,9 +1158,9 @@ void Scene::HandleResourceBackgroundLoaded(StringHash eventType, VariantMap& eve
     if (asyncLoading_)
     {
         auto* resource = static_cast<Resource*>(eventData[P_RESOURCE].GetPtr());
-        if (asyncProgress_.resources_.Contains(resource->GetNameHash()))
+        if (asyncProgress_.resources_.find(resource->GetNameHash()) != asyncProgress_.resources_.end())
         {
-            asyncProgress_.resources_.Erase(resource->GetNameHash());
+            asyncProgress_.resources_.erase(resource->GetNameHash());
             ++asyncProgress_.loadedResources_;
         }
     }
@@ -1317,7 +1317,7 @@ void Scene::PreloadResources(File* file, bool isSceneFile)
                     if (success)
                     {
                         ++asyncProgress_.totalResources_;
-                        asyncProgress_.resources_.Insert(StringHash(name));
+                        asyncProgress_.resources_.insert(StringHash(name));
                     }
                 }
                 else if (attr.type_ == VAR_RESOURCEREFLIST)
@@ -1330,7 +1330,7 @@ void Scene::PreloadResources(File* file, bool isSceneFile)
                         if (success)
                         {
                             ++asyncProgress_.totalResources_;
-                            asyncProgress_.resources_.Insert(StringHash(name));
+                            asyncProgress_.resources_.insert(StringHash(name));
                         }
                     }
                 }
@@ -1381,7 +1381,7 @@ void Scene::PreloadResourcesXML(const XMLElement& element)
                             if (success)
                             {
                                 ++asyncProgress_.totalResources_;
-                                asyncProgress_.resources_.Insert(StringHash(name));
+                                asyncProgress_.resources_.insert(StringHash(name));
                             }
                         }
                         else if (attr.type_ == VAR_RESOURCEREFLIST)
@@ -1394,7 +1394,7 @@ void Scene::PreloadResourcesXML(const XMLElement& element)
                                 if (success)
                                 {
                                     ++asyncProgress_.totalResources_;
-                                    asyncProgress_.resources_.Insert(StringHash(name));
+                                    asyncProgress_.resources_.insert(StringHash(name));
                                 }
                             }
                         }
@@ -1466,7 +1466,7 @@ void Scene::PreloadResourcesJSON(const JSONValue& value)
                             if (success)
                             {
                                 ++asyncProgress_.totalResources_;
-                                asyncProgress_.resources_.Insert(StringHash(name));
+                                asyncProgress_.resources_.insert(StringHash(name));
                             }
                         }
                         else if (attr.type_ == VAR_RESOURCEREFLIST)
@@ -1479,7 +1479,7 @@ void Scene::PreloadResourcesJSON(const JSONValue& value)
                                 if (success)
                                 {
                                     ++asyncProgress_.totalResources_;
-                                    asyncProgress_.resources_.Insert(StringHash(name));
+                                    asyncProgress_.resources_.insert(StringHash(name));
                                 }
                             }
                         }

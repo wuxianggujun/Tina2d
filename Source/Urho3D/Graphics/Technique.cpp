@@ -153,8 +153,8 @@ void Pass::ReleaseShaders()
 {
     vertexShaders_.Clear();
     pixelShaders_.Clear();
-    extraVertexShaders_.Clear();
-    extraPixelShaders_.Clear();
+    extraVertexShaders_.clear();
+    extraPixelShaders_.clear();
 }
 
 void Pass::MarkShadersLoaded(i32 frameNumber)
@@ -240,7 +240,7 @@ void Technique::RegisterObject(Context* context)
 bool Technique::BeginLoad(Deserializer& source)
 {
     passes_.Clear();
-    cloneTechniques_.Clear();
+    cloneTechniques_.clear();
 
     SetMemoryUse(sizeof(Technique));
 
@@ -407,32 +407,32 @@ Pass* Technique::CreatePass(const String& name)
 
 void Technique::RemovePass(const String& name)
 {
-    HashMap<String, i32>::ConstIterator i = passIndices.Find(name.ToLower());
-    if (i == passIndices.End())
+    auto i = passIndices.find(name.ToLower());
+    if (i == passIndices.end())
         return;
-    else if (i->second_ < passes_.Size() && passes_[i->second_].Get())
+    else if (i->second < (i32)passes_.Size() && passes_[i->second].Get())
     {
-        passes_[i->second_].Reset();
+        passes_[i->second].Reset();
         SetMemoryUse((unsigned)(sizeof(Technique) + GetNumPasses() * sizeof(Pass)));
     }
 }
 
 bool Technique::HasPass(const String& name) const
 {
-    HashMap<String, i32>::ConstIterator i = passIndices.Find(name.ToLower());
-    return i != passIndices.End() ? HasPass(i->second_) : false;
+    auto i = passIndices.find(name.ToLower());
+    return i != passIndices.end() ? HasPass(i->second) : false;
 }
 
 Pass* Technique::GetPass(const String& name) const
 {
-    HashMap<String, i32>::ConstIterator i = passIndices.Find(name.ToLower());
-    return i != passIndices.End() ? GetPass(i->second_) : nullptr;
+    auto i = passIndices.find(name.ToLower());
+    return i != passIndices.end() ? GetPass(i->second) : nullptr;
 }
 
 Pass* Technique::GetSupportedPass(const String& name) const
 {
-    HashMap<String, i32>::ConstIterator i = passIndices.Find(name.ToLower());
-    return i != passIndices.End() ? GetSupportedPass(i->second_) : nullptr;
+    auto i = passIndices.find(name.ToLower());
+    return i != passIndices.end() ? GetSupportedPass(i->second) : nullptr;
 }
 
 i32 Technique::GetNumPasses() const
@@ -485,15 +485,15 @@ SharedPtr<Technique> Technique::CloneWithDefines(const String& vsDefines, const 
     Pair<StringHash, StringHash> key = MakePair(StringHash(vsDefines), StringHash(psDefines));
 
     // Return existing if possible
-    HashMap<Pair<StringHash, StringHash>, SharedPtr<Technique>>::Iterator i = cloneTechniques_.Find(key);
-    if (i != cloneTechniques_.End())
-        return i->second_;
+    auto i = cloneTechniques_.find(key);
+    if (i != cloneTechniques_.end())
+        return i->second;
 
     // Set same name as the original for the clones to ensure proper serialization of the material. This should not be a problem
     // since the clones are never stored to the resource cache
-    i = cloneTechniques_.Insert(MakePair(key, Clone(GetName())));
+    i = cloneTechniques_.insert(eastl::make_pair(key, Clone(GetName()))).first;
 
-    for (Vector<SharedPtr<Pass>>::ConstIterator j = i->second_->passes_.Begin(); j != i->second_->passes_.End(); ++j)
+    for (Vector<SharedPtr<Pass>>::ConstIterator j = i->second->passes_.Begin(); j != i->second->passes_.End(); ++j)
     {
         Pass* pass = (*j);
         if (!pass)
@@ -505,13 +505,13 @@ SharedPtr<Technique> Technique::CloneWithDefines(const String& vsDefines, const 
             pass->SetPixelShaderDefines(pass->GetPixelShaderDefines() + " " + psDefines);
     }
 
-    return i->second_;
+    return i->second;
 }
 
 i32 Technique::GetPassIndex(const String& passName)
 {
     // Initialize built-in pass indices on first call
-    if (passIndices.Empty())
+    if (passIndices.empty())
     {
         basePassIndex = passIndices["base"] = 0;
         alphaPassIndex = passIndices["alpha"] = 1;
@@ -524,14 +524,14 @@ i32 Technique::GetPassIndex(const String& passName)
     }
 
     String nameLower = passName.ToLower();
-    HashMap<String, i32>::Iterator i = passIndices.Find(nameLower);
-    if (i != passIndices.End())
+    auto i2 = passIndices.find(nameLower);
+    if (i2 != passIndices.end())
     {
-        return i->second_;
+        return i2->second;
     }
     else
     {
-        i32 newPassIndex = passIndices.Size();
+        i32 newPassIndex = (i32)passIndices.size();
         passIndices[nameLower] = newPassIndex;
         return newPassIndex;
     }

@@ -179,7 +179,7 @@ void Component::PrepareNetworkUpdate()
                 if (!nodeState->markedDirty_)
                 {
                     nodeState->markedDirty_ = true;
-                    nodeState->sceneState_->dirtyNodes_.Insert(node_->GetID());
+                    nodeState->sceneState_->dirtyNodes_.insert(node_->GetID());
                 }
             }
         }
@@ -208,7 +208,7 @@ void Component::OnAttributeAnimationAdded()
 
 void Component::OnAttributeAnimationRemoved()
 {
-    if (attributeAnimationInfos_.Empty())
+    if (attributeAnimationInfos_.empty())
         UnsubscribeFromEvent(GetScene(), E_ATTRIBUTEANIMATIONUPDATE);
 }
 

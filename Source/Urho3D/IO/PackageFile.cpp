@@ -93,15 +93,15 @@ bool PackageFile::Open(const String& fileName, unsigned startOffset)
 
 bool PackageFile::Exists(const String& fileName) const
 {
-    bool found = entries_.Find(fileName) != entries_.End();
+    bool found = entries_.find(fileName) != entries_.end();
 
 #ifdef _WIN32
     // On Windows perform a fallback case-insensitive search
     if (!found)
     {
-        for (HashMap<String, PackageEntry>::ConstIterator i = entries_.Begin(); i != entries_.End(); ++i)
+        for (auto i = entries_.begin(); i != entries_.end(); ++i)
         {
-            if (!i->first_.Compare(fileName, false))
+            if (!i->first.Compare(fileName, false))
             {
                 found = true;
                 break;
@@ -115,18 +115,18 @@ bool PackageFile::Exists(const String& fileName) const
 
 const PackageEntry* PackageFile::GetEntry(const String& fileName) const
 {
-    HashMap<String, PackageEntry>::ConstIterator i = entries_.Find(fileName);
-    if (i != entries_.End())
-        return &i->second_;
+    auto i = entries_.find(fileName);
+    if (i != entries_.end())
+        return &i->second;
 
 #ifdef _WIN32
     // On Windows perform a fallback case-insensitive search
     else
     {
-        for (HashMap<String, PackageEntry>::ConstIterator j = entries_.Begin(); j != entries_.End(); ++j)
+        for (auto j = entries_.begin(); j != entries_.end(); ++j)
         {
-            if (!j->first_.Compare(fileName, false))
-                return &j->second_;
+            if (!j->first.Compare(fileName, false))
+                return &j->second;
         }
     }
 #endif

@@ -132,7 +132,7 @@ void Localization::Reset()
 {
     languages_.clear();
     languageIndex_ = -1;
-    strings_.Clear();
+    strings_.clear();
 }
 
 void Localization::LoadJSONFile(const String& name, const String& language)

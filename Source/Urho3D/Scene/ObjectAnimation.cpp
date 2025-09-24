@@ -59,7 +59,7 @@ bool ObjectAnimation::Save(Serializer& dest) const
 
 bool ObjectAnimation::LoadXML(const XMLElement& source)
 {
-    attributeAnimationInfos_.Clear();
+    attributeAnimationInfos_.clear();
 
     XMLElement animElem;
     animElem = source.GetChild("attributeanimation");
@@ -111,7 +111,7 @@ bool ObjectAnimation::SaveXML(XMLElement& dest) const
 
 bool ObjectAnimation::LoadJSON(const JSONValue& source)
 {
-    attributeAnimationInfos_.Clear();
+    attributeAnimationInfos_.clear();
 
     JSONValue attributeAnimationsValue = source.Get("attributeanimations");
     if (attributeAnimationsValue.IsNull())

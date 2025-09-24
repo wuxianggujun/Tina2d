@@ -195,9 +195,9 @@ Sprite2D* AnimationSet2D::GetSprite() const
 Sprite2D* AnimationSet2D::GetSpriterFileSprite(int folderId, int fileId) const
 {
     unsigned key = folderId << 16u | fileId;
-    HashMap<unsigned, SharedPtr<Sprite2D>>::ConstIterator i = spriterFileSprites_.Find(key);
-    if (i != spriterFileSprites_.End())
-        return i->second_;
+    auto i = spriterFileSprites_.find(key);
+    if (i != spriterFileSprites_.end())
+        return i->second;
 
     return nullptr;
 }
@@ -265,7 +265,7 @@ bool AnimationSet2D::EndLoadSpine()
 
 bool AnimationSet2D::BeginLoadSpriter(Deserializer& source)
 {
-    unsigned dataSize = source.GetSize();
+    unsigned dataSize = (unsigned)source.GetSize();
     if (!dataSize && !source.GetName().Empty())
     {
         URHO3D_LOGERROR("Zero sized XML data in " + source.GetName());
@@ -508,7 +508,7 @@ void AnimationSet2D::Dispose()
 
     sprite_.Reset();
     spriteSheet_.Reset();
-    spriterFileSprites_.Clear();
+    spriterFileSprites_.clear();
 }
 
 }
