@@ -9,6 +9,7 @@
 #include "../IO/Serializer.h"
 #include "../Resource/XMLElement.h"
 #include "../Resource/JSONValue.h"
+#include "../Resource/JSONObject.h"
 #include "../Scene/ReplicationState.h"
 #include "../Scene/SceneEvents.h"
 #include "../Scene/Serializable.h"
@@ -426,16 +427,16 @@ bool Serializable::LoadJSON(const JSONValue& source)
 
     unsigned startIndex = 0;
 
-    for (JSONObject::ConstIterator it = attributesObject.Begin(); it != attributesObject.End();)
+    for (const auto& kv : attributesObject)
     {
-        String name = it->first_;
-        const JSONValue& value = it->second_;
+        const String& name = kv.first;
+        const JSONValue& value = kv.second;
         unsigned i = startIndex;
-        unsigned attempts = attributes->Size();
+        unsigned attempts = (unsigned)attributes->size();
 
         while (attempts)
         {
-            const AttributeInfo& attr = attributes->At(i);
+            const AttributeInfo& attr = (*attributes)[i];
             if ((attr.mode_ & AM_FILE) && !attr.name_.Compare(name, true))
             {
                 Variant varValue;
@@ -468,20 +469,18 @@ bool Serializable::LoadJSON(const JSONValue& source)
                 if (!varValue.IsEmpty())
                     OnSetAttribute(attr, varValue);
 
-                startIndex = (i + 1) % attributes->Size();
+                startIndex = (i + 1) % (unsigned)attributes->size();
                 break;
             }
             else
             {
-                i = (i + 1) % attributes->Size();
+                i = (i + 1) % (unsigned)attributes->size();
                 --attempts;
             }
         }
 
         if (!attempts)
             URHO3D_LOGWARNING("Unknown attribute " + name + " in JSON data");
-
-        it++;
     }
 
     return true;
@@ -501,9 +500,9 @@ bool Serializable::SaveXML(XMLElement& dest) const
 
     Variant value;
 
-    for (unsigned i = 0; i < attributes->Size(); ++i)
+    for (unsigned i = 0; i < (unsigned)attributes->size(); ++i)
     {
-        const AttributeInfo& attr = attributes->At(i);
+        const AttributeInfo& attr = (*attributes)[i];
         if (!(attr.mode_ & AM_FILE) || (attr.mode_ & AM_FILEREADONLY) == AM_FILEREADONLY)
             continue;
 
@@ -538,9 +537,9 @@ bool Serializable::SaveJSON(JSONValue& dest) const
     Variant value;
     JSONValue attributesValue;
 
-    for (unsigned i = 0; i < attributes->Size(); ++i)
+    for (unsigned i = 0; i < (unsigned)attributes->size(); ++i)
     {
-        const AttributeInfo& attr = attributes->At(i);
+        const AttributeInfo& attr = (*attributes)[i];
         if (!(attr.mode_ & AM_FILE) || (attr.mode_ & AM_FILEREADONLY) == AM_FILEREADONLY)
             continue;
 
@@ -576,13 +575,13 @@ bool Serializable::SetAttribute(unsigned index, const Variant& value)
         URHO3D_LOGERROR(GetTypeName() + " has no attributes");
         return false;
     }
-    if (index >= attributes->Size())
+    if (index >= (unsigned)attributes->size())
     {
         URHO3D_LOGERROR("Attribute index out of bounds");
         return false;
     }
 
-    const AttributeInfo& attr = attributes->At(index);
+    const AttributeInfo& attr = (*attributes)[index];
 
     // Check that the new value's type matches the attribute type
     if (value.GetType() == attr.type_)
@@ -607,19 +606,18 @@ bool Serializable::SetAttribute(const String& name, const Variant& value)
         return false;
     }
 
-    for (Vector<AttributeInfo>::ConstIterator i = attributes->Begin(); i != attributes->End(); ++i)
+    for (const auto& a : *attributes)
     {
-        if (!i->name_.Compare(name, true))
+        if (!a.name_.Compare(name, true))
         {
-            // Check that the new value's type matches the attribute type
-            if (value.GetType() == i->type_)
+            if (value.GetType() == a.type_)
             {
-                OnSetAttribute(*i, value);
+                OnSetAttribute(a, value);
                 return true;
             }
             else
             {
-                URHO3D_LOGERROR("Could not set attribute " + i->name_ + ": expected type " + Variant::GetTypeName(i->type_)
+                URHO3D_LOGERROR("Could not set attribute " + a.name_ + ": expected type " + Variant::GetTypeName(a.type_)
                          + " but got " + value.GetTypeName());
                 return false;
             }
@@ -636,9 +634,9 @@ void Serializable::ResetToDefault()
     if (!attributes)
         return;
 
-    for (unsigned i = 0; i < attributes->Size(); ++i)
+    for (unsigned i = 0; i < (unsigned)attributes->size(); ++i)
     {
-        const AttributeInfo& attr = attributes->At(i);
+        const AttributeInfo& attr = (*attributes)[i];
         if (attr.mode_ & (AM_NOEDIT | AM_NODEID | AM_COMPONENTID | AM_NODEIDVECTOR))
             continue;
 
@@ -678,9 +676,9 @@ void Serializable::SetInterceptNetworkUpdate(const String& attributeName, bool e
     if (!attributes)
         return;
 
-    for (unsigned i = 0; i < attributes->Size(); ++i)
+    for (unsigned i = 0; i < (unsigned)attributes->size(); ++i)
     {
-        const AttributeInfo& attr = attributes->At(i);
+        const AttributeInfo& attr = (*attributes)[i];
         if (!attr.name_.Compare(attributeName, true))
         {
             if (enable)
@@ -704,16 +702,15 @@ void Serializable::AllocateNetworkState()
     if (!networkAttributes)
         return;
 
-    unsigned numAttributes = networkAttributes->Size();
+    unsigned numAttributes = (unsigned)networkAttributes->size();
 
-    if (networkState_->currentValues_.Size() != numAttributes)
+    if (networkState_->currentValues_.size() != numAttributes)
     {
-        networkState_->currentValues_.Resize(numAttributes);
-        networkState_->previousValues_.Resize(numAttributes);
+        networkState_->currentValues_.resize(numAttributes);
+        networkState_->previousValues_.resize(numAttributes);
 
-        // Copy the default attribute values to the previous state as a starting point
         for (unsigned i = 0; i < numAttributes; ++i)
-            networkState_->previousValues_[i] = networkAttributes->At(i).defaultValue_;
+            networkState_->previousValues_[i] = (*networkAttributes)[i].defaultValue_;
     }
 }
 
@@ -1011,9 +1008,9 @@ Variant Serializable::GetInstanceDefault(const String& name) const
 {
     if (instanceDefaultValues_)
     {
-        VariantMap::ConstIterator i = instanceDefaultValues_->Find(name);
-        if (i != instanceDefaultValues_->End())
-            return i->second_;
+        auto i = instanceDefaultValues_->find(name);
+        if (i != instanceDefaultValues_->end())
+            return i->second;
     }
 
     return Variant::EMPTY;

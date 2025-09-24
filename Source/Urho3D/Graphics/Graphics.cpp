@@ -266,7 +266,7 @@ i32 Graphics::FindBestResolutionIndex(int monitor, int width, int height, int re
     i32 best = 0;
     i32 bestError = M_MAX_INT;
 
-    for (i32 i = 0; i < resolutions.Size(); ++i)
+    for (i32 i = 0; (unsigned)i < resolutions.Size(); ++i)
     {
         i32 error = Abs(resolutions[i].x_ - width) + Abs(resolutions[i].y_ - height);
         if (refreshRate != 0)

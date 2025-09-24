@@ -162,8 +162,8 @@ struct URHO3D_API SceneReplicationState : public ReplicationState
 
     void Clear()
     {
-        nodeStates_.Clear();
-        dirtyNodes_.Clear();
+        nodeStates_.clear();
+        dirtyNodes_.clear();
     }
 };
 

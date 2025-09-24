@@ -261,8 +261,8 @@ bool UI::SetModalElement(UIElement* modalElement, bool enable)
         modalElement->SetParent(static_cast<UIElement*>(modalElement->GetVar(VAR_ORIGINAL_PARENT).GetPtr()),
             modalElement->GetVar(VAR_ORIGINAL_CHILD_INDEX).GetU32());
         auto& vars = const_cast<VariantMap&>(modalElement->GetVars());
-        vars.Erase(VAR_ORIGINAL_PARENT);
-        vars.Erase(VAR_ORIGINAL_CHILD_INDEX);
+        vars.erase(VAR_ORIGINAL_PARENT);
+        vars.erase(VAR_ORIGINAL_CHILD_INDEX);
 
         // If it is a popup element, revert back its top-level parent
         auto* originElement = static_cast<UIElement*>(modalElement->GetVar(VAR_ORIGIN).GetPtr());
@@ -271,12 +271,12 @@ bool UI::SetModalElement(UIElement* modalElement, bool enable)
             auto* element = static_cast<UIElement*>(originElement->GetVar(VAR_PARENT_CHANGED).GetPtr());
             if (element)
             {
-                const_cast<VariantMap&>(originElement->GetVars()).Erase(VAR_PARENT_CHANGED);
+                const_cast<VariantMap&>(originElement->GetVars()).erase(VAR_PARENT_CHANGED);
                 element->SetParent(static_cast<UIElement*>(element->GetVar(VAR_ORIGINAL_PARENT).GetPtr()),
                     element->GetVar(VAR_ORIGINAL_CHILD_INDEX).GetU32());
                 vars = const_cast<VariantMap&>(element->GetVars());
-                vars.Erase(VAR_ORIGINAL_PARENT);
-                vars.Erase(VAR_ORIGINAL_CHILD_INDEX);
+                vars.erase(VAR_ORIGINAL_PARENT);
+                vars.erase(VAR_ORIGINAL_CHILD_INDEX);
             }
         }
 
@@ -299,8 +299,8 @@ void UI::Update(float timeStep)
     URHO3D_PROFILE(UpdateUI);
 
     // Expire hovers
-    for (HashMap<WeakPtr<UIElement>, bool>::Iterator i = hoveredElements_.Begin(); i != hoveredElements_.End(); ++i)
-        i->second_ = false;
+    for (auto i = hoveredElements_.begin(); i != hoveredElements_.end(); ++i)
+        i->second = false;
 
     auto* input = GetSubsystem<Input>();
     bool mouseGrabbed = input->IsMouseGrabbed();
@@ -312,10 +312,10 @@ void UI::Update(float timeStep)
     // Drag begin based on time
     if (dragElementsCount_ > 0 && !mouseGrabbed)
     {
-        for (HashMap<WeakPtr<UIElement>, UI::DragData*>::Iterator i = dragElements_.Begin(); i != dragElements_.End();)
+        for (auto i = dragElements_.begin(); i != dragElements_.end();)
         {
-            WeakPtr<UIElement> dragElement = i->first_;
-            UI::DragData* dragData = i->second_;
+            WeakPtr<UIElement> dragElement = i->first;
+            UI::DragData* dragData = i->second;
 
             if (!dragElement)
             {
@@ -365,11 +365,11 @@ void UI::Update(float timeStep)
     }
 
     // End hovers that expired without refreshing
-    for (HashMap<WeakPtr<UIElement>, bool>::Iterator i = hoveredElements_.Begin(); i != hoveredElements_.End();)
+    for (auto i = hoveredElements_.begin(); i != hoveredElements_.end();)
     {
-        if (i->first_.Expired() || !i->second_)
+        if (i->first.Expired() || !i->second)
         {
-            UIElement* element = i->first_;
+            UIElement* element = i->first;
             if (element)
             {
                 using namespace HoverEnd;
@@ -378,7 +378,7 @@ void UI::Update(float timeStep)
                 eventData[P_ELEMENT] = element;
                 element->SendEvent(E_HOVEREND, eventData);
             }
-            i = hoveredElements_.Erase(i);
+            i = hoveredElements_.erase(i);
         }
         else
             ++i;
@@ -424,12 +424,12 @@ void UI::RenderUpdate()
     }
 
     // Get batches for UI elements rendered into textures. Each element rendered into texture is treated as root element.
-    for (auto it = renderToTexture_.Begin(); it != renderToTexture_.End();)
+    for (auto it = renderToTexture_.begin(); it != renderToTexture_.end();)
     {
-        RenderToTextureData& data = it->second_;
+        RenderToTextureData& data = it->second;
         if (data.rootElement_.Expired())
         {
-            it = renderToTexture_.Erase(it);
+            it = renderToTexture_.erase(it);
             continue;
         }
 
@@ -445,12 +445,12 @@ void UI::RenderUpdate()
             GetBatches(data.batches_, data.vertexData_, element, scissor);
 
             // UIElement does not have anything to show. Insert dummy batch that will clear the texture.
-            if (data.batches_.Empty())
+            if (data.batches_.empty())
             {
                 UIBatch batch(element, BLEND_REPLACE, scissor, nullptr, &data.vertexData_);
                 batch.SetColor(Color::BLACK);
                 batch.AddQuad(scissor.left_, scissor.top_, scissor.right_, scissor.bottom_, 0, 0);
-                data.batches_.Push(batch);
+                data.batches_.push_back(batch);
             }
         }
         ++it;
@@ -490,7 +490,7 @@ void UI::Render(bool renderUICommand)
     {
         for (auto& item : renderToTexture_)
         {
-            RenderToTextureData& data = item.second_;
+            RenderToTextureData& data = item.second;
             if (data.rootElement_->IsEnabled())
             {
                 SetVertexData(data.vertexBuffer_, data.vertexData_);
@@ -509,7 +509,7 @@ void UI::Render(bool renderUICommand)
             }
         }
 
-        if (renderToTexture_.Size())
+        if (!renderToTexture_.empty())
             graphics_->ResetRenderTargets();
     }
 
@@ -536,7 +536,7 @@ void UI::DebugDraw(UIElement* element)
         {
             for (auto& item : renderToTexture_)
             {
-                RenderToTextureData& data = item.second_;
+                RenderToTextureData& data = item.second;
                 if (!data.rootElement_.Expired() && data.rootElement_ == root && data.rootElement_->IsEnabled())
                 {
                     element->GetDebugDrawBatches(data.debugDrawBatches_, data.debugVertexData_, scissor);
@@ -762,11 +762,11 @@ UIElement* UI::GetElementAt(const IntVector2& position, bool enabledOnly, IntVec
         result = GetElementAt(rootElement_, position, enabledOnly);
 
     // Mouse was not hovering UI element. Check elements rendered on 3D objects.
-    if (!result && renderToTexture_.Size())
+    if (!result && !renderToTexture_.empty())
     {
         for (auto& item : renderToTexture_)
         {
-            RenderToTextureData& data = item.second_;
+            RenderToTextureData& data = item.second;
             if (data.rootElement_.Expired() || !data.rootElement_->IsEnabled())
                 continue;
 
@@ -865,10 +865,10 @@ const Vector<UIElement*> UI::GetDragElements()
     if (!dragElementsConfirmed_.Empty())
         return dragElementsConfirmed_;
 
-    for (HashMap<WeakPtr<UIElement>, UI::DragData*>::Iterator i = dragElements_.Begin(); i != dragElements_.End();)
+    for (auto i = dragElements_.begin(); i != dragElements_.end();)
     {
-        WeakPtr<UIElement> dragElement = i->first_;
-        UI::DragData* dragData = i->second_;
+        WeakPtr<UIElement> dragElement = i->first;
+        UI::DragData* dragData = i->second;
 
         if (!dragElement)
         {
@@ -949,7 +949,7 @@ void UI::Update(float timeStep, UIElement* element)
 
     const Vector<SharedPtr<UIElement>>& children = element->GetChildren();
     // Update of an element may modify its child vector. Use just index-based iteration to be safe
-    for (i32 i = 0; i < children.Size(); ++i)
+    for (u32 i = 0; i < (u32)children.Size(); ++i)
         Update(timeStep, children[i]);
 }
 
@@ -1046,7 +1046,7 @@ void UI::Render(VertexBuffer* buffer, const Vector<UIBatch>& batches, unsigned b
         {
             for (auto& item : renderToTexture_)
             {
-                RenderToTextureData& data = item.second_;
+                RenderToTextureData& data = item.second;
                 if (buffer == data.vertexBuffer_.Get()) { vdata = &data.vertexData_; break; }
                 if (buffer == data.debugVertexBuffer_.Get()) { vdata = &data.debugVertexData_; break; }
             }
@@ -1180,19 +1180,19 @@ void UI::Render(VertexBuffer* buffer, const Vector<UIBatch>& batches, unsigned b
         } else
         {
             // Update custom shader parameters if needed
-            if (graphics_->NeedParameterUpdate(SP_MATERIAL, reinterpret_cast<const void*>(batch.customMaterial_->GetShaderParameterHash())))
+            if (graphics_->NeedParameterUpdate(SP_MATERIAL, reinterpret_cast<const void*>((uintptr_t)batch.customMaterial_->GetShaderParameterHash())))
             {
                 auto shader_parameters = batch.customMaterial_->GetShaderParameters();
-                for (auto it = shader_parameters.Begin(); it != shader_parameters.End(); ++it)
+                for (auto it = shader_parameters.begin(); it != shader_parameters.end(); ++it)
                 {
-                    graphics_->SetShaderParameter(it->second_.name_, it->second_.value_);
+                    graphics_->SetShaderParameter(it->second.name_, it->second.value_);
                 }
             }
             // Apply custom shader textures
             auto textures = batch.customMaterial_->GetTextures();
-            for (auto it = textures.Begin(); it != textures.End(); ++it)
+            for (auto it = textures.begin(); it != textures.end(); ++it)
             {
-                graphics_->SetTexture(it->first_, it->second_);
+                graphics_->SetTexture(it->first, it->second);
             }
         }
 
@@ -1203,9 +1203,9 @@ void UI::Render(VertexBuffer* buffer, const Vector<UIBatch>& batches, unsigned b
         {
             // Reset textures used by the batch custom material
             auto textures = batch.customMaterial_->GetTextures();
-            for (auto it = textures.Begin(); it != textures.End(); ++it)
+            for (auto it = textures.begin(); it != textures.end(); ++it)
             {
-                graphics_->SetTexture(it->first_, 0);
+                graphics_->SetTexture(it->first, 0);
             }
         }
     }
@@ -1397,10 +1397,10 @@ void UI::ProcessHover(const IntVector2& windowCursorPos, MouseButtonFlags button
     IntVector2 cursorPos;
     WeakPtr<UIElement> element(GetElementAt(windowCursorPos, true, &cursorPos));
 
-    for (HashMap<WeakPtr<UIElement>, UI::DragData*>::Iterator i = dragElements_.Begin(); i != dragElements_.End();)
+    for (auto i = dragElements_.begin(); i != dragElements_.end();)
     {
-        WeakPtr<UIElement> dragElement = i->first_;
-        UI::DragData* dragData = i->second_;
+        WeakPtr<UIElement> dragElement = i->first;
+        UI::DragData* dragData = i->second;
 
         if (!dragElement)
         {
@@ -1424,7 +1424,7 @@ void UI::ProcessHover(const IntVector2& windowCursorPos, MouseButtonFlags button
                 element->OnHover(element->ScreenToElement(cursorPos), cursorPos, buttons, qualifiers, cursor);
 
                 // Begin hover event
-                if (!hoveredElements_.Contains(element))
+                if (hoveredElements_.find(element) == hoveredElements_.end())
                 {
                     SendDragOrHoverEvent(E_HOVERBEGIN, element, cursorPos, IntVector2::ZERO, nullptr);
                     // Exit if element is destroyed by the event handling
@@ -1469,7 +1469,7 @@ void UI::ProcessHover(const IntVector2& windowCursorPos, MouseButtonFlags button
             element->OnHover(element->ScreenToElement(cursorPos), cursorPos, buttons, qualifiers, cursor);
 
             // Begin hover event
-            if (!hoveredElements_.Contains(element))
+            if (hoveredElements_.find(element) == hoveredElements_.end())
             {
                 SendDragOrHoverEvent(E_HOVERBEGIN, element, cursorPos, IntVector2::ZERO, nullptr);
                 // Exit if element is destroyed by the event handling
@@ -1524,7 +1524,7 @@ void UI::ProcessClickBegin(const IntVector2& windowCursorPos, MouseButton button
             }
 
             // Handle start of drag. Click handling may have caused destruction of the element, so check the pointer again
-            bool dragElementsContain = dragElements_.Contains(element);
+            bool dragElementsContain = dragElements_.find(element) != dragElements_.end();
             if (element && !dragElementsContain)
             {
                 auto* dragData = new DragData();
@@ -1537,7 +1537,7 @@ void UI::ProcessClickBegin(const IntVector2& windowCursorPos, MouseButton button
                 dragData->numDragButtons = CountSetBits((u32)dragData->dragButtons);
                 dragElementsCount_++;
 
-                dragElementsContain = dragElements_.Contains(element);
+                dragElementsContain = dragElements_.find(element) != dragElements_.end();
             }
             else if (element && dragElementsContain && newButton)
             {
@@ -1571,10 +1571,10 @@ void UI::ProcessClickEnd(const IntVector2& windowCursorPos, MouseButton button, 
         element = GetElementAt(cursorPos, true, &cursorPos);
 
     // Handle end of drag
-    for (HashMap<WeakPtr<UIElement>, UI::DragData*>::Iterator i = dragElements_.Begin(); i != dragElements_.End();)
+    for (auto i = dragElements_.begin(); i != dragElements_.end();)
     {
-        WeakPtr<UIElement> dragElement = i->first_;
-        UI::DragData* dragData = i->second_;
+        WeakPtr<UIElement> dragElement = i->first;
+        UI::DragData* dragData = i->second;
 
         if (!dragElement || !cursorVisible)
         {
@@ -1639,10 +1639,10 @@ void UI::ProcessMove(const IntVector2& windowCursorPos, const IntVector2& cursor
 
         auto* input = GetSubsystem<Input>();
         bool mouseGrabbed = input->IsMouseGrabbed();
-        for (HashMap<WeakPtr<UIElement>, UI::DragData*>::Iterator i = dragElements_.Begin(); i != dragElements_.End();)
+        for (auto i = dragElements_.begin(); i != dragElements_.end();)
         {
-            WeakPtr<UIElement> dragElement = i->first_;
-            UI::DragData* dragData = i->second_;
+            WeakPtr<UIElement> dragElement = i->first;
+            UI::DragData* dragData = i->second;
 
             if (!dragElement)
             {
@@ -1967,11 +1967,11 @@ void UI::HandleTouchEnd(StringHash eventType, VariantMap& eventData)
     WeakPtr<UIElement> element(GetElementAt(pos));
 
     // Clear any drag events that were using the touch id
-    for (auto i = touchDragElements_.Begin(); i != touchDragElements_.End();)
+    for (auto i = touchDragElements_.begin(); i != touchDragElements_.end();)
     {
-        const MouseButtonFlags touches = i->second_;
+        const MouseButtonFlags touches = i->second;
         if (touches & touchId)
-            i = touchDragElements_.Erase(i);
+            i = touchDragElements_.erase(i);
         else
             ++i;
     }
@@ -2017,7 +2017,7 @@ void UI::HandleKeyDown(StringHash eventType, VariantMap& eventData)
     if (key == KEY_ESCAPE && HasModalElement())
     {
         UIElement* element = rootModalElement_->GetChild(rootModalElement_->GetNumChildren() - 1);
-        if (element->GetVars().Contains(VAR_ORIGIN))
+        if (element->GetVars().find(VAR_ORIGIN) != element->GetVars().end())
             // If it is a popup, dismiss by defocusing it
             SetFocusElement(nullptr);
         else
@@ -2132,19 +2132,19 @@ void UI::HandleDropFile(StringHash eventType, VariantMap& eventData)
     }
 }
 
-HashMap<WeakPtr<UIElement>, UI::DragData*>::Iterator UI::DragElementErase(HashMap<WeakPtr<UIElement>, UI::DragData*>::Iterator i)
+HashMap<WeakPtr<UIElement>, UI::DragData*>::iterator UI::DragElementErase(HashMap<WeakPtr<UIElement>, UI::DragData*>::iterator i)
 {
     // If running the engine frame in response to an event (re-entering UI frame logic) the dragElements_ may already be empty
-    if (dragElements_.Empty())
-        return dragElements_.End();
+    if (dragElements_.empty())
+        return dragElements_.end();
 
     dragElementsConfirmed_.Clear();
 
-    DragData* dragData = i->second_;
+    DragData* dragData = i->second;
 
     if (!dragData->dragBeginPending)
         --dragConfirmedCount_;
-    i = dragElements_.Erase(i);
+    i = dragElements_.erase(i);
     --dragElementsCount_;
 
     delete dragData;
@@ -2161,10 +2161,10 @@ void UI::ProcessDragCancel()
     bool cursorVisible;
     GetCursorPositionAndVisible(cursorPos, cursorVisible);
 
-    for (HashMap<WeakPtr<UIElement>, UI::DragData*>::Iterator i = dragElements_.Begin(); i != dragElements_.End();)
+    for (auto i = dragElements_.begin(); i != dragElements_.end();)
     {
-        WeakPtr<UIElement> dragElement = i->first_;
-        UI::DragData* dragData = i->second_;
+        WeakPtr<UIElement> dragElement = i->first;
+        UI::DragData* dragData = i->second;
 
         if (dragElement && dragElement->IsEnabled() && dragElement->IsVisible() && !dragData->dragBeginPending)
         {
@@ -2236,8 +2236,8 @@ void UI::SetElementRenderTexture(UIElement* element, Texture2D* texture)
         return;
     }
 
-    auto it = renderToTexture_.Find(element);
-    if (texture && it == renderToTexture_.End())
+    auto it = renderToTexture_.find(element);
+    if (texture && it == renderToTexture_.end())
     {
         RenderToTextureData data;
         data.texture_ = texture;
@@ -2246,12 +2246,12 @@ void UI::SetElementRenderTexture(UIElement* element, Texture2D* texture)
         data.debugVertexBuffer_ = new VertexBuffer(context_);
         renderToTexture_[element] = data;
     }
-    else if (it != renderToTexture_.End())
+    else if (it != renderToTexture_.end())
     {
         if (texture == nullptr)
-            renderToTexture_.Erase(it);
+            renderToTexture_.erase(it);
         else
-            it->second_.texture_ = texture;
+            it->second.texture_ = texture;
     }
 }
 

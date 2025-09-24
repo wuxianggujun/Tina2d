@@ -242,7 +242,7 @@ void Console::AddAutoComplete(const String& option)
 {
     // Sorted insertion
     Vector<String>::Iterator iter = std::upper_bound(autoComplete_.Begin(), autoComplete_.End(), option);
-    if (!iter.ptr_)
+    if (iter == autoComplete_.End())
         autoComplete_.Push(option);
     // Make sure it isn't a duplicate
     else if (iter == autoComplete_.Begin() || *(iter - 1) != option)

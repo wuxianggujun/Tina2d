@@ -155,7 +155,7 @@ Vector<VertexElement> VertexBuffer::GetElements(VertexElements elementMask)
     for (i32 i = 0; i < MAX_LEGACY_VERTEX_ELEMENTS; ++i)
     {
         if (!!(elementMask & VertexElements{1u << i}))
-            ret.Push(LEGACY_VERTEXELEMENTS[i]);
+            ret.push_back(LEGACY_VERTEXELEMENTS[i]);
     }
 
     return ret;
@@ -165,7 +165,7 @@ i32 VertexBuffer::GetVertexSize(const Vector<VertexElement>& elements)
 {
     i32 size = 0;
 
-    for (i32 i = 0; i < elements.Size(); ++i)
+    for (i32 i = 0; i < elements.size(); ++i)
         size += ELEMENT_TYPESIZES[elements[i].type_];
 
     return size;
@@ -376,3 +376,4 @@ void VertexBuffer::UnmapBuffer()
 }
 
 }
+

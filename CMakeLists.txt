@@ -58,9 +58,9 @@ set (URHO3D_PHYSICS          OFF CACHE BOOL "Disable 3D Physics in 2D-only build
 set (URHO3D_OPENGL           OFF CACHE BOOL "Disable OpenGL backend for 2D-only build" FORCE)
 set (URHO3D_D3D11            OFF CACHE BOOL "Disable Direct3D11 backend for 2D-only build" FORCE)
 
-# 可选启用：bgfx 渲染后端（实验性）。
-# 仅接入依赖与骨架，不改变现有 OpenGL/D3D 渲染路径，后续可渐进式切换。
-option(URHO3D_BGFX "启用 bgfx 渲染后端（实验性）" ON)
+# 强制启用：bgfx 渲染后端（BGFX-only）。
+# 项目已默认使用 bgfx，保持变量存在但恒为 ON，便于兼容现有条件分支与第三方脚本。
+set(URHO3D_BGFX ON CACHE BOOL "启用 bgfx 渲染后端（强制开启）" FORCE)
 
 # Setup SDK install destinations
 set (PATH_SUFFIX Urho3D)
@@ -238,6 +238,7 @@ if (URHO3D_BGFX)
         Urho2D_Lit2D_Diff_VC
         # 新增：高质量文本/后处理/无光照材质
         Text_SDF_VC
+        Text_MSDF_VC
         CopyFramebuffer
             )
         # 让占位目标依赖实际的 shaders 目标，这样示例中的依赖会按需触发编译
@@ -248,4 +249,3 @@ endif()
 
 # Urho3D documentation
 add_subdirectory (Docs)
-

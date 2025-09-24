@@ -35,6 +35,9 @@ build/
 # Compiled shaders
 *.vs?
 *.ps?
+# BGFX compiled shader binaries
+/bin/CoreData/Shaders/BGFX/**/*.bin
+/bin/CoreData/Shaders/BGFX/*.sc.bin
 
 # Compiled AngelScript
 *.asc
@@ -100,6 +103,8 @@ CTestTestfile.cmake
 !/Source/ThirdParty/SDL/cmake/*.cmake
 !/Source/ThirdParty/SDL/include/*cmake
 !/Source/ThirdParty/Assimp/cmake-modules/*cmake
+!/Source/ThirdParty/bgfx.cmake/
+!/Source/ThirdParty/bgfx.cmake/**
 /Docs/**/*.cmake
 
 # Precompiled header files
@@ -124,3 +129,4 @@ Thumbs.db
 # Doxygen mess from absence of 'dot' dependency
 CMakeDoxyFile.in
 CMakeDoxygenDefaults.cmake
+/nul

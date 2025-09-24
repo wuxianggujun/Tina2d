@@ -62,9 +62,9 @@ bool Font::BeginLoad(Deserializer& source)
         return true;
 
     fontType_ = FONT_NONE;
-    faces_.Clear();
+    faces_.clear();
 
-    fontDataSize_ = source.GetSize();
+    fontDataSize_ = (unsigned)source.GetSize();
     if (fontDataSize_)
     {
         fontData_ = new unsigned char[fontDataSize_];
@@ -94,7 +94,7 @@ bool Font::BeginLoad(Deserializer& source)
 
 bool Font::SaveXML(Serializer& dest, int pointSize, bool usedGlyphs, const String& indentation)
 {
-    FontFace* fontFace = GetFace(pointSize);
+    FontFace* fontFace = GetFace((float)pointSize);
     if (!fontFace)
         return false;
 
@@ -132,15 +132,15 @@ FontFace* Font::GetFace(float pointSize)
 
     // For outline fonts, we return the nearest size in 1/64th increments, as that's what FreeType supports.
     int key = FloatToFixed(pointSize);
-    HashMap<int, SharedPtr<FontFace>>::Iterator i = faces_.Find(key);
-    if (i != faces_.End())
+    auto i = faces_.find(key);
+    if (i != faces_.end())
     {
-        if (!i->second_->IsDataLost())
-            return i->second_;
+        if (!i->second->IsDataLost())
+            return i->second;
         else
         {
             // Erase and reload face if texture data lost (OpenGL mode only)
-            faces_.Erase(i);
+            faces_.erase(i);
         }
     }
 
@@ -167,7 +167,7 @@ IntVector2 Font::GetTotalGlyphOffset(float pointSize) const
 
 void Font::ReleaseFaces()
 {
-    faces_.Clear();
+    faces_.clear();
 }
 
 void Font::LoadParameters()

@@ -38,7 +38,7 @@ bool SpriteSheet2D::BeginLoad(Deserializer& source)
         SetName(source.GetName());
 
     loadTextureName_.Clear();
-    spriteMapping_.Clear();
+    spriteMapping_.clear();
 
     String extension = GetExtension(source.GetName());
     if (extension == ".plist")
@@ -96,11 +96,11 @@ void SpriteSheet2D::DefineSprite(const String& name, const IntRect& rectangle, c
 
 Sprite2D* SpriteSheet2D::GetSprite(const String& name) const
 {
-    HashMap<String, SharedPtr<Sprite2D>>::ConstIterator i = spriteMapping_.Find(name);
-    if (i == spriteMapping_.End())
+    auto i = spriteMapping_.find(name);
+    if (i == spriteMapping_.end())
         return nullptr;
 
-    return i->second_;
+    return i->second;
 }
 
 bool SpriteSheet2D::BeginLoadFromPListFile(Deserializer& source)
@@ -113,11 +113,23 @@ bool SpriteSheet2D::BeginLoadFromPListFile(Deserializer& source)
         return false;
     }
 
-    SetMemoryUse(source.GetSize());
+    SetMemoryUse(static_cast<i32>(source.GetSize()));
 
     const PListValueMap& root = loadPListFile_->GetRoot();
-    const PListValueMap& metadata = root["metadata"]->GetValueMap();
-    const String& textureFileName = metadata["realTextureFileName"]->GetString();
+    auto metaIt = root.find("metadata");
+    if (metaIt == root.end())
+    {
+        URHO3D_LOGERROR("Invalid sprite sheet: missing 'metadata'");
+        return false;
+    }
+    const PListValueMap& metadata = metaIt->second.GetValueMap();
+    auto tfIt = metadata.find("realTextureFileName");
+    if (tfIt == metadata.end())
+    {
+        URHO3D_LOGERROR("Invalid sprite sheet: missing 'realTextureFileName'");
+        return false;
+    }
+    const String& textureFileName = tfIt->second.GetString();
 
     // If we're async loading, request the texture now. Finish during EndLoad().
     loadTextureName_ = GetParentPath(GetName()) + textureFileName;
@@ -140,29 +152,43 @@ bool SpriteSheet2D::EndLoadFromPListFile()
     }
 
     const PListValueMap& root = loadPListFile_->GetRoot();
-    const PListValueMap& frames = root["frames"]->GetValueMap();
-    for (PListValueMap::ConstIterator i = frames.Begin(); i != frames.End(); ++i)
+    auto framesIt = root.find("frames");
+    if (framesIt == root.end())
     {
-        String name = i->first_.Split('.')[0];
+        URHO3D_LOGERROR("Invalid sprite sheet: missing 'frames'");
+        return false;
+    }
+    const PListValueMap& frames = framesIt->second.GetValueMap();
+    for (auto i = frames.begin(); i != frames.end(); ++i)
+    {
+        String name = i->first.Split('.')[0];
 
-        const PListValueMap& frameInfo = i->second_.GetValueMap();
-        if (frameInfo["rotated"]->GetBool())
+        const PListValueMap& frameInfo = i->second.GetValueMap();
+        auto rotatedIt = frameInfo.find("rotated");
+        if (rotatedIt != frameInfo.end() && rotatedIt->second.GetBool())
         {
             URHO3D_LOGWARNING("Rotated sprite is not support now");
             continue;
         }
 
-        IntRect rectangle = frameInfo["frame"]->GetIntRect();
+        auto frameRectIt = frameInfo.find("frame");
+        if (frameRectIt == frameInfo.end())
+        {
+            URHO3D_LOGWARNING("Frame info missing 'frame' rect, skipping");
+            continue;
+        }
+        IntRect rectangle = frameRectIt->second.GetIntRect();
         Vector2 hotSpot(0.5f, 0.5f);
         IntVector2 offset(0, 0);
 
-        IntRect sourceColorRect = frameInfo["sourceColorRect"]->GetIntRect();
+        auto scrIt = frameInfo.find("sourceColorRect");
+        IntRect sourceColorRect = scrIt != frameInfo.end() ? scrIt->second.GetIntRect() : IntRect(0, 0, 0, 0);
         if (sourceColorRect.left_ != 0 && sourceColorRect.top_ != 0)
         {
             offset.x_ = -sourceColorRect.left_;
             offset.y_ = -sourceColorRect.top_;
-
-            IntVector2 sourceSize = frameInfo["sourceSize"]->GetIntVector2();
+            auto ssIt = frameInfo.find("sourceSize");
+            IntVector2 sourceSize = ssIt != frameInfo.end() ? ssIt->second.GetIntVector2() : IntVector2(rectangle.Width(), rectangle.Height());
             hotSpot.x_ = (offset.x_ + sourceSize.x_ / 2.f) / rectangle.Width();
             hotSpot.y_ = 1.0f - (offset.y_ + sourceSize.y_ / 2.f) / rectangle.Height();
         }
@@ -185,7 +211,7 @@ bool SpriteSheet2D::BeginLoadFromXMLFile(Deserializer& source)
         return false;
     }
 
-    SetMemoryUse(source.GetSize());
+    SetMemoryUse(static_cast<i32>(source.GetSize()));
 
     XMLElement rootElem = loadXMLFile_->GetRoot("TextureAtlas");
     if (!rootElem)
@@ -259,7 +285,7 @@ bool SpriteSheet2D::BeginLoadFromJSONFile(Deserializer& source)
         return false;
     }
 
-    SetMemoryUse(source.GetSize());
+    SetMemoryUse(static_cast<i32>(source.GetSize()));
 
     JSONValue rootElem = loadJSONFile_->GetRoot();
     if (rootElem.IsNull())

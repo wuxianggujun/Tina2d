@@ -29,14 +29,14 @@ void SpriterData::Reset()
     {
         for (const Folder* folder : folders_)
             delete folder;
-        folders_.Clear();
+        folders_.clear();
     }
 
     if (!entities_.Empty())
     {
         for (const Entity* entity : entities_)
             delete entity;
-        entities_.Clear();
+        entities_.clear();
     }
 }
 
@@ -53,15 +53,15 @@ bool SpriterData::Load(const pugi::xml_node& node)
 
     for (xml_node folderNode = node.child("folder"); !folderNode.empty(); folderNode = folderNode.next_sibling("folder"))
     {
-        folders_.Push(new Folder());
-        if (!folders_.Back()->Load(folderNode))
+        folders_.push_back(new Folder());
+        if (!folders_.back()->Load(folderNode))
             return false;
     }
 
     for (xml_node entityNode = node.child("entity"); !entityNode.empty(); entityNode = entityNode.next_sibling("entity"))
     {
-        entities_.Push(new Entity());
-        if (!entities_.Back()->Load(entityNode))
+        entities_.push_back(new Entity());
+        if (!entities_.back()->Load(entityNode))
             return false;
     }
 
@@ -86,7 +86,7 @@ void Folder::Reset()
 {
     for (const File* file : files_)
         delete file;
-    files_.Clear();
+    files_.clear();
 }
 
 bool Folder::Load(const pugi::xml_node& node)
@@ -101,8 +101,8 @@ bool Folder::Load(const pugi::xml_node& node)
 
     for (xml_node fileNode = node.child("file"); !fileNode.empty(); fileNode = fileNode.next_sibling("file"))
     {
-        files_.Push(new  File(this));
-        if (!files_.Back()->Load(fileNode))
+        files_.push_back(new  File(this));
+        if (!files_.back()->Load(fileNode))
             return false;
     }
 
@@ -138,11 +138,11 @@ void Entity::Reset()
 {
     for (const CharacterMap* characterMap : characterMaps_)
         delete characterMap;
-    characterMaps_.Clear();
+    characterMaps_.clear();
 
     for (const Animation* animation : animations_)
         delete animation;
-    animations_.Clear();
+    animations_.clear();
 }
 
 bool Entity::Load(const pugi::xml_node& node)
@@ -157,15 +157,15 @@ bool Entity::Load(const pugi::xml_node& node)
 
     for (xml_node characterMapNode = node.child("character_map"); !characterMapNode.empty(); characterMapNode = characterMapNode.next_sibling("character_map"))
     {
-        characterMaps_.Push(new CharacterMap());
-        if (!characterMaps_.Back()->Load(characterMapNode))
+        characterMaps_.push_back(new CharacterMap());
+        if (!characterMaps_.back()->Load(characterMapNode))
             return false;
     }
 
     for (xml_node animationNode = node.child("animation"); !animationNode.empty(); animationNode = animationNode.next_sibling("animation"))
     {
-        animations_.Push(new  Animation());
-        if (!animations_.Back()->Load(animationNode))
+        animations_.push_back(new  Animation());
+        if (!animations_.back()->Load(animationNode))
             return false;
     }
 
@@ -181,7 +181,7 @@ void CharacterMap::Reset()
 {
     for (const MapInstruction* map : maps_)
         delete map;
-    maps_.Clear();
+    maps_.clear();
 }
 
 bool CharacterMap::Load(const pugi::xml_node& node)
@@ -196,8 +196,8 @@ bool CharacterMap::Load(const pugi::xml_node& node)
 
     for (xml_node mapNode = node.child("map"); !mapNode.empty(); mapNode = mapNode.next_sibling("map"))
     {
-        maps_.Push(new MapInstruction());
-        if (!maps_.Back()->Load(mapNode))
+        maps_.push_back(new MapInstruction());
+        if (!maps_.back()->Load(mapNode))
             return false;
     }
 
@@ -228,12 +228,12 @@ void Animation::Reset()
     {
         for (const MainlineKey* mainlineKey : mainlineKeys_)
             delete mainlineKey;
-        mainlineKeys_.Clear();
+        mainlineKeys_.clear();
     }
 
     for (const Timeline* timeline : timelines_)
         delete timeline;
-    timelines_.Clear();
+    timelines_.clear();
 }
 
 bool Animation::Load(const pugi::xml_node& node)
@@ -251,15 +251,15 @@ bool Animation::Load(const pugi::xml_node& node)
     xml_node mainlineNode = node.child("mainline");
     for (xml_node keyNode = mainlineNode.child("key"); !keyNode.empty(); keyNode = keyNode.next_sibling("key"))
     {
-        mainlineKeys_.Push(new MainlineKey());
-        if (!mainlineKeys_.Back()->Load(keyNode))
+        mainlineKeys_.push_back(new MainlineKey());
+        if (!mainlineKeys_.back()->Load(keyNode))
             return false;
     }
 
     for (xml_node timelineNode = node.child("timeline"); !timelineNode.empty(); timelineNode = timelineNode.next_sibling("timeline"))
     {
-        timelines_.Push(new Timeline());
-        if (!timelines_.Back()->Load(timelineNode))
+        timelines_.push_back(new Timeline());
+        if (!timelines_.back()->Load(timelineNode))
             return false;
     }
 
@@ -275,11 +275,11 @@ void MainlineKey::Reset()
 {
     for (const Ref* boneRef : boneRefs_)
         delete boneRef;
-    boneRefs_.Clear();
+    boneRefs_.clear();
 
     for (const Ref* objectRef : objectRefs_)
         delete objectRef;
-    objectRefs_.Clear();
+    objectRefs_.clear();
 }
 
 bool MainlineKey::Load(const pugi::xml_node& node)
@@ -289,15 +289,15 @@ bool MainlineKey::Load(const pugi::xml_node& node)
 
     for (xml_node boneRefNode = node.child("bone_ref"); !boneRefNode.empty(); boneRefNode = boneRefNode.next_sibling("bone_ref"))
     {
-        boneRefs_.Push(new Ref());
-        if (!boneRefs_.Back()->Load(boneRefNode))
+        boneRefs_.push_back(new Ref());
+        if (!boneRefs_.back()->Load(boneRefNode))
             return false;
     }
 
     for (xml_node objectRefNode = node.child("object_ref"); !objectRefNode.empty(); objectRefNode = objectRefNode.next_sibling("object_ref"))
     {
-        objectRefs_.Push(new Ref());
-        if (!objectRefs_.Back()->Load(objectRefNode))
+        objectRefs_.push_back(new Ref());
+        if (!objectRefs_.back()->Load(objectRefNode))
             return false;
     }
 
@@ -327,7 +327,7 @@ void Timeline::Reset()
 {
     for (const SpatialTimelineKey* key : keys_)
         delete key;
-    keys_.Clear();
+    keys_.clear();
 }
 
 bool Timeline::Load(const pugi::xml_node& node)
@@ -352,8 +352,8 @@ bool Timeline::Load(const pugi::xml_node& node)
         objectType_ = BONE;
         for (xml_node keyNode = node.child("key"); !keyNode.empty(); keyNode = keyNode.next_sibling("key"))
         {
-            keys_.Push(new BoneTimelineKey(this));
-            if (!keys_.Back()->Load(keyNode))
+            keys_.push_back(new BoneTimelineKey(this));
+            if (!keys_.back()->Load(keyNode))
                 return false;
         }
     }
@@ -362,8 +362,8 @@ bool Timeline::Load(const pugi::xml_node& node)
         objectType_ = SPRITE;
         for (xml_node keyNode = node.child("key"); !keyNode.empty(); keyNode = keyNode.next_sibling("key"))
         {
-            keys_.Push(new SpriteTimelineKey(this));
-            if (!keys_.Back()->Load(keyNode))
+            keys_.push_back(new SpriteTimelineKey(this));
+            if (!keys_.back()->Load(keyNode))
                 return false;
         }
     }
@@ -645,3 +645,4 @@ SpriteTimelineKey& SpriteTimelineKey::operator=(const SpriteTimelineKey& rhs)
 }
 
 }
+

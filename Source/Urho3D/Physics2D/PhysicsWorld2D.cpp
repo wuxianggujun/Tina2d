@@ -140,7 +140,7 @@ void PhysicsWorld2D::PreSolve(b2Contact* contact, const b2Manifold* oldManifold)
 
     SendEvent(E_PHYSICSUPDATECONTACT2D, eventData);
     contact->SetEnabled(eventData[PhysicsUpdateContact2D::P_ENABLED].GetBool());
-    eventData.Clear();
+    eventData.clear();
 
     // Send node event
     eventData[NodeUpdateContact2D::P_ENABLED] = contact->IsEnabled();
@@ -277,7 +277,7 @@ void PhysicsWorld2D::Update(float timeStep)
     physicsStepping_ = false;
 
     // Apply world transforms. Unparented transforms first
-    for (i32 i = 0; i < rigidBodies_.Size();)
+    for (i32 i = 0; i < (i32)rigidBodies_.Size();)
     {
         if (rigidBodies_[i])
         {
@@ -292,18 +292,18 @@ void PhysicsWorld2D::Update(float timeStep)
     }
 
     // Apply delayed (parented) world transforms now, if any
-    while (!delayedWorldTransforms_.Empty())
+    while (!delayedWorldTransforms_.empty())
     {
-        for (HashMap<RigidBody2D*, DelayedWorldTransform2D>::Iterator i = delayedWorldTransforms_.Begin();
-            i != delayedWorldTransforms_.End();)
+        for (auto i = delayedWorldTransforms_.begin();
+            i != delayedWorldTransforms_.end();)
         {
-            const DelayedWorldTransform2D& transform = i->second_;
+            const DelayedWorldTransform2D& transform = i->second;
 
             // If parent's transform has already been assigned, can proceed
-            if (!delayedWorldTransforms_.Contains(transform.parentRigidBody_))
+            if (delayedWorldTransforms_.find(transform.parentRigidBody_) == delayedWorldTransforms_.end())
             {
                 transform.rigidBody_->ApplyWorldTransform(transform.worldPosition_, transform.worldRotation_);
-                i = delayedWorldTransforms_.Erase(i);
+                i = delayedWorldTransforms_.erase(i);
             }
             else
                 ++i;

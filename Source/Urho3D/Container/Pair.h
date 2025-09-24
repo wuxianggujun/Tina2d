@@ -72,3 +72,17 @@ template <class T> T begin(const Urho3D::Pair<T, T>& range) { return range.first
 template <class T> T end(const Urho3D::Pair<T, T>& range) { return range.second_; }
 
 }
+
+// 放在全局命名空间，避免成为 Urho3D::eastl
+#include <EASTL/functional.h>
+namespace eastl
+{
+    template <class T, class U>
+    struct hash<Urho3D::Pair<T, U>>
+    {
+        size_t operator()(const Urho3D::Pair<T, U>& value) const noexcept
+        {
+            return (size_t)value.ToHash();
+        }
+    };
+}

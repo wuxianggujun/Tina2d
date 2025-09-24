@@ -8,6 +8,11 @@
 #include "../IO/VectorBuffer.h"
 #include "../Network/Connection.h"
 
+// EASTL 容器（通过适配器统一分配器/类型别名）
+#include "../Container/STLAdapter.h"
+// SLikeNet 基本类型（用于哈希）
+#include <slikenet/types.h>
+
 namespace Urho3D
 {
 
@@ -126,6 +131,13 @@ public:
     void PostUpdate(float timeStep);
 
 private:
+    struct AddressOrGUIDHasher {
+        size_t operator()(const SLNet::AddressOrGUID& aog) const noexcept
+        {
+            // 使用上游提供的整型转换作为哈希基础
+            return (size_t)SLNet::AddressOrGUID::ToInteger(aog);
+        }
+    };
     /// Handle begin frame event.
     void HandleBeginFrame(StringHash eventType, VariantMap& eventData);
     /// Handle render update frame event.
@@ -145,14 +157,14 @@ private:
     SLNet::RakPeerInterface* rakPeerClient_;
     /// Client's server connection.
     SharedPtr<Connection> serverConnection_;
-    /// Server's client connections.
-    HashMap<SLNet::AddressOrGUID, SharedPtr<Connection>> clientConnections_;
-    /// Allowed remote events.
-    HashSet<StringHash> allowedRemoteEvents_;
-    /// Remote event fixed blacklist.
-    HashSet<StringHash> blacklistedRemoteEvents_;
-    /// Networked scenes.
-    HashSet<Scene*> networkScenes_;
+    /// Server's client connections（EASTL 适配器容器）。
+    Urho3D::stl::unordered_map<SLNet::AddressOrGUID, SharedPtr<Connection>, AddressOrGUIDHasher> clientConnections_;
+    /// Allowed remote events（EASTL 适配器容器）。
+    Urho3D::stl::unordered_set<StringHash> allowedRemoteEvents_;
+    /// Remote event fixed blacklist（EASTL 适配器容器）。
+    Urho3D::stl::unordered_set<StringHash> blacklistedRemoteEvents_;
+    /// Networked scenes（EASTL 适配器容器）。
+    Urho3D::stl::unordered_set<Scene*> networkScenes_;
     /// Update FPS.
     int updateFps_;
     /// Simulated latency (send delay) in milliseconds.

@@ -300,7 +300,7 @@ void AnimatedSprite2D::UpdateSourceBatchesSpine()
     const Matrix3x4& worldTransform = GetNode()->GetWorldTransform();
 
     SourceBatch2D& sourceBatch = sourceBatches_[0];
-    sourceBatches_[0].vertices_.Clear();
+    sourceBatches_[0].vertices_.clear();
 
     const int SLOT_VERTEX_COUNT_MAX = 1024;
     float slotVertices[SLOT_VERTEX_COUNT_MAX];
@@ -338,10 +338,10 @@ void AnimatedSprite2D::UpdateSourceBatchesSpine()
             vertices[2].uv_ = Vector2(region->uvs[SP_VERTEX_X3], region->uvs[SP_VERTEX_Y3]);
             vertices[3].uv_ = Vector2(region->uvs[SP_VERTEX_X4], region->uvs[SP_VERTEX_Y4]);
 
-            sourceBatches_[0].vertices_.Push(vertices[0]);
-            sourceBatches_[0].vertices_.Push(vertices[1]);
-            sourceBatches_[0].vertices_.Push(vertices[2]);
-            sourceBatches_[0].vertices_.Push(vertices[3]);
+            sourceBatches_[0].vertices_.push_back(vertices[0]);
+            sourceBatches_[0].vertices_.push_back(vertices[1]);
+            sourceBatches_[0].vertices_.push_back(vertices[2]);
+            sourceBatches_[0].vertices_.push_back(vertices[3]);
         }
         else if (attachment->type == SP_ATTACHMENT_MESH || attachment->type == SP_ATTACHMENT_LINKED_MESH)
         {
@@ -359,10 +359,10 @@ void AnimatedSprite2D::UpdateSourceBatchesSpine()
                 vertex.position_ = worldTransform * Vector3(slotVertices[index], slotVertices[index + 1]);
                 vertex.uv_ = Vector2(mesh->uvs[index], mesh->uvs[index + 1]);
 
-                sourceBatches_[0].vertices_.Push(vertex);
+                sourceBatches_[0].vertices_.push_back(vertex);
                 // Add padding vertex
                 if (j % 3 == 2)
-                    sourceBatches_[0].vertices_.Push(vertex);
+                    sourceBatches_[0].vertices_.push_back(vertex);
             }
         }
     }
@@ -406,7 +406,7 @@ void AnimatedSprite2D::UpdateSourceBatchesSpriter()
     const Matrix3x4& nodeWorldTransform = GetNode()->GetWorldTransform();
 
     Vector<Vertex2D>& vertices = sourceBatches_[0].vertices_;
-    vertices.Clear();
+    vertices.clear();
 
     Rect drawRect;
     Rect textureRect;
@@ -418,7 +418,7 @@ void AnimatedSprite2D::UpdateSourceBatchesSpriter()
     Vertex2D vertex3;
 
     const Vector<Spriter::SpatialTimelineKey*>& timelineKeys = spriterInstance_->GetTimelineKeys();
-    for (i32 i = 0; i < timelineKeys.Size(); ++i)
+    for (i32 i = 0; i < (i32)timelineKeys.size(); ++i)
     {
         if (timelineKeys[i]->GetObjectType() != Spriter::SPRITE)
             continue;
@@ -469,10 +469,10 @@ void AnimatedSprite2D::UpdateSourceBatchesSpriter()
 
         vertex0.color_ = vertex1.color_ = vertex2.color_ = vertex3.color_ = finalColor.ToU32();
 
-        vertices.Push(vertex0);
-        vertices.Push(vertex1);
-        vertices.Push(vertex2);
-        vertices.Push(vertex3);
+        vertices.push_back(vertex0);
+        vertices.push_back(vertex1);
+        vertices.push_back(vertex2);
+        vertices.push_back(vertex3);
     }
 }
 
@@ -501,3 +501,4 @@ void AnimatedSprite2D::Dispose()
 }
 
 }
+

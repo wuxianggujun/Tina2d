@@ -1357,7 +1357,7 @@ bool Image::SaveDDS(const String& fileName) const
         | 0x00000002l /*DDSD_HEIGHT*/ | 0x00000004l /*DDSD_WIDTH*/ | 0x00020000l /*DDSD_MIPMAPCOUNT*/ | 0x00001000l /*DDSD_PIXELFORMAT*/;
     ddsd.dwWidth_ = width_;
     ddsd.dwHeight_ = height_;
-    ddsd.dwMipMapCount_ = levels.Size();
+    ddsd.dwMipMapCount_ = levels.size();
     ddsd.ddpfPixelFormat_.dwFlags_ = 0x00000040l /*DDPF_RGB*/ | 0x00000001l /*DDPF_ALPHAPIXELS*/;
     ddsd.ddpfPixelFormat_.dwSize_ = sizeof(ddsd.ddpfPixelFormat_);
     ddsd.ddpfPixelFormat_.dwRGBBitCount_ = 32;
@@ -2167,13 +2167,13 @@ Image* Image::GetSubimage(const IntRect& rect) const
                 break;
 
             // Mips are stored continuously
-            unsigned destStartOffset = subimageData.Size();
+            unsigned destStartOffset = subimageData.size();
             unsigned destRowSize = currentRect.Width() / 4 * level.blockSize_;
             unsigned destSize = currentRect.Height() / 4 * destRowSize;
             if (!destSize)
                 break;
 
-            subimageData.Resize(destStartOffset + destSize);
+            subimageData.resize(destStartOffset + destSize);
             unsigned char* dest = &subimageData[destStartOffset];
 
             for (int y = currentRect.top_; y < currentRect.bottom_; y += 4)
@@ -2208,9 +2208,9 @@ Image* Image::GetSubimage(const IntRect& rect) const
         image->compressedFormat_ = compressedFormat_;
         image->numCompressedLevels_ = subimageLevels;
         image->components_ = components_;
-        image->data_ = new unsigned char[subimageData.Size()];
-        memcpy(image->data_.Get(), &subimageData[0], subimageData.Size());
-        image->SetMemoryUse(subimageData.Size());
+        image->data_ = new unsigned char[subimageData.size()];
+        memcpy(image->data_.Get(), &subimageData[0], subimageData.size());
+        image->SetMemoryUse(subimageData.size());
 
         return image;
     }
@@ -2343,24 +2343,24 @@ void Image::CleanupLevels()
 
 void Image::GetLevels(Vector<Image*>& levels)
 {
-    levels.Clear();
+    levels.clear();
 
     Image* image = this;
     while (image)
     {
-        levels.Push(image);
+        levels.push_back(image);
         image = image->nextLevel_;
     }
 }
 
 void Image::GetLevels(Vector<const Image*>& levels) const
 {
-    levels.Clear();
+    levels.clear();
 
     const Image* image = this;
     while (image)
     {
-        levels.Push(image);
+        levels.push_back(image);
         image = image->nextLevel_;
     }
 }
@@ -2449,3 +2449,4 @@ bool Image::SetSubimage(const Image* image, const IntRect& rect)
 }
 
 }
+

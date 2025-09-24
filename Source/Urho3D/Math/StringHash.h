@@ -5,6 +5,8 @@
 
 #include "../Container/Str.h"
 #include "../Math/MathDefs.h"
+// EASTL 哈希支持（为 StringHash 提供 unordered_* 的哈希）
+#include <EASTL/functional.h>
 
 namespace Urho3D
 {
@@ -117,4 +119,17 @@ constexpr StringHash operator ""_hash(const char* str, size_t)
     return StringHash(StringHash::Calculate(str));
 }
 
+}
+
+// 为 eastl::unordered_* 提供 Urho3D::StringHash 的哈希支持（放在全局命名空间）
+namespace eastl
+{
+    template<>
+    struct hash<Urho3D::StringHash>
+    {
+        size_t operator()(const Urho3D::StringHash& v) const noexcept
+        {
+            return static_cast<size_t>(v.Value());
+        }
+    };
 }

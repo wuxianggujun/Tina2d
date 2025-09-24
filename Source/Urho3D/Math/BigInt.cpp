@@ -42,12 +42,13 @@ static Vector<BigInt::Digit> SumMagnitudes(const Vector<BigInt::Digit>& a, const
     Vector<BigInt::Digit> ret;
 
     i32 maxSize = Max(a.Size(), b.Size());
-    ret.Resize(maxSize, 0);
+    // eastl::vector::resize 会对内置数值类型做值初始化（置零）
+    ret.Resize(maxSize);
 
     for (i32 i = 0; i < maxSize; ++i)
     {
-        BigInt::Digit a_element = i < a.Size() ? a[i] : 0;
-        BigInt::Digit b_element = i < b.Size() ? b[i] : 0;
+        BigInt::Digit a_element = i < (i32)a.Size() ? a[i] : 0;
+        BigInt::Digit b_element = i < (i32)b.Size() ? b[i] : 0;
         BigInt::Digit sum = a_element + b_element;
 
         ret[i] += sum; // ret[i] can be not zero
@@ -56,7 +57,7 @@ static Vector<BigInt::Digit> SumMagnitudes(const Vector<BigInt::Digit>& a, const
         {
             ret[i] -= BASE; // Use div & mod instead loop?
 
-            if (i + 1 < ret.Size())
+            if (i + 1 < (i32)ret.Size())
                 ++ret[i + 1];
             else
                 ret.Push(1);
@@ -70,12 +71,13 @@ static Vector<BigInt::Digit> SumMagnitudes(const Vector<BigInt::Digit>& a, const
 static Vector<BigInt::Digit> DiffMagnitudes(const Vector<BigInt::Digit>& a, const Vector<BigInt::Digit>& b)
 {
     Vector<BigInt::Digit> ret;
-    ret.Resize(a.Size(), 0);
+    // 保证初始为零以便后续累加
+    ret.Resize(a.Size());
 
-    for (i32 i = 0; i < a.Size(); ++i)
+    for (i32 i = 0; i < (i32)a.Size(); ++i)
     {
         BigInt::Digit a_element = a[i];
-        BigInt::Digit b_element = i < b.Size() ? b[i] : 0;
+        BigInt::Digit b_element = i < (i32)b.Size() ? b[i] : 0;
         BigInt::Digit diff = a_element - b_element;
 
         ret[i] += diff; // ret[i] can be not zero
@@ -84,7 +86,7 @@ static Vector<BigInt::Digit> DiffMagnitudes(const Vector<BigInt::Digit>& a, cons
         {
             ret[i] += BASE;
 
-            assert(i + 1 < ret.Size());
+            assert(i + 1 < (i32)ret.Size());
             --ret[i + 1];
         }
     }
@@ -140,7 +142,7 @@ BigInt::BigInt()
 {
     // Init as zero
     positive_ = true;
-    magnitude_.Resize(1, 0);
+    magnitude_.Resize(1);
 }
 
 BigInt::BigInt(const String& str)
@@ -149,7 +151,7 @@ BigInt::BigInt(const String& str)
     {
         // Init as zero
         positive_ = true;
-        magnitude_.Resize(1, 0);
+        magnitude_.Resize(1);
         return;
     }
 
@@ -193,7 +195,7 @@ BigInt::BigInt(const String& str)
     {
         // Init as zero
         positive_ = true;
-        magnitude_.Resize(1, 0);
+        magnitude_.Resize(1);
         return;
     }
 
@@ -384,20 +386,21 @@ BigInt BigInt::operator -(const BigInt& rhs) const
 BigInt BigInt::operator *(const BigInt& rhs) const
 {
     BigInt ret;
-    ret.magnitude_.Resize(magnitude_.Size() + rhs.magnitude_.Size(), 0);
+    // 结果位数上限为两者位数之和，初始化为 0
+    ret.magnitude_.Resize(magnitude_.Size() + rhs.magnitude_.Size());
 
     if (positive_ == rhs.positive_)
         ret.positive_ = true;
     else
         ret.positive_ = false;
 
-    for (i32 this_index = 0; this_index < magnitude_.Size(); ++this_index)
+    for (i32 this_index = 0; this_index < (i32)magnitude_.Size(); ++this_index)
     {
-        for (i32 rhs_index = 0; rhs_index < rhs.magnitude_.Size(); ++rhs_index)
+        for (i32 rhs_index = 0; rhs_index < (i32)rhs.magnitude_.Size(); ++rhs_index)
             ret.magnitude_[this_index + rhs_index] += magnitude_[this_index] * rhs.magnitude_[rhs_index];
     }
 
-    for (i32 i = 0; i < ret.magnitude_.Size() - 1; ++i)
+    for (i32 i = 0; i < (i32)ret.magnitude_.Size() - 1; ++i)
     {
         ret.magnitude_[i + 1] += ret.magnitude_[i] / BASE;
         ret.magnitude_[i] %= BASE;

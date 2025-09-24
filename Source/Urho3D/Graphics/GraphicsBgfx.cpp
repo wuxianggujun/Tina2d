@@ -7,6 +7,8 @@
 #include "Precompiled.h"
 #include "GraphicsBgfx.h"
 #include "BgfxSDLPlatform.h"
+#include "BgfxMiAllocator.h"
+#include "BgfxCustomAllocator.h"
 
 #ifdef URHO3D_BGFX
     #include <bgfx/bgfx.h>
@@ -58,6 +60,9 @@ bool GraphicsBgfx::Initialize(void* nativeWindowHandle, unsigned width, unsigned
     // 提供原生窗口句柄（由上层获取，例如 SDL_GetProperty 获取 HWND/NSWindow/X11 Window）。
     init.platformData.nwh = nativeWindowHandle; // Win32: HWND, macOS: NSWindow*, X11: Window (cast)
     init.platformData.ndt = nativeDisplayHandle; // X11: Display*
+
+    // 统一注入 mimalloc 分配器（通过 bx::AllocatorI 桥接）
+    init.allocator = Urho3D::GetBgfxAllocator();
 
     if (!bgfx::init(init))
         return false;
@@ -127,6 +132,21 @@ void GraphicsBgfx::Shutdown()
     {
         bgfx::ProgramHandle ph; ph.idx = ui_.programMask; if (bgfx::isValid(ph)) bgfx::destroy(ph);
         ui_.programMask = bgfx::kInvalidHandle;
+    }
+    if (ui_.programTextSDF != bgfx::kInvalidHandle)
+    {
+        bgfx::ProgramHandle ph; ph.idx = ui_.programTextSDF; if (bgfx::isValid(ph)) bgfx::destroy(ph);
+        ui_.programTextSDF = bgfx::kInvalidHandle;
+    }
+    if (ui_.programTextMSDF != bgfx::kInvalidHandle)
+    {
+        bgfx::ProgramHandle ph; ph.idx = ui_.programTextMSDF; if (bgfx::isValid(ph)) bgfx::destroy(ph);
+        ui_.programTextMSDF = bgfx::kInvalidHandle;
+    }
+    if (ui_.programCopy != bgfx::kInvalidHandle)
+    {
+        bgfx::ProgramHandle ph; ph.idx = ui_.programCopy; if (bgfx::isValid(ph)) bgfx::destroy(ph);
+        ui_.programCopy = bgfx::kInvalidHandle;
     }
     // 动态 uniform/sampler 缓存
     for (auto& kv : samplerCache_){ bgfx::UniformHandle u{kv.second}; if (bgfx::isValid(u)) bgfx::destroy(u);} samplerCache_.clear();
@@ -621,6 +641,7 @@ bool GraphicsBgfx::LoadUIPrograms(ResourceCache* cache)
     auto [sv_mask, sf_mask] = findPair("Basic_DiffAlphaMask_VC");
     // 可选：Text SDF 与 CopyFramebuffer
     auto [sv_text, sf_text] = findPair("Text_SDF_VC");
+    auto [sv_msdf, sf_msdf] = findPair("Text_MSDF_VC");
     auto [sv_copy, sf_copy] = findPair("CopyFramebuffer");
     // 至少需要 Diff 版本
     if (!sv_diff || !sf_diff)
@@ -657,6 +678,15 @@ bool GraphicsBgfx::LoadUIPrograms(ResourceCache* cache)
         auto fsh_text = loadShader(sf_text);
         if (bgfx::isValid(vsh_text) && bgfx::isValid(fsh_text))
             ui_.programTextSDF = bgfx::createProgram(vsh_text, fsh_text, true).idx;
+    }
+
+    // Text MSDF（可选）
+    if (sv_msdf && sf_msdf)
+    {
+        auto vsh_msdf = loadShader(sv_msdf);
+        auto fsh_msdf = loadShader(sf_msdf);
+        if (bgfx::isValid(vsh_msdf) && bgfx::isValid(fsh_msdf))
+            ui_.programTextMSDF = bgfx::createProgram(vsh_msdf, fsh_msdf, true).idx;
     }
 
     // CopyFramebuffer（可选）
@@ -937,7 +967,7 @@ unsigned short GraphicsBgfx::GetOrCreateTexture(Texture2D* tex, ResourceCache* c
                     SharedArrayPtr<unsigned char> fbuf(new unsigned char[fsize]);
                     f->Read(fbuf.Get(), fsize);
 
-                    bx::DefaultAllocator alloc;
+                    BgfxCustomAllocator alloc;
                     bimg::ImageContainer* ic = bimg::imageParse(&alloc, fbuf.Get(), fsize);
                     if (ic)
                     {
@@ -1090,13 +1120,14 @@ void GraphicsBgfx::Set2DLights(const Vector4* posRange, const Vector4* colorInt,
 unsigned short GraphicsBgfx::GetOrCreateSampler(const char* name)
 {
 #ifdef URHO3D_BGFX
-    auto it = samplerCache_.find(name);
+    Urho3D::stl::string key(name);
+    auto it = samplerCache_.find(key);
     if (it != samplerCache_.end())
         return it->second;
     bgfx::UniformHandle h = bgfx::createUniform(name, bgfx::UniformType::Sampler);
     if (!bgfx::isValid(h))
         return bgfx::kInvalidHandle;
-    samplerCache_[name] = h.idx;
+    samplerCache_[key] = h.idx;
     return h.idx;
 #else
     (void)name; return bgfx::kInvalidHandle;
@@ -1106,13 +1137,14 @@ unsigned short GraphicsBgfx::GetOrCreateSampler(const char* name)
 unsigned short GraphicsBgfx::GetOrCreateVec4(const char* name)
 {
 #ifdef URHO3D_BGFX
-    auto it = vec4Cache_.find(name);
+    Urho3D::stl::string key(name);
+    auto it = vec4Cache_.find(key);
     if (it != vec4Cache_.end())
         return it->second;
     bgfx::UniformHandle h = bgfx::createUniform(name, bgfx::UniformType::Vec4);
     if (!bgfx::isValid(h))
         return bgfx::kInvalidHandle;
-    vec4Cache_[name] = h.idx;
+    vec4Cache_[key] = h.idx;
     return h.idx;
 #else
     (void)name; return bgfx::kInvalidHandle;
@@ -1122,13 +1154,14 @@ unsigned short GraphicsBgfx::GetOrCreateVec4(const char* name)
 unsigned short GraphicsBgfx::GetOrCreateMat4(const char* name)
 {
 #ifdef URHO3D_BGFX
-    auto it = mat4Cache_.find(name);
+    Urho3D::stl::string key(name);
+    auto it = mat4Cache_.find(key);
     if (it != mat4Cache_.end())
         return it->second;
     bgfx::UniformHandle h = bgfx::createUniform(name, bgfx::UniformType::Mat4);
     if (!bgfx::isValid(h))
         return bgfx::kInvalidHandle;
-    mat4Cache_[name] = h.idx;
+    mat4Cache_[key] = h.idx;
     return h.idx;
 #else
     (void)name; return bgfx::kInvalidHandle;
@@ -1138,7 +1171,15 @@ unsigned short GraphicsBgfx::GetOrCreateMat4(const char* name)
 unsigned short GraphicsBgfx::GetOrCreateVec4Array(const char* name, unsigned short num)
 {
 #ifdef URHO3D_BGFX
-    std::string key = std::string(name) + "#" + std::to_string((unsigned)num);
+    Urho3D::stl::string key(name);
+    key += '#';
+    char buf[32];
+#if defined(_MSC_VER)
+    _snprintf_s(buf, sizeof(buf), _TRUNCATE, "%u", (unsigned)num);
+#else
+    snprintf(buf, sizeof(buf), "%u", (unsigned)num);
+#endif
+    key += buf;
     auto it = vec4ArrayCache_.find(key);
     if (it != vec4ArrayCache_.end())
         return it->second;
@@ -1849,21 +1890,21 @@ bool GraphicsBgfx::DrawUIWithMaterial(const float* vertices, int numVertices, Ma
     Texture2D* primaryTex = nullptr;
     if (material)
     {
-        const auto textures = material->GetTextures();
-        if (!textures.Empty())
+        const auto& textures = material->GetTextures();
+        if (!textures.empty())
         {
-            Vector<unsigned> units; units.Reserve(textures.Size());
-            for (auto it = textures.Begin(); it != textures.End(); ++it)
-                units.Push(it->first_);
+            Vector<unsigned> units; units.Reserve((unsigned)textures.size());
+            for (auto it = textures.begin(); it != textures.end(); ++it)
+                units.Push(it->first);
             Sort(units.Begin(), units.End());
 
             unsigned stage = 0;
             for (unsigned u : units)
             {
-                auto it2 = textures.Find(static_cast<TextureUnit>(u));
-                if (it2 == textures.End())
+                auto it2 = textures.find(static_cast<TextureUnit>(u));
+                if (it2 == textures.end())
                     continue;
-                Texture* t = it2->second_.Get();
+                Texture* t = it2->second.Get();
                 if (!t) continue;
                 auto* t2d = dynamic_cast<Texture2D*>(t);
                 if (!t2d) continue;
@@ -1912,21 +1953,31 @@ bool GraphicsBgfx::DrawUIWithMaterial(const float* vertices, int numVertices, Ma
     if (material)
     {
         const auto shaderParams = material->GetShaderParameters();
-        for (auto it = shaderParams.Begin(); it != shaderParams.End(); ++it)
-            SetUniformByVariant(it->second_.name_.CString(), it->second_.value_);
+        for (auto it = shaderParams.begin(); it != shaderParams.end(); ++it)
+            SetUniformByVariant(it->second.name_.CString(), it->second.value_);
     }
 
     // 程序选择
     unsigned short programIdx = ui_.programDiff;
-    // 优先：若材质声明为 Text SDF，则使用 Text_SDF 程序（需要材质中设置参数 u_isTextSDF=true）
+    // 优先：MSDF -> SDF -> 其他
     if (material)
     {
-        const Variant& v = material->GetShaderParameter("u_isTextSDF");
-        if (v.GetType() != VAR_NONE)
+        const Variant& vmsdf = material->GetShaderParameter("u_isTextMSDF");
+        if (vmsdf.GetType() != VAR_NONE)
         {
-            const bool isSdf = (v.GetType()==VAR_BOOL ? v.GetBool() : (v.GetType()==VAR_INT ? (v.GetI32()!=0) : false));
-            if (isSdf && ui_.programTextSDF != bgfx::kInvalidHandle)
-                programIdx = ui_.programTextSDF;
+            const bool isMsdf = (vmsdf.GetType()==VAR_BOOL ? vmsdf.GetBool() : (vmsdf.GetType()==VAR_INT ? (vmsdf.GetI32()!=0) : false));
+            if (isMsdf && ui_.programTextMSDF != bgfx::kInvalidHandle)
+                programIdx = ui_.programTextMSDF;
+        }
+        if (programIdx == ui_.programDiff)
+        {
+            const Variant& vsdf = material->GetShaderParameter("u_isTextSDF");
+            if (vsdf.GetType() != VAR_NONE)
+            {
+                const bool isSdf = (vsdf.GetType()==VAR_BOOL ? vsdf.GetBool() : (vsdf.GetType()==VAR_INT ? (vsdf.GetI32()!=0) : false));
+                if (isSdf && ui_.programTextSDF != bgfx::kInvalidHandle)
+                    programIdx = ui_.programTextSDF;
+            }
         }
     }
     // 其次：按纹理格式与混合模式选择像素程序

@@ -6,6 +6,9 @@
 set (CMAKE_FOLDER "third-party libs")
 
 # 基础第三方库：仅在目录存在时引入，避免裁剪后构建失败
+set (SDL_TEST_LIBRARY OFF CACHE BOOL "Disable building SDL3_test" FORCE)
+set (SDL_TESTS        OFF CACHE BOOL "Disable SDL tests"      FORCE)
+set (SDL_EXAMPLES     OFF CACHE BOOL "Disable SDL examples"   FORCE)
 foreach (TARGET ETCPACK FreeType LZ4 PugiXml rapidjson SDL STB)
     if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${TARGET}/CMakeLists.txt)
         add_subdirectory (${TARGET})
@@ -72,6 +75,54 @@ if (URHO3D_TRACY_PROFILING)
     add_subdirectory (Tracy)
 endif ()
 
+# 高性能分配器：mimalloc 深度集成（仅使用本地 ThirdParty），默认尝试启用；
+# 若本地不存在或当前工具链无法编译 C/Windows SDK 头，则静默跳过并退回 CRT。
+if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/mimalloc/CMakeLists.txt)
+    include(CheckCSourceCompiles)
+    set(CMAKE_REQUIRED_QUIET TRUE)
+    check_c_source_compiles("#include <stddef.h>\n#ifdef _WIN32\n#include <windows.h>\n#endif\nint main(void){return 0;}" CAN_BUILD_C_SDK)
+    if (CAN_BUILD_C_SDK)
+        set (MI_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+        add_subdirectory (mimalloc)
+        if (TARGET mimalloc-static)
+            set (MIMALLOC_TARGET mimalloc-static)
+        elseif (TARGET mimalloc)
+            set (MIMALLOC_TARGET mimalloc)
+        endif ()
+        # 将变量提升到父作用域，便于上层目标链接并打开宏
+        if (DEFINED MIMALLOC_TARGET)
+            set (MIMALLOC_TARGET ${MIMALLOC_TARGET} PARENT_SCOPE)
+        endif ()
+        set (HAVE_MIMALLOC ON)
+        set (HAVE_MIMALLOC ON PARENT_SCOPE)
+    else ()
+        message (STATUS "mimalloc: 检测到当前工具链环境缺少标准/SDK 头，已跳过本地 mimalloc 构建（回退 CRT）")
+    endif ()
+else ()
+    message (STATUS "mimalloc: 未发现 Source/ThirdParty/mimalloc，已跳过（回退 CRT）")
+endif ()
+
+# EASTL / EABase：构建并整库链接（推荐）。
+if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/EASTL AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/EABase)
+    # 优先使用本地 EABase 源，避免网络获取失败或版本漂移
+    set(FETCHCONTENT_SOURCE_DIR_EABASE ${CMAKE_CURRENT_SOURCE_DIR}/EABase CACHE PATH "Local EABase path for EASTL FetchContent")
+    set(FETCHCONTENT_UPDATES_DISCONNECTED_EABASE ON CACHE BOOL "Disable EABase FetchContent updates" FORCE)
+    # 先添加 EABase，确保 INTERFACE 目标被创建
+    add_subdirectory (EABase)
+    add_subdirectory (EASTL)
+    # EASTL 源文件直接包含 <EABase/eabase.h>，需要把 EABase 的 include 路径注入到 EASTL 目标
+    if (TARGET EASTL AND TARGET EABase)
+        get_target_property(_EABASE_INCS EABase INTERFACE_INCLUDE_DIRECTORIES)
+        if (_EABASE_INCS)
+            target_include_directories(EASTL PUBLIC ${_EABASE_INCS})
+        endif ()
+    endif ()
+    # 兜底：直接注入本地 EABase 头文件路径，防止上游 CMake 未正确透传
+    if (TARGET EASTL)
+        target_include_directories(EASTL PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/EABase/include/Common)
+    endif ()
+endif ()
+
 if (NOT ANDROID AND NOT ARM AND NOT WEB)
     # Tina2D: 不再使用传统 OpenGL 渲染路径，彻底移除 GLEW 依赖
     # 如果未来需要恢复 OpenGL 支持，可在此处重新引入 GLEW。
@@ -98,6 +149,10 @@ if (URHO3D_BGFX)
         set (BGFX_BUILD_EXAMPLES OFF CACHE BOOL "Disable bgfx examples" FORCE)
         set (BGFX_BUILD_TESTS    OFF CACHE BOOL "Disable bgfx tests"    FORCE)
         set (BGFX_BUILD_TOOLS    ON  CACHE BOOL "Build bgfx tools"       FORCE)
+        # 仅需 shaderc，禁用纹理工具链，避免 iqa 等 C 依赖在非开发者命令行下找不到 SDK 头
+        set (BGFX_BUILD_TOOLS_TEXTURE OFF CACHE BOOL "Disable bgfx texture tools" FORCE)
+        set (BGFX_BUILD_TOOLS_GEOMETRY OFF CACHE BOOL "Disable bgfx geometry tools" FORCE)
+        set (BGFX_BUILD_TOOLS_BIN2C OFF CACHE BOOL "Disable bgfx bin2c tool" FORCE)
         add_subdirectory (bgfx.cmake)
         # 将 bgfx 工具 (shaderc/texturec 等) 拷贝到引擎惯用的 tool 目录
         # 注意：add_custom_command(TARGET ...) 只能作用于当前目录创建的目标，因此

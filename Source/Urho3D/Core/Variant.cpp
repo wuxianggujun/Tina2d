@@ -86,7 +86,7 @@ Variant& Variant::operator =(const Variant& rhs)
         break;
 
     case VAR_VARIANTVECTOR:
-        value_.variantVector_ = rhs.value_.variantVector_;
+        *value_.variantVector_ = *rhs.value_.variantVector_;
         break;
 
     case VAR_STRINGVECTOR:
@@ -94,7 +94,7 @@ Variant& Variant::operator =(const Variant& rhs)
         break;
 
     case VAR_VARIANTMAP:
-        value_.variantMap_ = rhs.value_.variantMap_;
+        *value_.variantMap_ = *rhs.value_.variantMap_;
         break;
 
     case VAR_PTR:
@@ -179,13 +179,13 @@ bool Variant::operator ==(const Variant& rhs) const
         return value_.resourceRefList_ == rhs.value_.resourceRefList_;
 
     case VAR_VARIANTVECTOR:
-        return value_.variantVector_ == rhs.value_.variantVector_;
+        return *value_.variantVector_ == *rhs.value_.variantVector_;
 
     case VAR_STRINGVECTOR:
         return value_.stringVector_ == rhs.value_.stringVector_;
 
     case VAR_VARIANTMAP:
-        return value_.variantMap_ == rhs.value_.variantMap_;
+        return *value_.variantMap_ == *rhs.value_.variantMap_;
 
     case VAR_INTRECT:
         return value_.intRect_ == rhs.value_.intRect_;
@@ -456,7 +456,7 @@ String Variant::ToString() const
         {
             const Vector<byte>& buffer = value_.buffer_;
             String ret;
-            BufferToString(ret, buffer.Begin().ptr_, buffer.Size());
+            BufferToString(ret, buffer.Buffer(), buffer.Size());
             return ret;
         }
 
@@ -557,13 +557,13 @@ bool Variant::IsZero() const
     }
 
     case VAR_VARIANTVECTOR:
-        return value_.variantVector_.Empty();
+        return value_.variantVector_->empty();
 
     case VAR_STRINGVECTOR:
         return value_.stringVector_.Empty();
 
     case VAR_VARIANTMAP:
-        return value_.variantMap_.Empty();
+        return value_.variantMap_->empty();
 
     case VAR_INTRECT:
         return value_.intRect_ == IntRect::ZERO;
@@ -625,7 +625,7 @@ void Variant::SetType(VariantType newType)
         break;
 
     case VAR_VARIANTVECTOR:
-        value_.variantVector_.~VariantVector();
+        delete value_.variantVector_;
         break;
 
     case VAR_STRINGVECTOR:
@@ -633,7 +633,7 @@ void Variant::SetType(VariantType newType)
         break;
 
     case VAR_VARIANTMAP:
-        value_.variantMap_.~VariantMap();
+        delete value_.variantMap_;
         break;
 
     case VAR_PTR:
@@ -685,7 +685,7 @@ void Variant::SetType(VariantType newType)
         break;
 
     case VAR_VARIANTVECTOR:
-        new(&value_.variantVector_) VariantVector();
+        value_.variantVector_ = new VariantVector();
         break;
 
     case VAR_STRINGVECTOR:
@@ -693,7 +693,7 @@ void Variant::SetType(VariantType newType)
         break;
 
     case VAR_VARIANTMAP:
-        new(&value_.variantMap_) VariantMap();
+        value_.variantMap_ = new VariantMap();
         break;
 
     case VAR_PTR:

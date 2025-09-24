@@ -92,7 +92,7 @@ struct JoystickState
     bool GetButtonDown(i32 index) const
     {
         assert(index >= 0);
-        return index < buttons_.Size() ? buttons_[index] : false;
+        return index < (i32)buttons_.Size() ? buttons_[index] : false;
     }
 
     /// Check if a button has been pressed on this frame.
@@ -100,7 +100,7 @@ struct JoystickState
     bool GetButtonPress(i32 index) const
     {
         assert(index >= 0);
-        return index < buttonPress_.Size() ? buttonPress_[index] : false;
+        return index < (i32)buttonPress_.Size() ? buttonPress_[index] : false;
     }
 
     /// Return axis position.
@@ -108,7 +108,7 @@ struct JoystickState
     float GetAxisPosition(i32 index) const
     {
         assert(index >= 0);
-        return index < axes_.Size() ? axes_[index] : 0.0f;
+        return index < (i32)axes_.Size() ? axes_[index] : 0.0f;
     }
 
     /// Return hat position.
@@ -116,7 +116,7 @@ struct JoystickState
     int GetHatPosition(i32 index) const
     {
         assert(index >= 0);
-        return index < hats_.Size() ? hats_[index] : int(HAT_CENTER);
+        return index < (i32)hats_.Size() ? hats_[index] : int(HAT_CENTER);
     }
 
     /// SDL joystick.
@@ -293,14 +293,14 @@ public:
 
     /// Return number of active finger touches.
     /// @property
-    i32 GetNumTouches() const { return touches_.Size(); }
+    i32 GetNumTouches() const { return (i32)touches_.size(); }
     /// Return active finger touch by index.
     /// @property{get_touches}
     TouchState* GetTouch(i32 index) const;
 
     /// Return number of connected joysticks.
     /// @property
-    i32 GetNumJoysticks() const { return joysticks_.Size(); }
+    i32 GetNumJoysticks() const { return (i32)joysticks_.size(); }
     /// Return joystick state by ID, or null if does not exist.
     /// @property{get_joysticks}
     JoystickState* GetJoystick(SDL_JoystickID id);

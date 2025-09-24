@@ -6,6 +6,7 @@
 #pragma once
 
 #include "../Container/HashSet.h"
+#include "../Container/Pair.h"
 #include "../Core/Mutex.h"
 #include "../Graphics/Batch.h"
 #include "../Graphics/Drawable.h"

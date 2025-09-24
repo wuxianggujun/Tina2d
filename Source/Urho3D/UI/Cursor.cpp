@@ -70,12 +70,12 @@ Cursor::Cursor(Context* context) :
 
 Cursor::~Cursor()
 {
-    for (HashMap<String, CursorShapeInfo>::Iterator i = shapeInfos_.Begin(); i != shapeInfos_.End(); ++i)
+    for (auto i = shapeInfos_.begin(); i != shapeInfos_.end(); ++i)
     {
-        if (i->second_.osCursor_)
+        if (i->second.osCursor_)
         {
-            SDL_DestroyCursor(i->second_.osCursor_);
-            i->second_.osCursor_ = nullptr;
+            SDL_DestroyCursor(i->second.osCursor_);
+            i->second.osCursor_ = nullptr;
         }
     }
 }
@@ -97,7 +97,7 @@ void Cursor::GetBatches(Vector<UIBatch>& batches, Vector<float>& vertexData, con
     Vector2 floatOffset(-(float)offset.x_, -(float)offset.y_);
     BorderImage::GetBatches(batches, vertexData, currentScissor);
 
-    for (i32 i = initialSize; i < vertexData.Size(); i += 6)
+    for (u32 i = initialSize; i < (u32)vertexData.Size(); i += 6)
     {
         vertexData[i] += floatOffset.x_;
         vertexData[i + 1] += floatOffset.y_;
@@ -122,7 +122,7 @@ void Cursor::DefineShape(const String& shape, Image* image, const IntRect& image
 
     auto* cache = GetSubsystem<ResourceCache>();
 
-    if (!shapeInfos_.Contains(shape))
+    if (shapeInfos_.find(shape) == shapeInfos_.end())
         shapeInfos_[shape] = CursorShapeInfo();
 
     CursorShapeInfo& info = shapeInfos_[shape];
@@ -158,7 +158,7 @@ void Cursor::DefineShape(const String& shape, Image* image, const IntRect& image
 
 void Cursor::SetShape(const String& shape)
 {
-    if (shape == String::EMPTY || shape.Empty() || shape_ == shape || !shapeInfos_.Contains(shape))
+    if (shape == String::EMPTY || shape.Empty() || shape_ == shape || shapeInfos_.find(shape) == shapeInfos_.end())
         return;
 
     shape_ = shape;
@@ -217,16 +217,16 @@ VariantVector Cursor::GetShapesAttr() const
 {
     VariantVector ret;
 
-    for (HashMap<String, CursorShapeInfo>::ConstIterator i = shapeInfos_.Begin(); i != shapeInfos_.End(); ++i)
+    for (auto i = shapeInfos_.begin(); i != shapeInfos_.end(); ++i)
     {
-        if (i->second_.imageRect_ != IntRect::ZERO)
+        if (i->second.imageRect_ != IntRect::ZERO)
         {
             // Could use a map but this simplifies the UI xml.
             VariantVector shape;
-            shape.Push(i->first_);
-            shape.Push(GetResourceRef(i->second_.texture_, Texture2D::GetTypeStatic()));
-            shape.Push(i->second_.imageRect_);
-            shape.Push(i->second_.hotSpot_);
+            shape.Push(i->first);
+            shape.Push(GetResourceRef(i->second.texture_, Texture2D::GetTypeStatic()));
+            shape.Push(i->second.imageRect_);
+            shape.Push(i->second.hotSpot_);
             ret.Push(shape);
         }
     }

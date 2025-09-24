@@ -7,6 +7,9 @@
 
 #include "../Core/Variant.h"
 
+// 仅前向声明，避免在 JSONValue 定义之前实例化依赖 JSONValue 的 EASTL 容器
+namespace Urho3D { struct JSONObject; }
+
 namespace Urho3D
 {
 
@@ -45,12 +48,7 @@ class JSONValue;
 
 /// JSON array type.
 using JSONArray = Vector<JSONValue>;
-/// JSON object type.
-using JSONObject = HashMap<String, JSONValue>;
-/// JSON object iterator.
-using JSONObjectIterator = JSONObject::Iterator;
-/// Constant JSON object iterator.
-using ConstJSONObjectIterator = JSONObject::ConstIterator;
+/// JSON object 类型由 JSONObject 薄包装提供（见 JSONObject.h）。
 
 /// JSON value class.
 class URHO3D_API JSONValue
@@ -242,14 +240,7 @@ public:
     bool Erase(const String& key);
     /// Return whether contains a pair with key.
     bool Contains(const String& key) const;
-    /// Return iterator to the beginning.
-    JSONObjectIterator Begin();
-    /// Return iterator to the beginning.
-    ConstJSONObjectIterator Begin() const;
-    /// Return iterator to the end.
-    JSONObjectIterator End();
-    /// Return iterator to the beginning.
-    ConstJSONObjectIterator End() const;
+    // 迭代器接口留给 JSONObject 自身提供，避免在此头文件中强制实例化容器模板。
 
     /// Clear array or object.
     void Clear();

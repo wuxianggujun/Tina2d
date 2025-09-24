@@ -160,7 +160,7 @@ void Renderer::SetViewport(i32 index, Viewport* viewport)
 {
     assert(index >= 0);
 
-    if (index >= viewports_.Size())
+    if (index >= (i32)viewports_.Size())
         viewports_.Resize(index + 1);
 
     viewports_[index] = viewport;
@@ -325,10 +325,10 @@ void Renderer::SetMaxShadowMaps(int shadowMaps)
         return;
 
     maxShadowMaps_ = shadowMaps;
-    for (HashMap<int, Vector<SharedPtr<Texture2D>>>::Iterator i = shadowMaps_.Begin(); i != shadowMaps_.End(); ++i)
+    for (auto i = shadowMaps_.begin(); i != shadowMaps_.end(); ++i)
     {
-        if ((int)i->second_.Size() > maxShadowMaps_)
-            i->second_.Resize((unsigned)maxShadowMaps_);
+        if ((int)i->second.Size() > maxShadowMaps_)
+            i->second.Resize((unsigned)maxShadowMaps_);
     }
 }
 
@@ -487,7 +487,7 @@ void Renderer::Update(float timeStep)
     URHO3D_PROFILE(UpdateViews);
 
     views_.Clear();
-    preparedViews_.Clear();
+    preparedViews_.clear();
 
     // If device lost, do not perform update. This is because any dynamic vertex/index buffer updates happen already here,
     // and if the device is lost, the updates queue up, causing memory use to rise constantly
@@ -499,7 +499,7 @@ void Renderer::Update(float timeStep)
     frame_.timeStep_ = timeStep;
     frame_.camera_ = nullptr;
     numShadowCameras_ = 0;
-    updatedOctrees_.Clear();
+    updatedOctrees_.clear();
 
     // Reload shaders now if needed
     if (shadersDirty_)
@@ -619,10 +619,10 @@ void Renderer::DrawDebugGeometry(bool depthTest)
 
         for (Drawable* geometry : geometries)
         {
-            if (!processedGeometries.Contains(geometry))
+            if (processedGeometries.find(geometry) == processedGeometries.end())
             {
                 geometry->DrawDebugGeometry(debug, depthTest);
-                processedGeometries.Insert(geometry);
+                processedGeometries.insert(geometry);
             }
         }
 
@@ -706,8 +706,8 @@ void Renderer::StorePreparedView(View* view, Camera* camera)
 
 View* Renderer::GetPreparedView(Camera* camera)
 {
-    HashMap<Camera*, WeakPtr<View>>::Iterator i = preparedViews_.Find(camera);
-    return i != preparedViews_.End() ? i->second_ : nullptr;
+    auto i = preparedViews_.find(camera);
+    return i != preparedViews_.end() ? i->second : nullptr;
 }
 
 View* Renderer::GetActualView(View* view)
@@ -815,9 +815,9 @@ void Renderer::SetBatchShaders(Batch& batch, Technique* tech, bool allowShadows,
     // Log error if shaders could not be assigned, but only once per technique
     if (!batch.vertexShader_ || !batch.pixelShader_)
     {
-        if (!shaderErrorDisplayed_.Contains(tech))
+        if (shaderErrorDisplayed_.find(tech) == shaderErrorDisplayed_.end())
         {
-            shaderErrorDisplayed_.Insert(tech);
+            shaderErrorDisplayed_.insert(tech);
             URHO3D_LOGERROR("Technique " + tech->GetName() + " has missing shaders");
         }
     }
@@ -889,7 +889,7 @@ void Renderer::OptimizeLightByStencil(Light* light, Camera* camera)
 Viewport* Renderer::GetViewport(i32 index) const
 {
     assert(index >= 0);
-    return index < viewports_.Size() ? viewports_[index] : nullptr;
+    return index < (i32)viewports_.Size() ? viewports_[index] : nullptr;
 }
 
 Viewport* Renderer::GetViewportForScene(Scene* scene, i32 index) const
@@ -942,7 +942,7 @@ Texture* Renderer::GetScreenBuffer(int width, int height, unsigned format, int m
         searchKey += (hash64)persistentKey << 32u;
 
     // If new size or format, initialize the allocation stats
-    if (screenBuffers_.Find(searchKey) == screenBuffers_.End())
+    if (screenBuffers_.find(searchKey) == screenBuffers_.end())
         screenBufferAllocations_[searchKey] = 0;
 
     // Reuse depth-stencil buffers whenever the size matches, instead of allocating new
@@ -1042,14 +1042,14 @@ void Renderer::UpdateQueuedViewport(i32 index)
 
     // Update octree (perform early update for drawables which need that, and reinsert moved drawables).
     // However, if the same scene is viewed from multiple cameras, update the octree only once
-    if (!updatedOctrees_.Contains(octree))
+    if (updatedOctrees_.find(octree) == updatedOctrees_.end())
     {
         frame_.camera_ = viewport->GetCamera();
         frame_.viewSize_ = viewRect.Size();
         if (frame_.viewSize_ == IntVector2::ZERO)
             frame_.viewSize_ = IntVector2(graphics_->GetWidth(), graphics_->GetHeight());
         octree->Update(frame_);
-        updatedOctrees_.Insert(octree);
+        updatedOctrees_.insert(octree);
 
         // Set also the view for the debug renderer already here, so that it can use culling
         /// \todo May result in incorrect debug geometry culling if the same scene is drawn from multiple viewports
@@ -1066,7 +1066,7 @@ void Renderer::UpdateQueuedViewport(i32 index)
 void Renderer::PrepareViewRender()
 {
     ResetScreenBufferAllocations();
-    lightScissorCache_.Clear();
+    lightScissorCache_.clear();
     lightStencilValue_ = 1;
 }
 
@@ -1074,10 +1074,10 @@ void Renderer::RemoveUnusedBuffers()
 {
     // 2D-only：不维护遮挡缓冲
 
-    for (HashMap<hash64, Vector<SharedPtr<Texture>>>::Iterator i = screenBuffers_.Begin(); i != screenBuffers_.End();)
+    for (auto i = screenBuffers_.begin(); i != screenBuffers_.end();)
     {
-        HashMap<hash64, Vector<SharedPtr<Texture>>>::Iterator current = i++;
-        Vector<SharedPtr<Texture>>& buffers = current->second_;
+        auto current = i++;
+        Vector<SharedPtr<Texture>>& buffers = current->second;
         for (i32 j = buffers.Size() - 1; j >= 0; --j)
         {
             Texture* buffer = buffers[j];
@@ -1090,22 +1090,22 @@ void Renderer::RemoveUnusedBuffers()
         }
         if (buffers.Empty())
         {
-            screenBufferAllocations_.Erase(current->first_);
-            screenBuffers_.Erase(current);
+            screenBufferAllocations_.erase(current->first);
+            screenBuffers_.erase(current);
         }
     }
 }
 
 void Renderer::ResetShadowMapAllocations()
 {
-    for (HashMap<int, Vector<Light*>>::Iterator i = shadowMapAllocations_.Begin(); i != shadowMapAllocations_.End(); ++i)
-        i->second_.Clear();
+    for (auto i = shadowMapAllocations_.begin(); i != shadowMapAllocations_.end(); ++i)
+        i->second.Clear();
 }
 
 void Renderer::ResetScreenBufferAllocations()
 {
-    for (HashMap<hash64, i32>::Iterator i = screenBufferAllocations_.Begin(); i != screenBufferAllocations_.End(); ++i)
-        i->second_ = 0;
+    for (auto i = screenBufferAllocations_.begin(); i != screenBufferAllocations_.end(); ++i)
+        i->second = 0;
 }
 
 void Renderer::Initialize()
@@ -1339,15 +1339,15 @@ void Renderer::CreateInstancingBuffer()
 
 void Renderer::ResetShadowMaps()
 {
-    shadowMaps_.Clear();
-    shadowMapAllocations_.Clear();
-    colorShadowMaps_.Clear();
+    shadowMaps_.clear();
+    shadowMapAllocations_.clear();
+    colorShadowMaps_.clear();
 }
 
 void Renderer::ResetBuffers()
 {
-    screenBuffers_.Clear();
-    screenBufferAllocations_.Clear();
+    screenBuffers_.clear();
+    screenBufferAllocations_.clear();
 }
 
 String Renderer::GetShadowVariations() const

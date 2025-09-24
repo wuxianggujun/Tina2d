@@ -144,15 +144,15 @@ public:
     /// Return attribute descriptions for an object type, or null if none defined.
     const Vector<AttributeInfo>* GetAttributes(StringHash type) const
     {
-        HashMap<StringHash, Vector<AttributeInfo>>::ConstIterator i = attributes_.Find(type);
-        return i != attributes_.End() ? &i->second_ : nullptr;
+        auto i = attributes_.find(type);
+        return i != attributes_.end() ? &i->second : nullptr;
     }
 
     /// Return network replication attribute descriptions for an object type, or null if none defined.
     const Vector<AttributeInfo>* GetNetworkAttributes(StringHash type) const
     {
-        HashMap<StringHash, Vector<AttributeInfo>>::ConstIterator i = networkAttributes_.Find(type);
-        return i != networkAttributes_.End() ? &i->second_ : nullptr;
+        auto i = networkAttributes_.find(type);
+        return i != networkAttributes_.end() ? &i->second : nullptr;
     }
 
     /// Return all registered attributes.
@@ -161,11 +161,12 @@ public:
     /// Return event receivers for a sender and event type, or null if they do not exist.
     EventReceiverGroup* GetEventReceivers(Object* sender, StringHash eventType)
     {
-        HashMap<Object*, HashMap<StringHash, SharedPtr<EventReceiverGroup>>>::Iterator i = specificEventReceivers_.Find(sender);
-        if (i != specificEventReceivers_.End())
+        auto i = specificEventReceivers_.find(sender);
+        if (i != specificEventReceivers_.end())
         {
-            HashMap<StringHash, SharedPtr<EventReceiverGroup>>::Iterator j = i->second_.Find(eventType);
-            return j != i->second_.End() ? j->second_ : nullptr;
+            auto& inner = i->second;
+            auto j = inner.find(eventType);
+            return j != inner.end() ? j->second : nullptr;
         }
         else
             return nullptr;
@@ -174,8 +175,8 @@ public:
     /// Return event receivers for an event type, or null if they do not exist.
     EventReceiverGroup* GetEventReceivers(StringHash eventType)
     {
-        HashMap<StringHash, SharedPtr<EventReceiverGroup>>::Iterator i = eventReceivers_.Find(eventType);
-        return i != eventReceivers_.End() ? i->second_ : nullptr;
+        auto i = eventReceivers_.find(eventType);
+        return i != eventReceivers_.end() ? i->second : nullptr;
     }
 
 private:

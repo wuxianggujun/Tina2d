@@ -53,7 +53,7 @@ public:
 
     /// Return number of files.
     /// @property
-    unsigned GetNumFiles() const { return entries_.Size(); }
+    unsigned GetNumFiles() const { return (unsigned)entries_.size(); }
 
     /// Return total size of the package file.
     /// @property
@@ -72,7 +72,14 @@ public:
     bool IsCompressed() const { return compressed_; }
 
     /// Return list of file names in the package.
-    const Vector<String> GetEntryNames() const { return entries_.Keys(); }
+    const Vector<String> GetEntryNames() const 
+    {
+        Vector<String> names;
+        names.Reserve((unsigned)entries_.size());
+        for (auto it = entries_.begin(); it != entries_.end(); ++it)
+            names.Push(it->first);
+        return names;
+    }
 
 private:
     /// File entries.

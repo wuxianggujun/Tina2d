@@ -13,6 +13,8 @@
 #include "../Core/Profiler.h"
 #include "../IO/Log.h"
 
+#include <EASTL/algorithm.h>
+
 #include <SDL3/SDL.h>
 
 #include "../DebugNew.h"
@@ -132,20 +134,20 @@ void Audio::SetMasterGain(const String& type, float gain)
 {
     masterGain_[type] = Clamp(gain, 0.0f, 1.0f);
 
-    for (Vector<SoundSource*>::Iterator i = soundSources_.Begin(); i != soundSources_.End(); ++i)
+    for (auto i = soundSources_.begin(); i != soundSources_.end(); ++i)
         (*i)->UpdateMasterGain();
 }
 
 void Audio::PauseSoundType(const String& type)
 {
     MutexLock lock(audioMutex_);
-    pausedSoundTypes_.Insert(type);
+    pausedSoundTypes_.insert(type);
 }
 
 void Audio::ResumeSoundType(const String& type)
 {
     MutexLock lock(audioMutex_);
-    pausedSoundTypes_.Erase(type);
+    pausedSoundTypes_.erase(type);
     // Update sound sources before resuming playback to make sure 3D positions are up to date
     // Done under mutex to ensure no mixing happens before we are ready
     UpdateInternal(0.0f);
@@ -154,7 +156,7 @@ void Audio::ResumeSoundType(const String& type)
 void Audio::ResumeAll()
 {
     MutexLock lock(audioMutex_);
-    pausedSoundTypes_.Clear();
+    pausedSoundTypes_.clear();
     UpdateInternal(0.0f);
 }
 
@@ -165,7 +167,7 @@ void Audio::SetListener(SoundListener* listener)
 
 void Audio::StopSound(Sound* sound)
 {
-    for (Vector<SoundSource*>::Iterator i = soundSources_.Begin(); i != soundSources_.End(); ++i)
+    for (auto i = soundSources_.begin(); i != soundSources_.end(); ++i)
     {
         if ((*i)->GetSound() == sound)
             (*i)->Stop();
@@ -175,16 +177,16 @@ void Audio::StopSound(Sound* sound)
 float Audio::GetMasterGain(const String& type) const
 {
     // By definition previously unknown types return full volume
-    HashMap<StringHash, Variant>::ConstIterator findIt = masterGain_.Find(type);
-    if (findIt == masterGain_.End())
+    auto findIt = masterGain_.find(type);
+    if (findIt == masterGain_.end())
         return 1.0f;
 
-    return findIt->second_.GetFloat();
+    return findIt->second.GetFloat();
 }
 
 bool Audio::IsSoundTypePaused(const String& type) const
 {
-    return pausedSoundTypes_.Contains(type);
+    return pausedSoundTypes_.contains(type);
 }
 
 SoundListener* Audio::GetListener() const
@@ -195,32 +197,32 @@ SoundListener* Audio::GetListener() const
 void Audio::AddSoundSource(SoundSource* soundSource)
 {
     MutexLock lock(audioMutex_);
-    soundSources_.Push(soundSource);
+    soundSources_.push_back(soundSource);
 }
 
 void Audio::RemoveSoundSource(SoundSource* soundSource)
 {
-    Vector<SoundSource*>::Iterator i = soundSources_.Find(soundSource);
-    if (i != soundSources_.End())
+    auto i = eastl::find(soundSources_.begin(), soundSources_.end(), soundSource);
+    if (i != soundSources_.end())
     {
         MutexLock lock(audioMutex_);
-        soundSources_.Erase(i);
+        soundSources_.erase(i);
     }
 }
 
 float Audio::GetSoundSourceMasterGain(StringHash typeHash) const
 {
-    HashMap<StringHash, Variant>::ConstIterator masterIt = masterGain_.Find(SOUND_MASTER_HASH);
+    auto masterIt = masterGain_.find(SOUND_MASTER_HASH);
 
     if (!typeHash)
-        return masterIt->second_.GetFloat();
+        return masterIt->second.GetFloat();
 
-    HashMap<StringHash, Variant>::ConstIterator typeIt = masterGain_.Find(typeHash);
+    auto typeIt = masterGain_.find(typeHash);
 
-    if (typeIt == masterGain_.End() || typeIt == masterIt)
-        return masterIt->second_.GetFloat();
+    if (typeIt == masterGain_.end() || typeIt == masterIt)
+        return masterIt->second.GetFloat();
 
-    return masterIt->second_.GetFloat() * typeIt->second_.GetFloat();
+    return masterIt->second.GetFloat() * typeIt->second.GetFloat();
 }
 
 void SDLAudioCallback(void* userdata, Uint8* stream, i32 len)
@@ -271,14 +273,14 @@ void Audio::MixOutput(void* dest, u32 samples)
         memset(clipPtr, 0, clipSamples * sizeof(i32));
 
         // Mix samples to clip buffer
-        for (Vector<SoundSource*>::Iterator i = soundSources_.Begin(); i != soundSources_.End(); ++i)
+        for (auto i = soundSources_.begin(); i != soundSources_.end(); ++i)
         {
             SoundSource* source = *i;
 
             // Check for pause if necessary
-            if (!pausedSoundTypes_.Empty())
+            if (!pausedSoundTypes_.empty())
             {
-                if (pausedSoundTypes_.Contains(source->GetSoundType()))
+                if (pausedSoundTypes_.contains(source->GetSoundType()))
                     continue;
             }
 
@@ -322,14 +324,14 @@ void Audio::UpdateInternal(float timeStep)
     URHO3D_PROFILE(UpdateAudio);
 
     // Update in reverse order, because sound sources might remove themselves
-    for (i32 i = soundSources_.Size() - 1; i >= 0; --i)
+    for (i32 i = (i32)soundSources_.size() - 1; i >= 0; --i)
     {
         SoundSource* source = soundSources_[i];
 
         // Check for pause if necessary; do not update paused sound sources
-        if (!pausedSoundTypes_.Empty())
+        if (!pausedSoundTypes_.empty())
         {
-            if (pausedSoundTypes_.Contains(source->GetSoundType()))
+            if (pausedSoundTypes_.contains(source->GetSoundType()))
                 continue;
         }
 

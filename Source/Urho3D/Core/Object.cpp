@@ -9,6 +9,8 @@
 #include "../Core/Profiler.h"
 #include "../IO/Log.h"
 
+#include <EASTL/algorithm.h>
+
 #include "../DebugNew.h"
 
 
@@ -329,7 +331,7 @@ void Object::SendEvent(StringHash eventType, VariantMap& eventData)
                 return;
             }
 
-            processed.Insert(receiver);
+            processed.insert(receiver);
         }
 
         group->EndSendEvent();
@@ -341,7 +343,7 @@ void Object::SendEvent(StringHash eventType, VariantMap& eventData)
     {
         group->BeginSendEvent();
 
-        if (processed.Empty())
+        if (processed.empty())
         {
             const unsigned numReceivers = group->receivers_.Size();
             for (unsigned i = 0; i < numReceivers; ++i)
@@ -367,7 +369,7 @@ void Object::SendEvent(StringHash eventType, VariantMap& eventData)
             for (unsigned i = 0; i < numReceivers; ++i)
             {
                 Object* receiver = group->receivers_[i];
-                if (!receiver || processed.Contains(receiver))
+                if (!receiver || processed.find(receiver) != processed.end())
                     continue;
 
                 receiver->OnEvent(this, eventType, eventData);
@@ -438,10 +440,10 @@ bool Object::HasSubscribedToEvent(Object* sender, StringHash eventType) const
 const String& Object::GetCategory() const
 {
     const HashMap<String, Vector<StringHash>>& objectCategories = context_->GetObjectCategories();
-    for (HashMap<String, Vector<StringHash>>::ConstIterator i = objectCategories.Begin(); i != objectCategories.End(); ++i)
+    for (const auto& kv : objectCategories)
     {
-        if (i->second_.Contains(GetType()))
-            return i->first_;
+        if (eastl::find(kv.second.begin(), kv.second.end(), GetType()) != kv.second.end())
+            return kv.first;
     }
 
     return String::EMPTY;

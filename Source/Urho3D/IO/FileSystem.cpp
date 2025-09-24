@@ -356,7 +356,7 @@ void FileSystem::SetExecuteConsoleCommands(bool enable)
 
 int FileSystem::SystemCommand(const String& commandLine, bool redirectStdOutToLog)
 {
-    if (allowedPaths_.Empty())
+    if (allowedPaths_.empty())
         return DoSystemCommand(commandLine, redirectStdOutToLog, context_);
     else
     {
@@ -367,7 +367,7 @@ int FileSystem::SystemCommand(const String& commandLine, bool redirectStdOutToLo
 
 int FileSystem::SystemRun(const String& fileName, const Vector<String>& arguments)
 {
-    if (allowedPaths_.Empty())
+    if (allowedPaths_.empty())
         return DoSystemRun(fileName, arguments);
     else
     {
@@ -379,7 +379,7 @@ int FileSystem::SystemRun(const String& fileName, const Vector<String>& argument
 unsigned FileSystem::SystemCommandAsync(const String& commandLine)
 {
 #ifdef URHO3D_THREADING
-    if (allowedPaths_.Empty())
+    if (allowedPaths_.empty())
     {
         unsigned requestID = nextAsyncExecID_;
         auto* cmd = new AsyncSystemCommand(nextAsyncExecID_, commandLine);
@@ -400,7 +400,7 @@ unsigned FileSystem::SystemCommandAsync(const String& commandLine)
 unsigned FileSystem::SystemRunAsync(const String& fileName, const Vector<String>& arguments)
 {
 #ifdef URHO3D_THREADING
-    if (allowedPaths_.Empty())
+    if (allowedPaths_.empty())
     {
         unsigned requestID = nextAsyncExecID_;
         auto* cmd = new AsyncSystemRun(nextAsyncExecID_, fileName, arguments);
@@ -420,7 +420,7 @@ unsigned FileSystem::SystemRunAsync(const String& fileName, const Vector<String>
 
 bool FileSystem::SystemOpen(const String& fileName, const String& mode)
 {
-    if (allowedPaths_.Empty())
+    if (allowedPaths_.empty())
     {
         if (!FileExists(fileName) && !DirExists(fileName))
         {
@@ -536,7 +536,7 @@ bool FileSystem::CheckAccess(const String& pathName) const
     String fixedPath = AddTrailingSlash(pathName);
 
     // If no allowed directories defined, succeed always
-    if (allowedPaths_.Empty())
+    if (allowedPaths_.empty())
         return true;
 
     // If there is any attempt to go to a parent directory, disallow
@@ -544,7 +544,7 @@ bool FileSystem::CheckAccess(const String& pathName) const
         return false;
 
     // Check if the path is a partial match of any of the allowed directories
-    for (HashSet<String>::ConstIterator i = allowedPaths_.Begin(); i != allowedPaths_.End(); ++i)
+    for (HashSet<String>::const_iterator i = allowedPaths_.begin(); i != allowedPaths_.end(); ++i)
     {
         if (fixedPath.Find(*i) == 0)
             return true;
@@ -633,7 +633,7 @@ bool FileSystem::DirExists(const String& pathName) const
             parentPath = assetPath.Substring(0, pos);
             assetPath = assetPath.Substring(pos + 1);
         }
-        assetPath.Resize(assetPath.Length() - 1);
+    assetPath.Resize(assetPath.Length() - 1);
 
         bool exist = false;
         int count;
@@ -745,7 +745,7 @@ void FileSystem::RegisterPath(const String& pathName)
     if (pathName.Empty())
         return;
 
-    allowedPaths_.Insert(AddTrailingSlash(pathName));
+    allowedPaths_.insert(AddTrailingSlash(pathName));
 }
 
 bool FileSystem::SetLastModifiedTime(const String& fileName, unsigned newTime)
@@ -984,7 +984,7 @@ String AddTrailingSlash(const String& pathName)
 {
     String ret = pathName.Trimmed();
     ret.Replace('\\', '/');
-    if (!ret.Empty() && ret.Back() != '/')
+    if (!ret.Empty() && ret[ret.Length() - 1] != '/')
         ret += '/';
     return ret;
 }
@@ -993,7 +993,7 @@ String RemoveTrailingSlash(const String& pathName)
 {
     String ret = pathName.Trimmed();
     ret.Replace('\\', '/');
-    if (!ret.Empty() && ret.Back() == '/')
+    if (!ret.Empty() && ret[ret.Length() - 1] == '/')
         ret.Resize(ret.Length() - 1);
     return ret;
 }
@@ -1071,3 +1071,4 @@ String FileSystem::GetTemporaryDir() const
 }
 
 }
+

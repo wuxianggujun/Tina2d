@@ -4,7 +4,9 @@
 #pragma once
 
 #include "../Container/Swap.h"
-#include "../Container/VectorBase.h"
+#include "../Container/Iter.h"
+// EASTL 通用排序（用于适配 EASTL 迭代器）
+#include <EASTL/sort.h>
 
 namespace Urho3D
 {
@@ -120,6 +122,20 @@ template <class T, class U> void Sort(RandomAccessIterator<T> begin, RandomAcces
 {
     InitialQuickSort(begin, end, compare);
     InsertionSort(begin, end, compare);
+}
+
+// 适配通用迭代器（EASTL/STL），直接转调 eastl::sort。
+// 注意：当传入的是 Urho3D 自定义 RandomAccessIterator<T> 时，将优先匹配上面的特化版本。
+template <class It>
+inline void Sort(It begin, It end)
+{
+    eastl::sort(begin, end);
+}
+
+template <class It, class Compare>
+inline void Sort(It begin, It end, Compare comp)
+{
+    eastl::sort(begin, end, comp);
 }
 
 }

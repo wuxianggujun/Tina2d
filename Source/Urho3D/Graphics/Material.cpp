@@ -18,6 +18,7 @@
 #include "../Resource/ResourceCache.h"
 #include "../Resource/XMLFile.h"
 #include "../Resource/JSONFile.h"
+#include "../Resource/JSONObject.h"
 #include "../Scene/Scene.h"
 #include "../Scene/SceneEvents.h"
 #include "../Scene/ValueAnimation.h"
@@ -294,9 +295,9 @@ bool Material::BeginLoadJSON(Deserializer& source)
 
             // 预请求 textures
             JSONObject textureObject = rootVal.Get("textures").GetObject();
-            for (JSONObject::ConstIterator it = textureObject.Begin(); it != textureObject.End(); it++)
+            for (JSONObject::ConstIterator it = textureObject.Begin(); it != textureObject.End(); ++it)
             {
-                String name = it->second_.GetString();
+                String name = it->second.GetString();
                 if (GetExtension(name) == ".xml")
                 {
                     StringHash type = ParseTextureTypeXml(cache, name);
@@ -524,10 +525,10 @@ bool Material::Load(const JSONValue& source)
 
     // Load textures
     JSONObject textureObject = source.Get("textures").GetObject();
-    for (JSONObject::ConstIterator it = textureObject.Begin(); it != textureObject.End(); it++)
+    for (JSONObject::ConstIterator it = textureObject.Begin(); it != textureObject.End(); ++it)
     {
-        String textureUnit = it->first_;
-        String textureName = it->second_.GetString();
+        String textureUnit = it->first;
+        String textureName = it->second.GetString();
 
         TextureUnit unit = TU_DIFFUSE;
         unit = ParseTextureUnitName(textureUnit);
@@ -563,14 +564,14 @@ bool Material::Load(const JSONValue& source)
     batchedParameterUpdate_ = true;
     JSONObject parameterObject = source.Get("shaderParameters").GetObject();
 
-    for (JSONObject::ConstIterator it = parameterObject.Begin(); it != parameterObject.End(); it++)
+    for (JSONObject::ConstIterator it = parameterObject.Begin(); it != parameterObject.End(); ++it)
     {
-        String name = it->first_;
-        if (it->second_.IsString())
-            SetShaderParameter(name, ParseShaderParameterValue(it->second_.GetString()));
-        else if (it->second_.IsObject())
+        String name = it->first;
+        if (it->second.IsString())
+            SetShaderParameter(name, ParseShaderParameterValue(it->second.GetString()));
+        else if (it->second.IsObject())
         {
-            JSONObject valueObj = it->second_.GetObject();
+            JSONObject valueObj = it->second.GetObject();
             SetShaderParameter(name, Variant(valueObj["type"].GetString(), valueObj["value"].GetString()));
         }
     }
@@ -578,10 +579,10 @@ bool Material::Load(const JSONValue& source)
 
     // Load shader parameter animations
     JSONObject paramAnimationsObject = source.Get("shaderParameterAnimations").GetObject();
-    for (JSONObject::ConstIterator it = paramAnimationsObject.Begin(); it != paramAnimationsObject.End(); it++)
+    for (JSONObject::ConstIterator it = paramAnimationsObject.Begin(); it != paramAnimationsObject.End(); ++it)
     {
-        String name = it->first_;
-        JSONValue paramAnimVal = it->second_;
+        String name = it->first;
+        JSONValue paramAnimVal = it->second;
 
         SharedPtr<ValueAnimation> animation(new ValueAnimation(context_));
         if (!animation->LoadJSON(paramAnimVal))
@@ -685,25 +686,25 @@ bool Material::Save(XMLElement& dest) const
     }
 
     // Write shader parameters
-    for (HashMap<StringHash, MaterialShaderParameter>::ConstIterator j = shaderParameters_.Begin();
-         j != shaderParameters_.End(); ++j)
+    for (auto j = shaderParameters_.begin();
+    j != shaderParameters_.end(); ++j)
     {
         XMLElement parameterElem = dest.CreateChild("parameter");
-        parameterElem.SetString("name", j->second_.name_);
-        if (j->second_.value_.GetType() != VAR_BUFFER && j->second_.value_.GetType() != VAR_INT && j->second_.value_.GetType() != VAR_BOOL)
-            parameterElem.SetVectorVariant("value", j->second_.value_);
+        parameterElem.SetString("name", j->second.name_);
+        if (j->second.value_.GetType() != VAR_BUFFER && j->second.value_.GetType() != VAR_INT && j->second.value_.GetType() != VAR_BOOL)
+            parameterElem.SetVectorVariant("value", j->second.value_);
         else
         {
-            parameterElem.SetAttribute("type", j->second_.value_.GetTypeName());
-            parameterElem.SetAttribute("value", j->second_.value_.ToString());
+            parameterElem.SetAttribute("type", j->second.value_.GetTypeName());
+            parameterElem.SetAttribute("value", j->second.value_.ToString());
         }
     }
 
     // Write shader parameter animations
-    for (HashMap<StringHash, SharedPtr<ShaderParameterAnimationInfo>>::ConstIterator j = shaderParameterAnimationInfos_.Begin();
-         j != shaderParameterAnimationInfos_.End(); ++j)
+    for (auto j = shaderParameterAnimationInfos_.begin();
+    j != shaderParameterAnimationInfos_.end(); ++j)
     {
-        ShaderParameterAnimationInfo* info = j->second_;
+        ShaderParameterAnimationInfo* info = j->second;
         XMLElement parameterAnimationElem = dest.CreateChild("parameteranimation");
         parameterAnimationElem.SetString("name", info->GetName());
         if (!info->GetAnimation()->SaveXML(parameterAnimationElem))
@@ -789,27 +790,27 @@ bool Material::Save(JSONValue& dest) const
 
     // Write shader parameters
     JSONValue shaderParamsVal;
-    for (HashMap<StringHash, MaterialShaderParameter>::ConstIterator j = shaderParameters_.Begin();
-         j != shaderParameters_.End(); ++j)
+    for (auto j = shaderParameters_.begin();
+    j != shaderParameters_.end(); ++j)
     {
-        if (j->second_.value_.GetType() != VAR_BUFFER && j->second_.value_.GetType() != VAR_INT && j->second_.value_.GetType() != VAR_BOOL)
-            shaderParamsVal.Set(j->second_.name_, j->second_.value_.ToString());
+        if (j->second.value_.GetType() != VAR_BUFFER && j->second.value_.GetType() != VAR_INT && j->second.value_.GetType() != VAR_BOOL)
+            shaderParamsVal.Set(j->second.name_, j->second.value_.ToString());
         else
         {
-            JSONObject valueObj;
-            valueObj["type"] = j->second_.value_.GetTypeName();
-            valueObj["value"] = j->second_.value_.ToString();
-            shaderParamsVal.Set(j->second_.name_, valueObj);
+            JSONValue valueObj;
+            valueObj.Set("type", j->second.value_.GetTypeName());
+            valueObj.Set("value", j->second.value_.ToString());
+            shaderParamsVal.Set(j->second.name_, valueObj);
         }
     }
     dest.Set("shaderParameters", shaderParamsVal);
 
     // Write shader parameter animations
     JSONValue shaderParamAnimationsVal;
-    for (HashMap<StringHash, SharedPtr<ShaderParameterAnimationInfo>>::ConstIterator j = shaderParameterAnimationInfos_.Begin();
-         j != shaderParameterAnimationInfos_.End(); ++j)
+    for (auto j = shaderParameterAnimationInfos_.begin();
+    j != shaderParameterAnimationInfos_.end(); ++j)
     {
-        ShaderParameterAnimationInfo* info = j->second_;
+        ShaderParameterAnimationInfo* info = j->second;
         JSONValue paramAnimationVal;
         if (!info->GetAnimation()->SaveJSON(paramAnimationVal))
             return false;
@@ -863,7 +864,7 @@ void Material::SetTechnique(i32 index, Technique* tech, MaterialQuality qualityL
 {
     assert(index >= 0);
 
-    if (index >= techniques_.Size())
+    if ((unsigned)index >= techniques_.Size())
         return;
 
     techniques_[index] = TechniqueEntry(tech, qualityLevel, lodDistance);
@@ -932,7 +933,7 @@ void Material::SetShaderParameterAnimation(const String& name, ValueAnimation* a
             return;
         }
 
-        if (shaderParameters_.Find(name) == shaderParameters_.End())
+        if (shaderParameters_.find(name) == shaderParameters_.end())
         {
             URHO3D_LOGERROR(GetName() + " has no shader parameter: " + name);
             return;
@@ -947,7 +948,7 @@ void Material::SetShaderParameterAnimation(const String& name, ValueAnimation* a
         if (info)
         {
             StringHash nameHash(name);
-            shaderParameterAnimationInfos_.Erase(nameHash);
+            shaderParameterAnimationInfos_.erase(nameHash);
             UpdateEventSubscription();
         }
     }
@@ -974,7 +975,7 @@ void Material::SetTexture(TextureUnit unit, Texture* texture)
         if (texture)
             textures_[unit] = texture;
         else
-            textures_.Erase(unit);
+            textures_.erase(unit);
     }
 }
 
@@ -1062,7 +1063,7 @@ void Material::SetScene(Scene* scene)
 void Material::RemoveShaderParameter(const String& name)
 {
     StringHash nameHash(name);
-    shaderParameters_.Erase(nameHash);
+    shaderParameters_.erase(nameHash);
 
     if (nameHash == PSP_MATSPECCOLOR)
         specular_ = false;
@@ -1073,7 +1074,7 @@ void Material::RemoveShaderParameter(const String& name)
 
 void Material::ReleaseShaders()
 {
-    for (i32 i = 0; i < techniques_.Size(); ++i)
+    for (i32 i = 0; (unsigned)i < techniques_.Size(); ++i)
     {
         Technique* tech = techniques_[i].technique_;
         if (tech)
@@ -1120,32 +1121,32 @@ void Material::MarkForAuxView(i32 frameNumber)
 const TechniqueEntry& Material::GetTechniqueEntry(i32 index) const
 {
     assert(index >= 0);
-    return index < techniques_.Size() ? techniques_[index] : noEntry;
+    return (unsigned)index < techniques_.Size() ? techniques_[index] : noEntry;
 }
 
 Technique* Material::GetTechnique(i32 index) const
 {
     assert(index >= 0);
-    return index < techniques_.Size() ? techniques_[index].technique_ : nullptr;
+    return (unsigned)index < techniques_.Size() ? techniques_[index].technique_ : nullptr;
 }
 
 Pass* Material::GetPass(i32 index, const String& passName) const
 {
     assert(index >= 0);
-    Technique* tech = index < techniques_.Size() ? techniques_[index].technique_ : nullptr;
+    Technique* tech = (unsigned)index < techniques_.Size() ? techniques_[index].technique_ : nullptr;
     return tech ? tech->GetPass(passName) : nullptr;
 }
 
 Texture* Material::GetTexture(TextureUnit unit) const
 {
-    HashMap<TextureUnit, SharedPtr<Texture>>::ConstIterator i = textures_.Find(unit);
-    return i != textures_.End() ? i->second_.Get() : nullptr;
+    auto i = textures_.find(unit);
+    return i != textures_.end() ? i->second.Get() : nullptr;
 }
 
 const Variant& Material::GetShaderParameter(const String& name) const
 {
-    HashMap<StringHash, MaterialShaderParameter>::ConstIterator i = shaderParameters_.Find(name);
-    return i != shaderParameters_.End() ? i->second_.value_ : Variant::EMPTY;
+    auto i = shaderParameters_.find(name);
+    return i != shaderParameters_.end() ? i->second.value_ : Variant::EMPTY;
 }
 
 ValueAnimation* Material::GetShaderParameterAnimation(const String& name) const
@@ -1199,11 +1200,11 @@ void Material::ResetToDefaults()
     SetTechnique(0, renderer ? renderer->GetDefaultTechnique() :
         GetSubsystem<ResourceCache>()->GetResource<Technique>("Techniques/NoTextureUnlit.xml"));
 
-    textures_.Clear();
+    textures_.clear();
 
     batchedParameterUpdate_ = true;
-    shaderParameters_.Clear();
-    shaderParameterAnimationInfos_.Clear();
+    shaderParameters_.clear();
+    shaderParameterAnimationInfos_.clear();
     SetShaderParameter("UOffset", Vector4(1.0f, 0.0f, 0.0f, 0.0f));
     SetShaderParameter("VOffset", Vector4(0.0f, 1.0f, 0.0f, 0.0f));
     SetShaderParameter("MatDiffColor", Vector4::ONE);
@@ -1228,16 +1229,16 @@ void Material::ResetToDefaults()
 void Material::RefreshShaderParameterHash()
 {
     VectorBuffer temp;
-    for (HashMap<StringHash, MaterialShaderParameter>::ConstIterator i = shaderParameters_.Begin();
-         i != shaderParameters_.End(); ++i)
+    for (auto i = shaderParameters_.begin();
+    i != shaderParameters_.end(); ++i)
     {
-        temp.WriteStringHash(i->first_);
-        temp.WriteVariant(i->second_.value_);
+        temp.WriteStringHash(i->first);
+        temp.WriteVariant(i->second.value_);
     }
 
     shaderParameterHash_ = 0;
     const byte* data = temp.GetData();
-    unsigned dataSize = temp.GetSize();
+    unsigned dataSize = (unsigned)temp.GetSize();
     for (unsigned i = 0; i < dataSize; ++i)
         shaderParameterHash_ = SDBMHash(shaderParameterHash_, data[i]);
 }
@@ -1248,7 +1249,7 @@ void Material::RefreshMemoryUse()
 
     memoryUse += techniques_.Size() * sizeof(TechniqueEntry);
     memoryUse += MAX_TEXTURE_UNITS * sizeof(SharedPtr<Texture>);
-    memoryUse += shaderParameters_.Size() * sizeof(MaterialShaderParameter);
+    memoryUse += (unsigned)shaderParameters_.size() * sizeof(MaterialShaderParameter);
 
     SetMemoryUse(memoryUse);
 }
@@ -1256,15 +1257,15 @@ void Material::RefreshMemoryUse()
 ShaderParameterAnimationInfo* Material::GetShaderParameterAnimationInfo(const String& name) const
 {
     StringHash nameHash(name);
-    HashMap<StringHash, SharedPtr<ShaderParameterAnimationInfo>>::ConstIterator i = shaderParameterAnimationInfos_.Find(nameHash);
-    if (i == shaderParameterAnimationInfos_.End())
+    auto i = shaderParameterAnimationInfos_.find(nameHash);
+    if (i == shaderParameterAnimationInfos_.end())
         return nullptr;
-    return i->second_;
+    return i->second;
 }
 
 void Material::UpdateEventSubscription()
 {
-    if (shaderParameterAnimationInfos_.Size() && !subscribed_)
+    if (!shaderParameterAnimationInfos_.empty() && !subscribed_)
     {
         if (scene_)
             SubscribeToEvent(scene_, E_ATTRIBUTEANIMATIONUPDATE, URHO3D_HANDLER(Material, HandleAttributeAnimationUpdate));
@@ -1272,7 +1273,7 @@ void Material::UpdateEventSubscription()
             SubscribeToEvent(E_UPDATE, URHO3D_HANDLER(Material, HandleAttributeAnimationUpdate));
         subscribed_ = true;
     }
-    else if (subscribed_ && shaderParameterAnimationInfos_.Empty())
+    else if (subscribed_ && shaderParameterAnimationInfos_.empty())
     {
         UnsubscribeFromEvent(E_UPDATE);
         UnsubscribeFromEvent(E_ATTRIBUTEANIMATIONUPDATE);
@@ -1289,16 +1290,16 @@ void Material::HandleAttributeAnimationUpdate(StringHash eventType, VariantMap& 
     WeakPtr<Object> self(this);
 
     Vector<String> finishedNames;
-    for (HashMap<StringHash, SharedPtr<ShaderParameterAnimationInfo>>::ConstIterator i = shaderParameterAnimationInfos_.Begin();
-         i != shaderParameterAnimationInfos_.End(); ++i)
+    for (auto i = shaderParameterAnimationInfos_.begin();
+    i != shaderParameterAnimationInfos_.end(); ++i)
     {
-        bool finished = i->second_->Update(timeStep);
+        bool finished = i->second->Update(timeStep);
         // If self deleted as a result of an event sent during animation playback, nothing more to do
         if (self.Expired())
             return;
 
         if (finished)
-            finishedNames.Push(i->second_->GetName());
+            finishedNames.Push(i->second->GetName());
     }
 
     // Remove finished animations
@@ -1312,12 +1313,12 @@ void Material::ApplyShaderDefines(i32 index/* = NINDEX*/)
 
     if (index == NINDEX)
     {
-        for (i32 i = 0; i < techniques_.Size(); ++i)
+        for (i32 i = 0; (unsigned)i < techniques_.Size(); ++i)
             ApplyShaderDefines(i);
         return;
     }
 
-    if (index >= techniques_.Size() || !techniques_[index].original_)
+    if ((unsigned)index >= techniques_.Size() || !techniques_[index].original_)
         return;
 
     if (vertexShaderDefines_.Empty() && pixelShaderDefines_.Empty())
@@ -1327,8 +1328,5 @@ void Material::ApplyShaderDefines(i32 index/* = NINDEX*/)
 }
 
 }
-
-
-
 
 

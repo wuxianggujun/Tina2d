@@ -163,14 +163,33 @@ void Text::GetBatches(Vector<UIBatch>& batches, Vector<float>& vertexData, const
     {
         // One batch per texture/page
         UIBatch pageBatch(this, BLEND_ALPHA, currentScissor, textures[n], &vertexData);
-        // SDF 字体：改用自定义材质以触发 BGFX Text_SDF 程序
+        // SDF/MSDF 字体：改用自定义材质以触发 BGFX Text_* 程序
         if (font_ && font_->IsSDFFont())
         {
             if (sdfMaterials_.Size() <= n)
                 sdfMaterials_.Resize(n + 1);
             if (!sdfMaterials_[n])
                 sdfMaterials_[n] = new Material(context_);
-            sdfMaterials_[n]->SetShaderParameter("u_isTextSDF", true);
+            // 通过资源名约定区分 SDF 与 MSDF：文件名包含 "msdf" 则视为 MSDF
+            // 例如：Fonts/BlueHighway_msdf.sdf（图集应为 RGB[A] 存储）
+            bool isMsdf = false;
+            if (font_)
+            {
+                String nameLower = font_->GetName().ToLower();
+                isMsdf = nameLower.Contains("msdf");
+            }
+            if (isMsdf)
+            {
+                sdfMaterials_[n]->SetShaderParameter("u_isTextMSDF", true);
+                // 缺省 MSDF 参数：edge=0.5、softnessScale=1.0，可按需覆盖
+                sdfMaterials_[n]->SetShaderParameter("u_msdfParams", Vector2(0.5f, 1.0f));
+            }
+            else
+            {
+                sdfMaterials_[n]->SetShaderParameter("u_isTextSDF", true);
+                // 缺省 SDF 参数：edge=0.5、softnessScale=1.0，可按需覆盖
+                sdfMaterials_[n]->SetShaderParameter("u_sdfParams", Vector2(0.5f, 1.0f));
+            }
             sdfMaterials_[n]->SetTexture(TU_DIFFUSE, textures[n]);
             pageBatch.customMaterial_ = sdfMaterials_[n];
         }

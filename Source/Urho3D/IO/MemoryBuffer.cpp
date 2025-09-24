@@ -32,14 +32,14 @@ MemoryBuffer::MemoryBuffer(const void* data, i32 size) :
 
 MemoryBuffer::MemoryBuffer(Vector<byte>& data) :
     AbstractFile(data.Size()),
-    buffer_(data.Begin().ptr_),
+    buffer_(data.Buffer()),
     readOnly_(false)
 {
 }
 
 MemoryBuffer::MemoryBuffer(const Vector<byte>& data) :
     AbstractFile(data.Size()),
-    buffer_(const_cast<byte*>(data.Begin().ptr_)),
+    buffer_(const_cast<byte*>(data.Buffer())),
     readOnly_(true)
 {
 }

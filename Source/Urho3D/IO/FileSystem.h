@@ -68,7 +68,7 @@ public:
     bool GetExecuteConsoleCommands() const { return executeConsoleCommands_; }
 
     /// Return whether paths have been registered.
-    bool HasRegisteredPaths() const { return allowedPaths_.Size() > 0; }
+    bool HasRegisteredPaths() const { return allowedPaths_.size() > 0; }
 
     /// Check if a path is allowed to be accessed. If no paths are registered, all are allowed.
     bool CheckAccess(const String& pathName) const;

@@ -66,6 +66,13 @@ inline constexpr float M_DEGTORAD = M_PI / 180.0f;
 inline constexpr float M_DEGTORAD_2 = M_PI / 360.0f;    // M_DEGTORAD / 2.f
 inline constexpr float M_RADTODEG = 1.0f / M_DEGTORAD;
 
+/// 通用“插入到末尾”索引。
+inline constexpr i32 ENDPOS = -1;
+
+/// 通用“无效索引”标记，常用于返回/存储找不到的索引。
+/// 统一为 -1（有符号），与代码中大量的断言与比较约定保持一致。
+inline constexpr i32 NINDEX = -1;
+
 /// Intersection test result.
 enum Intersection
 {

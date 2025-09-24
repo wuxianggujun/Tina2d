@@ -10,6 +10,7 @@
 #include "../IO/Log.h"
 #include "../IO/MemoryBuffer.h"
 #include "../Resource/JSONFile.h"
+#include "../Resource/JSONObject.h"
 #include "../Resource/ResourceCache.h"
 
 #include <rapidjson/document.h>
@@ -160,7 +161,7 @@ static void ToRapidjsonValue(rapidjson::Value& rapidjsonValue, const JSONValue& 
             const JSONArray& jsonArray = jsonValue.GetArray();
 
             rapidjsonValue.SetArray();
-            rapidjsonValue.Reserve(jsonArray.Size(), allocator);
+            rapidjsonValue.Reserve(jsonArray.size(), allocator);
 
             for (const JSONValue& jsonValue : jsonArray)
             {
@@ -176,11 +177,11 @@ static void ToRapidjsonValue(rapidjson::Value& rapidjsonValue, const JSONValue& 
             const JSONObject& jsonObject = jsonValue.GetObject();
 
             rapidjsonValue.SetObject();
-            for (JSONObject::ConstIterator i = jsonObject.Begin(); i != jsonObject.End(); ++i)
+            for (const auto& kv : jsonObject)
             {
-                const char* name = i->first_.CString();
+                const char* name = kv.first.CString();
                 rapidjson::Value value;
-                ToRapidjsonValue(value, i->second_, allocator);
+                ToRapidjsonValue(value, kv.second, allocator);
                 rapidjsonValue.AddMember(StringRef(name), value, allocator);
             }
         }
