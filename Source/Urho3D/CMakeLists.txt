@@ -199,6 +199,33 @@ list (APPEND EXCLUDE_PATTERNS ${EXCLUDE_3D_PATTERNS})
 
 # 已删除 3D 类与脚本系统
 
+# RmlUI 模块集成
+if (TINA2D_USE_RMLUI AND RMLUI_FOUND)
+    # 添加 RmlUI 源文件
+    set (RMLUI_SOURCES
+        RmlUI/RmlUISystem.cpp
+        RmlUI/RmlUISystem.h
+        RmlUI/RmlUIRenderer.cpp
+        RmlUI/RmlUIRenderer.h
+        RmlUI/RmlUIFile.cpp
+        RmlUI/RmlUIFile.h
+        RmlUI/RmlUISystemInterface.cpp
+        RmlUI/RmlUISystemInterface.h
+        RmlUI/RmlUIInput.cpp
+        RmlUI/RmlUIInput.h
+    )
+    
+    # 排除原生 UI 系统文件（如果启用 RmlUI）
+    list (APPEND EXCLUDE_PATTERNS "UI/.*\\.[^;]+")
+    
+    # 将 RmlUI 源文件加入编译
+    list (APPEND SOURCE_FILES ${RMLUI_SOURCES})
+    source_group ("Source Files\\RmlUI" FILES ${RMLUI_SOURCES})
+    
+    # 添加 RmlUI 编译定义
+    add_definitions (-DTINA2D_USE_RMLUI=1)
+endif ()
+
 define_source_files (EXCLUDE_PATTERNS ${EXCLUDE_PATTERNS} GLOB_CPP_PATTERNS *.cpp ${GLOB_OBJC_PATTERN} RECURSE GROUP)
 
 if (URHO3D_GENERATEBINDINGS)
@@ -415,7 +442,7 @@ if (IOS OR TVOS)
 endif ()
 setup_library (${URHO3D_LIB_TYPE} ${EXCLUDE_FROM_ALL})
 
-# 让 Urho3D 公有地依赖 EASTL，使所有示例与下游应用“整库链接”EASTL
+# 让 Urho3D 公有地依赖 EASTL，使所有示例与下游应用"整库链接"EASTL
 if (TARGET EASTL)
     # 与 UrhoCommon.cmake 的 plain 签名保持一致，避免关键字/非关键字混用
     target_link_libraries(${TARGET_NAME} EASTL)
@@ -426,6 +453,12 @@ if (NOT DEFINED MIMALLOC_TARGET)
     message(FATAL_ERROR "MIMALLOC_TARGET 未定义。请确保 ThirdParty/mimalloc 被正确引入并构建")
 endif ()
 target_link_libraries(${TARGET_NAME} ${MIMALLOC_TARGET})
+
+# 链接 RmlUI（如果启用）
+if (TINA2D_USE_RMLUI AND RMLUI_FOUND)
+    target_link_libraries(${TARGET_NAME} rmlui_core)
+    target_include_directories(${TARGET_NAME} PUBLIC ${RMLUI_INCLUDE_DIR})
+endif ()
 
 # 告知代码层：启用 mimalloc 作为全局分配器，避免与 MSVC CRT DebugNew 冲突
 target_compile_definitions(${TARGET_NAME} PUBLIC URHO3D_USE_MIMALLOC=1)

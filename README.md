@@ -8,42 +8,42 @@ English | [中文](README_zh.md)
 
 TINA2D is a specialized fork of Urho3D focused exclusively on 2D and 2.5D game development. The engine features **BGFX-only** rendering, **EASTL container integration**, and a **built-in visual editor** for streamlined game development workflow.
 
-## Key Features ✅
+## Key Features
 
-### **Integrated Visual Editor** 🎨
+### **Integrated Visual Editor**
 - **Multi-Panel Layout**: Hierarchy, Inspector, Resource Browser, and Log panels
 - **Scene Management**: Visual scene editing with node manipulation
 - **Resource Management**: Built-in asset browser and management
 - **Selection Service**: Advanced object selection and inspection system
 - **Live Updates**: Real-time scene and UI updates
 
-### **Modern Architecture** ⚡
+### **Modern Architecture**
 - **EASTL Integration**: High-performance EA Standard Template Library containers
 - **Memory Management**: Custom allocators with mimalloc optimization
 - **STL Adapter Layer**: Seamless fallback to standard containers when needed
 - **Modern C++17**: Advanced language features and optimizations
 
 ### **Rendering System**
-- **🎯 BGFX-only Backend**: Pure BGFX rendering, OpenGL/D3D paths completely removed
-- **🔄 Cross-platform**: Supports DX10/DX11/OpenGL/OpenGL ES/Vulkan through BGFX
-- **📦 Complete Shader Pipeline**: 12 optimized shader groups for 2D/2.5D rendering
-- **🎨 High-quality Text**: SDF and MSDF text rendering with anti-aliasing
+- **BGFX-only Backend**: Pure BGFX rendering, OpenGL/D3D paths completely removed
+- **Cross-platform**: Supports DX10/DX11/OpenGL/OpenGL ES/Vulkan through BGFX
+- **Complete Shader Pipeline**: 12 optimized shader groups for 2D/2.5D rendering
+- **High-quality Text**: SDF and MSDF text rendering with anti-aliasing
 
 ### **2D/2.5D Capabilities**
-- **🌟 2D Core**: Full Urho2D, Physics2D, UI system support  
-- **💡 2D Lighting**: Enhanced Light2D system with point/directional lights
-- **📏 Depth System**: Y→Z mapping for 2.5D depth sorting and occlusion
-- **🎭 Advanced Effects**: Post-processing pipeline with framebuffer operations
-- **🎮 Rich Samples**: 12+ comprehensive 2D game examples
+- **2D Core**: Full Urho2D, Physics2D, UI system support  
+- **2D Lighting**: Enhanced Light2D system with point/directional lights
+- **Depth System**: Y→Z mapping for 2.5D depth sorting and occlusion
+- **Advanced Effects**: Post-processing pipeline with framebuffer operations
+- **Rich Samples**: 12+ comprehensive 2D game examples
 
 ### **Development Experience**
-- **⚡ Streamlined**: Removed 60+ 3D classes and dependencies
-- **🛠️ Built-in Tools**: Integrated visual editor for rapid development
-- **📚 Complete Examples**: From basic sprites to complex platformers
-- **🏗️ Modern Build**: CMake-based build with automated shader compilation
-- **📖 Comprehensive Docs**: Technical documentation and guides
+- **Streamlined**: Removed 60+ 3D classes and dependencies
+- **Built-in Tools**: Integrated visual editor for rapid development
+- **Complete Examples**: From basic sprites to complex platformers
+- **Modern Build**: CMake-based build with automated shader compilation
+- **Comprehensive Docs**: Technical documentation and guides
 
-## Shader System 🎨
+## Shader System
 
 TINA2D includes a complete BGFX shader pipeline with cross-platform support:
 
@@ -86,16 +86,16 @@ bin/CoreData/Shaders/BGFX/
 └── spirv/*.bin            # Vulkan compiled
 ```
 
-## Integrated Visual Editor 🛠️
+## Integrated Visual Editor
 
 TINA2D includes a built-in visual editor for streamlined game development:
 
 ### **Editor Features**
-- **📁 Hierarchy Panel**: Visual scene graph with drag-drop node management
-- **🔍 Inspector Panel**: Component properties editing and configuration
-- **📂 Resource Panel**: Asset browser with file management capabilities  
-- **📝 Log Panel**: Real-time logging and debugging information
-- **🎨 Multi-Panel Layout**: Customizable workspace with dockable panels
+- **Hierarchy Panel**: Visual scene graph with drag-drop node management
+- **Inspector Panel**: Component properties editing and configuration
+- **Resource Panel**: Asset browser with file management capabilities  
+- **Log Panel**: Real-time logging and debugging information
+- **Multi-Panel Layout**: Customizable workspace with dockable panels
 
 ### **Development Workflow**
 ```
@@ -104,7 +104,7 @@ TINA2D includes a built-in visual editor for streamlined game development:
 
 The editor is implemented with native UI components and provides a professional game development environment similar to Unity or Godot editors.
 
-## Sample Applications 🎮
+## Sample Applications
 
 TINA2D includes comprehensive 2D game examples:
 
@@ -179,12 +179,12 @@ make -j$(nproc)
 ```
 
 ### **Development Features**
-- **🎨 Visual Editor**: Launch `Tina2D_Editor` for visual development
-- **📦 Shader Compilation**: Automatically handled by CMake build system  
-- **🔧 Hot Reload**: Editor supports live asset and scene updates
-- **📊 Performance**: Built-in Tracy profiler integration
-- **🐛 Debugging**: Comprehensive logging and debug visualization
-## Technical Architecture 🏗️
+- **Visual Editor**: Launch `Tina2D_Editor` for visual development
+- **Shader Compilation**: Automatically handled by CMake build system  
+- **Hot Reload**: Editor supports live asset and scene updates
+- **Performance**: Built-in Tracy profiler integration
+- **Debugging**: Comprehensive logging and debug visualization
+## Technical Architecture
 
 ### **Memory Management**
 - **EASTL Integration**: High-performance EA containers with custom allocators
@@ -204,7 +204,7 @@ make -j$(nproc)
 - **Resource System**: Efficient caching and loading of game assets
 - **Input Handling**: Unified input system for keyboard, mouse, and touch
 
-## Documentation 📚
+## Documentation
 
 ### **Development Guides**
 - **[2.5D Design Guide](Docs/2_5D_Design.md)** - 2.5D rendering and lighting system
@@ -218,7 +218,7 @@ make -j$(nproc)
 - **2D Systems** - Sprite, physics, animation, and UI systems
 - **Asset Pipeline** - Resource management and loading
 
-## Getting Started 🚀
+## Getting Started
 
 ### **1. Build the Engine**
 ```bash
@@ -244,13 +244,13 @@ mkdir build && cd build && cmake .. && cmake --build . --config Release
 - Configure lighting and effects  
 - Build and deploy your game
 
-## Community & Support 💬
+## Community & Support
 
 ### **Project Status**
-- **🎯 Production Ready** - Stable for 2D/2.5D game development
-- **🔄 Active Development** - Regular updates and improvements  
-- **📖 Well Documented** - Comprehensive guides and examples
-- **🎮 Battle Tested** - Multiple sample games and use cases
+- **Production Ready** - Stable for 2D/2.5D game development
+- **Active Development** - Regular updates and improvements  
+- **Well Documented** - Comprehensive guides and examples
+- **Battle Tested** - Multiple sample games and use cases
 
 ### **Getting Help**
 - **Documentation** - Start with the comprehensive docs above
@@ -266,10 +266,10 @@ See [LICENSE](licenses/urho3d/LICENSE) for more details.
 
 ---
 
-**⭐ TINA2D** - Professional 2D/2.5D Game Engine with Visual Editor  
-**🎮 Version**: BGFX-only v2.0 with Integrated Editor  
-**📅 Last Updated**: 2025-01-25  
-**🔧 Status**: Production Ready - Build Amazing 2D Games Today!
+**TINA2D** - Professional 2D/2.5D Game Engine with Visual Editor  
+**Version**: BGFX-only v2.0 with Integrated Editor  
+**Last Updated**: 2025-09-25  
+**Status**: Production Ready - Build Amazing 2D Games Today!
 
 
 

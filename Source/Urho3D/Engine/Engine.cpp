@@ -33,7 +33,11 @@
 #include "../Resource/Localization.h"
 #include "../Scene/Scene.h"
 #include "../Scene/SceneEvents.h"
+#ifdef TINA2D_USE_RMLUI
+#include "../RmlUI/RmlUISystem.h"
+#else
 #include "../UI/UI.h"
+#endif
 #ifdef URHO3D_URHO2D
 #include "../Urho2D/Urho2D.h"
 #endif
@@ -113,7 +117,11 @@ Engine::Engine(Context* context) :
 #endif
     context_->RegisterSubsystem(new Input(context_));
     context_->RegisterSubsystem(new Audio(context_));
+#ifdef TINA2D_USE_RMLUI
+    context_->RegisterSubsystem(new RmlUISystem(context_));
+#else
     context_->RegisterSubsystem(new UI(context_));
+#endif
 
     // Register object factories for libraries which are not automatically registered along with subsystem creation
     RegisterSceneLibrary(context_);
@@ -719,7 +727,13 @@ void Engine::Render()
         return;
 
     GetSubsystem<Renderer>()->Render();
+#ifdef TINA2D_USE_RMLUI
+    auto* rmlUI = GetSubsystem<RmlUISystem>();
+    if (rmlUI)
+        rmlUI->Render();
+#else
     GetSubsystem<UI>()->Render();
+#endif
     graphics->EndFrame();
 }
 

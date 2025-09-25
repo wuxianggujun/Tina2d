@@ -56,6 +56,9 @@ set (URHO3D_PHYSICS          OFF CACHE BOOL "Disable 3D Physics in 2D-only build
 set (URHO3D_OPENGL           OFF CACHE BOOL "Disable OpenGL backend for 2D-only build" FORCE)
 set (URHO3D_D3D11            OFF CACHE BOOL "Disable Direct3D11 backend for 2D-only build" FORCE)
 
+# RmlUI 集成选项 - 使用 RmlUI 替换原生 UI 系统
+option(TINA2D_USE_RMLUI "Enable RmlUI and disable legacy UI" ON)
+
 # 已全面集成 bgfx 渲染后端，不再通过开关变量控制。
 
 # Setup SDK install destinations
