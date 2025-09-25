@@ -749,7 +749,8 @@ unsigned short GraphicsBgfx::GetOrCreateTexture(Texture2D* tex, ResourceCache* c
 {
     if (!tex)
     {
-        URHO3D_LOGDEBUG("GetOrCreateTexture: tex is null, returning white texture");
+        // Untextured draw call：使用纯白纹理作为占位（预期行为）
+        URHO3D_LOGTRACE("GetOrCreateTexture: texture is null, using white fallback");
         return ui_.whiteTex;
     }
     auto it = textureCache_.find(tex);

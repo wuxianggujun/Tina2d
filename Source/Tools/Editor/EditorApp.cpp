@@ -12,12 +12,14 @@
 #include <Urho3D/Graphics/Octree.h>
 #include <Urho3D/IO/Log.h>
 #include <Urho3D/Resource/ResourceCache.h>
+#include <Urho3D/Input/Input.h>
 #include <Urho3D/UI/UI.h>
 #include <Urho3D/UI/UIElement.h>
 #include <Urho3D/UI/Window.h>
 #include <Urho3D/UI/Text.h>
 #include <Urho3D/UI/Menu.h>
 #include <Urho3D/UI/BorderImage.h>
+#include <Urho3D/UI/Cursor.h>
 
 #include "EditorApp.h"
 
@@ -32,6 +34,7 @@ EditorApp::EditorApp(Context* context)
     engineParameters_[EP_HEADLESS] = false;
     engineParameters_[EP_RESOURCE_PATHS] = String("Data;CoreData");
     engineParameters_[EP_WINDOW_TITLE] = String("Tina2D Editor");
+    engineParameters_[EP_WINDOW_RESIZABLE] = true;
 }
 
 void EditorApp::Setup()
@@ -40,6 +43,10 @@ void EditorApp::Setup()
 
 void EditorApp::Start()
 {
+    // 设置鼠标模式为绝对坐标，允许鼠标移出窗口
+    GetSubsystem<Input>()->SetMouseMode(MM_ABSOLUTE);
+    GetSubsystem<Input>()->SetMouseVisible(true);
+    
     CreateUI();
 }
 
@@ -58,8 +65,12 @@ void EditorApp::CreateUI()
 
     // 顶部菜单条占位
     SharedPtr<UIElement> menubar(new UIElement(context_));
-    menubar->SetMinSize(IntVector2(0, 28));
     menubar->SetLayout(LM_HORIZONTAL);
+    menubar->SetEnableAnchor(true);
+    menubar->SetMinAnchor(0.0f, 0.0f);
+    menubar->SetMaxAnchor(1.0f, 0.0f);
+    menubar->SetMinOffset(IntVector2(0, 0));
+    menubar->SetMaxOffset(IntVector2(0, 28));
     ui->GetRoot()->AddChild(menubar);
 
     // 简单标题
@@ -72,17 +83,25 @@ void EditorApp::CreateUI()
     // 中央工作区占位
     SharedPtr<BorderImage> workspace(new BorderImage(context_));
     workspace->SetName("Workspace");
-    workspace->SetStyleAuto();
-    workspace->SetColor(Color(0.10f, 0.10f, 0.12f));
-    workspace->SetPosition(0, 28);
-    workspace->SetSize(GetSubsystem<Graphics>()->GetWidth(), GetSubsystem<Graphics>()->GetHeight() - 28);
+    // 不使用自动样式，避免应用UI纹理
+    workspace->SetColor(Color(0.10f, 0.10f, 0.12f, 1.0f));
+    workspace->SetEnableAnchor(true);
+    workspace->SetMinAnchor(0.0f, 0.0f);
+    workspace->SetMaxAnchor(1.0f, 1.0f);
+    workspace->SetMinOffset(IntVector2(0, 28));
+    workspace->SetMaxOffset(IntVector2(0, 0));
     ui->GetRoot()->AddChild(workspace);
 
+    // 在UI元素创建完成后设置光标
+    auto* cursor = ui->GetRoot()->CreateChild<Cursor>();
+    cursor->SetStyleAuto();
+    ui->SetCursor(cursor);
+
     // 自适应窗口变化
-    SubscribeToEvent(E_SCREENMODE, [this, workspace](StringHash, VariantMap&){
-        auto* gfx = GetSubsystem<Graphics>();
-        workspace->SetSize(gfx->GetWidth(), gfx->GetHeight() - 28);
-    });
+    // SubscribeToEvent(E_SCREENMODE, [this, workspace](StringHash, VariantMap&){
+        // auto* gfx = GetSubsystem<Graphics>();
+        // workspace->SetSize(gfx->GetWidth(), gfx->GetHeight() - 28);
+    // });
 }
 
 } // namespace Urho3D
