@@ -198,47 +198,44 @@ else ()
     message (FATAL_ERROR "未找到本地 ThirdParty/bgfx.cmake。请先将 bgfx.cmake 克隆到 Source/ThirdParty/bgfx.cmake 再配置构建。")
 endif ()
 
-# RmlUI 集成（仅在 TINA2D_USE_RMLUI 开启时编译）
+# RmlUI 集成（始终启用）
 # 注意：必须在 FreeType 之后处理 RmlUI
-if (TINA2D_USE_RMLUI)
-    if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/RmlUi/CMakeLists.txt)
-        message (STATUS "Integrating RmlUI for modern UI system")
-        
-        # 确保 FreeType 已经被添加
-        if (NOT TARGET FreeType)
-            message(FATAL_ERROR "FreeType is required for RmlUI but was not found")
-        endif()
-        
-        # 设置 Freetype 路径，让 RmlUI 能找到它
-        set(FREETYPE_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/FreeType/include")
-        set(FREETYPE_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/FreeType/include")
-        set(FREETYPE_LIBRARY FreeType)
-        set(FREETYPE_LIBRARIES FreeType)
-        set(FREETYPE_FOUND TRUE)
-        
-        # 创建一个别名目标供 RmlUI 使用
-        if (NOT TARGET Freetype::Freetype)
-            add_library(Freetype::Freetype ALIAS FreeType)
-        endif()
-        
-        # 配置 RmlUI 选项
-        set (RMLUI_NO_FONT_INTERFACE_DEFAULT OFF CACHE BOOL "Use RmlUI default font interface" FORCE)
-        set (RMLUI_NO_THIRDPARTY_CONTAINERS OFF CACHE BOOL "Use RmlUI containers" FORCE)
-        set (BUILD_SAMPLES OFF CACHE BOOL "Disable RmlUI samples" FORCE)
-        set (BUILD_TESTING OFF CACHE BOOL "Disable RmlUI tests" FORCE)
-        set (BUILD_LUA_BINDINGS OFF CACHE BOOL "Disable RmlUI Lua bindings" FORCE)
-        
-        # 添加 RmlUI 子目录
-        add_subdirectory (RmlUi)
-        
-        # 确保 RmlUI 能找到 FreeType 头文件
-        if (TARGET rmlui_core)
-            target_include_directories(rmlui_core PRIVATE ${FREETYPE_INCLUDE_DIRS})
-            set (RMLUI_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/RmlUi/Include PARENT_SCOPE)
-            set (RMLUI_FOUND TRUE PARENT_SCOPE)
-        endif ()
-    else ()
-        message (WARNING "RmlUI enabled but not found in ThirdParty/RmlUi. Please clone RmlUI to continue.")
-        set (TINA2D_USE_RMLUI OFF CACHE BOOL "Disable RmlUI as it was not found" FORCE)
+if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/RmlUi/CMakeLists.txt)
+    message (STATUS "Integrating RmlUI for modern UI system")
+    
+    # 确保 FreeType 已经被添加
+    if (NOT TARGET FreeType)
+        message(FATAL_ERROR "FreeType is required for RmlUI but was not found")
+    endif()
+    
+    # 设置 Freetype 路径，让 RmlUI 能找到它
+    set(FREETYPE_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/FreeType/include")
+    set(FREETYPE_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/FreeType/include")
+    set(FREETYPE_LIBRARY FreeType)
+    set(FREETYPE_LIBRARIES FreeType)
+    set(FREETYPE_FOUND TRUE)
+    
+    # 创建一个别名目标供 RmlUI 使用
+    if (NOT TARGET Freetype::Freetype)
+        add_library(Freetype::Freetype ALIAS FreeType)
+    endif()
+    
+    # 配置 RmlUI 选项
+    set (RMLUI_NO_FONT_INTERFACE_DEFAULT OFF CACHE BOOL "Use RmlUI default font interface" FORCE)
+    set (RMLUI_NO_THIRDPARTY_CONTAINERS OFF CACHE BOOL "Use RmlUI containers" FORCE)
+    set (BUILD_SAMPLES OFF CACHE BOOL "Disable RmlUI samples" FORCE)
+    set (BUILD_TESTING OFF CACHE BOOL "Disable RmlUI tests" FORCE)
+    set (BUILD_LUA_BINDINGS OFF CACHE BOOL "Disable RmlUI Lua bindings" FORCE)
+    
+    # 添加 RmlUI 子目录
+    add_subdirectory (RmlUi)
+    
+    # 确保 RmlUI 能找到 FreeType 头文件
+    if (TARGET rmlui_core)
+        target_include_directories(rmlui_core PRIVATE ${FREETYPE_INCLUDE_DIRS})
+        set (RMLUI_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/RmlUi/Include PARENT_SCOPE)
+        set (RMLUI_FOUND TRUE PARENT_SCOPE)
     endif ()
+else ()
+    message (FATAL_ERROR "RmlUI not found in ThirdParty/RmlUi. Please clone RmlUI to continue.")
 endif ()
