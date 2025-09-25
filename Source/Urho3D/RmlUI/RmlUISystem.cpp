@@ -7,6 +7,7 @@
 #include "RmlUIFile.h"
 #include "RmlUISystemInterface.h"
 #include "RmlUIInput.h"
+#include "../Core/Context.h"
 #include "../Core/CoreEvents.h"
 #include "../Graphics/Graphics.h"
 #include "../Graphics/GraphicsEvents.h"
@@ -22,21 +23,6 @@ RmlUISystem::RmlUISystem(Context* context)
     , defaultContext_(nullptr)
     , initialized_(false)
 {
-    graphics_ = GetSubsystem<Graphics>();
-    cache_ = GetSubsystem<ResourceCache>();
-    
-    // 初始化 RmlUI
-    if (!Initialize())
-    {
-        URHO3D_LOGERROR("Failed to initialize RmlUI system");
-        return;
-    }
-    
-    // 订阅事件
-    SubscribeToEvent(E_UPDATE, URHO3D_HANDLER(RmlUISystem, Update));
-    SubscribeToEvent(E_RENDERUPDATE, URHO3D_HANDLER(RmlUISystem, HandleRenderUpdate));
-    SubscribeToEvent(E_POSTRENDERUPDATE, URHO3D_HANDLER(RmlUISystem, HandlePostRenderUpdate));
-    SubscribeToEvent(E_SCREENMODE, URHO3D_HANDLER(RmlUISystem, HandleScreenModeChanged));
 }
 
 RmlUISystem::~RmlUISystem()
@@ -49,37 +35,43 @@ bool RmlUISystem::Initialize()
     if (initialized_)
         return true;
     
-    // 创建渲染接口
-    renderInterface_ = new RmlUIRenderer(context_);
-    if (!renderInterface_->Initialize())
+    // Subscribe to update events  
+    SubscribeToEvent(E_UPDATE, URHO3D_HANDLER(RmlUISystem, HandleUpdate));
+    SubscribeToEvent(E_POSTRENDERUPDATE, URHO3D_HANDLER(RmlUISystem, HandlePostRenderUpdate));
+    SubscribeToEvent(E_SCREENMODE, URHO3D_HANDLER(RmlUISystem, HandleScreenModeChanged));
+    
+    // 设置渲染接口
+    renderer_ = new RmlUIRenderer(context_);
+    if (!renderer_->Initialize())
     {
         URHO3D_LOGERROR("Failed to initialize RmlUI renderer");
         return false;
     }
-    Rml::SetRenderInterface(renderInterface_);
+    Rml::SetRenderInterface(renderer_);
     
-    // 创建文件接口
+    // 设置文件接口
     fileInterface_ = new RmlUIFile(context_);
     Rml::SetFileInterface(fileInterface_);
     
-    // 创建系统接口
+    // 设置系统接口
     systemInterface_ = new RmlUISystemInterface(context_);
     Rml::SetSystemInterface(systemInterface_);
     
-    // 初始化 RmlUI 核心
+    // 设置输入处理
+    input_ = new RmlUIInput(context_);
+    
+    // 初始化RmlUI
     if (!Rml::Initialise())
     {
-        URHO3D_LOGERROR("Failed to initialize RmlUI core");
+        URHO3D_LOGERROR("Failed to initialise RmlUI");
         return false;
     }
     
-    // 创建输入处理器
-    input_ = new RmlUIInput(context_);
-    
     // 创建默认上下文
-    if (graphics_)
+    Graphics* graphics = GetSubsystem<Graphics>();
+    if (graphics)
     {
-        Vector2 dimensions((float)graphics_->GetWidth(), (float)graphics_->GetHeight());
+        Vector2 dimensions(graphics->GetWidth(), graphics->GetHeight());
         defaultContext_ = CreateContext("default", dimensions);
         if (defaultContext_)
         {
@@ -88,14 +80,9 @@ bool RmlUISystem::Initialize()
         }
     }
     
-    // 加载默认字体
-    if (!Rml::LoadFontFace("Data/Fonts/NotoSans-Regular.ttf"))
-    {
-        URHO3D_LOGWARNING("Failed to load default font");
-    }
-    
     initialized_ = true;
-    URHO3D_LOGINFO("RmlUI system initialized successfully");
+    URHO3D_LOGINFO("RmlUI initialized successfully");
+    
     return true;
 }
 
@@ -104,145 +91,115 @@ void RmlUISystem::Shutdown()
     if (!initialized_)
         return;
     
-    // 取消订阅输入事件
-    if (input_)
-        input_->UnsubscribeFromEvents();
-    
-    // 关闭所有文档
+    // 清理所有上下文
     for (auto& pair : contexts_)
     {
         if (pair.second)
         {
-            pair.second->RemoveReference();
+            // 正确的释放方式是直接删除
+            delete pair.second;
         }
     }
     contexts_.Clear();
     defaultContext_ = nullptr;
     
-    // 关闭 RmlUI
+    // 关闭RmlUI
     Rml::Shutdown();
     
     // 清理接口
-    renderInterface_.Reset();
+    renderer_.Reset();
     fileInterface_.Reset();
     systemInterface_.Reset();
     input_.Reset();
     
+    UnsubscribeFromAllEvents();
+    
     initialized_ = false;
-    URHO3D_LOGINFO("RmlUI system shut down");
+    URHO3D_LOGINFO("RmlUI shut down");
 }
 
 Rml::Context* RmlUISystem::CreateContext(const String& name, const Vector2& dimensions)
 {
-    if (!initialized_)
-    {
-        URHO3D_LOGERROR("RmlUI not initialized");
-        return nullptr;
-    }
-    
     // 检查是否已存在
     auto it = contexts_.Find(name);
     if (it != contexts_.End())
     {
-        URHO3D_LOGWARNINGF("Context '%s' already exists", name.CString());
+        URHO3D_LOGWARNING("RmlUI context '" + name + "' already exists");
         return it->second;
     }
     
     // 创建新上下文
-    Rml::Context* context = Rml::CreateContext(
-        name.CString(),
-        Rml::Vector2i((int)dimensions.x_, (int)dimensions.y_)
-    );
+    Rml::Context* context = Rml::CreateContext(name.CString(), 
+        Rml::Vector2i((int)dimensions.x_, (int)dimensions.y_));
     
     if (!context)
     {
-        URHO3D_LOGERRORF("Failed to create RmlUI context '%s'", name.CString());
+        URHO3D_LOGERROR("Failed to create RmlUI context: " + name);
         return nullptr;
     }
     
     contexts_[name] = context;
     
-    // 如果是第一个上下文，设为默认
+    // 如果没有默认上下文，设置为默认
     if (!defaultContext_)
     {
         defaultContext_ = context;
         if (input_)
         {
             input_->SetContext(defaultContext_);
+            input_->SubscribeToEvents();
         }
     }
     
-    URHO3D_LOGINFOF("Created RmlUI context '%s' (%dx%d)", 
-                    name.CString(), (int)dimensions.x_, (int)dimensions.y_);
+    URHO3D_LOGINFO("Created RmlUI context: " + name);
     return context;
 }
 
 Rml::Context* RmlUISystem::GetContext(const String& name) const
 {
     auto it = contexts_.Find(name);
-    return it != contexts_.End() ? it->second : nullptr;
+    if (it != contexts_.End())
+        return it->second;
+    return nullptr;
 }
 
 Rml::ElementDocument* RmlUISystem::LoadDocument(const String& path, Rml::Context* context)
 {
-    if (!initialized_)
-    {
-        URHO3D_LOGERROR("RmlUI not initialized");
-        return nullptr;
-    }
-    
     if (!context)
         context = defaultContext_;
     
     if (!context)
     {
-        URHO3D_LOGERROR("No context available for loading document");
+        URHO3D_LOGERROR("No RmlUI context available to load document");
         return nullptr;
     }
     
     Rml::ElementDocument* document = context->LoadDocument(path.CString());
     if (!document)
     {
-        URHO3D_LOGERRORF("Failed to load document: %s", path.CString());
+        URHO3D_LOGERROR("Failed to load RmlUI document: " + path);
         return nullptr;
     }
     
-    URHO3D_LOGINFOF("Loaded RmlUI document: %s", path.CString());
     return document;
 }
 
 void RmlUISystem::ReloadStyleSheets()
 {
-    if (!initialized_)
-        return;
-    
+    // Reload style sheets for all contexts
     for (auto& pair : contexts_)
     {
         if (pair.second)
         {
-            // 重新加载所有文档的样式表
-            int numDocuments = pair.second->GetNumDocuments();
-            for (int i = 0; i < numDocuments; ++i)
-            {
-                Rml::ElementDocument* doc = pair.second->GetDocument(i);
-                if (doc)
-                {
-                    // TODO: 实现样式表重载
-                    // doc->ReloadStyleSheet();
-                }
-            }
+            // RmlUI doesn't have a direct reload method
+            // You'd need to reload documents to refresh styles
         }
     }
-    
-    URHO3D_LOGINFO("Reloaded RmlUI style sheets");
 }
 
 void RmlUISystem::Update(float timeStep)
 {
-    if (!initialized_)
-        return;
-    
-    // 更新所有上下文
+    // Update all contexts
     for (auto& pair : contexts_)
     {
         if (pair.second)
@@ -254,10 +211,7 @@ void RmlUISystem::Update(float timeStep)
 
 void RmlUISystem::Render()
 {
-    if (!initialized_)
-        return;
-    
-    // 渲染所有上下文
+    // Render all contexts
     for (auto& pair : contexts_)
     {
         if (pair.second)
@@ -269,13 +223,19 @@ void RmlUISystem::Render()
 
 void RmlUISystem::HandleScreenModeChanged(StringHash eventType, VariantMap& eventData)
 {
-    if (!initialized_ || !graphics_)
+    // 获取新的屏幕尺寸
+    Graphics* graphics = GetSubsystem<Graphics>();
+    if (!graphics)
         return;
     
-    // 更新所有上下文的尺寸
-    int width = graphics_->GetWidth();
-    int height = graphics_->GetHeight();
+    int width = graphics->GetWidth();
+    int height = graphics->GetHeight();
     
+    // 更新渲染器投影矩阵
+    if (renderer_)
+        renderer_->UpdateProjection(width, height);
+    
+    // 更新所有上下文的尺寸
     for (auto& pair : contexts_)
     {
         if (pair.second)
@@ -283,32 +243,23 @@ void RmlUISystem::HandleScreenModeChanged(StringHash eventType, VariantMap& even
             pair.second->SetDimensions(Rml::Vector2i(width, height));
         }
     }
-    
-    // 更新渲染器投影矩阵
-    if (renderInterface_)
-    {
-        renderInterface_->UpdateProjection();
-    }
-    
-    URHO3D_LOGINFOF("Updated RmlUI contexts for new screen size: %dx%d", width, height);
 }
 
-void RmlUISystem::HandleRenderUpdate(StringHash eventType, VariantMap& eventData)
-{
-    // 可以在这里处理渲染前的更新
-}
-
-void RmlUISystem::HandlePostRenderUpdate(StringHash eventType, VariantMap& eventData)
-{
-    // 在所有 3D 渲染完成后渲染 UI
-    Render();
-}
-
-void RmlUISystem::Update(StringHash eventType, VariantMap& eventData)
+void RmlUISystem::HandleUpdate(StringHash eventType, VariantMap& eventData)
 {
     using namespace Update;
     float timeStep = eventData[P_TIMESTEP].GetFloat();
     Update(timeStep);
+}
+
+void RmlUISystem::HandleRenderUpdate(StringHash eventType, VariantMap& eventData)
+{
+    // 可以在这里处理渲染前的准备工作
+}
+
+void RmlUISystem::HandlePostRenderUpdate(StringHash eventType, VariantMap& eventData)
+{
+    Render();
 }
 
 } // namespace Urho3D

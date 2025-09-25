@@ -31,37 +31,38 @@ public:
     /// Shutdown the renderer.
     void Shutdown();
 
-    // Rml::RenderInterface implementation
-    /// Called by RmlUi when it wants to render geometry that it does not wish to optimise.
-    void RenderGeometry(Rml::Vertex* vertices, int num_vertices, int* indices, int num_indices,
-                       Rml::TextureHandle texture, const Rml::Vector2f& translation) override;
-
-    /// Called by RmlUi when it wants to compile geometry it believes will be static for the forseeable future.
-    Rml::CompiledGeometryHandle CompileGeometry(Rml::Vertex* vertices, int num_vertices, int* indices, int num_indices, Rml::TextureHandle texture) override;
-    /// Called by RmlUi when it wants to render compiled geometry.
-    void RenderCompiledGeometry(Rml::CompiledGeometryHandle geometry, const Rml::Vector2f& translation) override;
-    /// Called by RmlUi when it wants to release compiled geometry.
-    void ReleaseCompiledGeometry(Rml::CompiledGeometryHandle geometry) override;
-
-    /// Called by RmlUi when it wants to enable or disable scissoring to clip content.
-    void EnableScissorRegion(bool enable) override;
-    /// Called by RmlUi when it wants to change the scissor region.
-    void SetScissorRegion(int x, int y, int width, int height) override;
-
-    /// Called by RmlUi when a texture is required by the library.
-    bool LoadTexture(Rml::TextureHandle& texture_handle, Rml::Vector2i& texture_dimensions, const Rml::String& source) override;
-    /// Called by RmlUi when a texture is required to be built from an internally-generated sequence of pixels.
-    bool GenerateTexture(Rml::TextureHandle& texture_handle, const Rml::byte* source, const Rml::Vector2i& source_dimensions) override;
-    /// Called by RmlUi when a loaded texture is no longer required.
+    // RenderInterface implementation - Required functions
+    Rml::CompiledGeometryHandle CompileGeometry(Rml::Span<const Rml::Vertex> vertices,
+                                                Rml::Span<const int> indices) override;
+    void RenderGeometry(Rml::CompiledGeometryHandle geometry,
+                       Rml::Vector2f translation,
+                       Rml::TextureHandle texture) override;
+    void ReleaseGeometry(Rml::CompiledGeometryHandle geometry) override;
+    
+    // Texture handling
+    Rml::TextureHandle LoadTexture(Rml::Vector2i& texture_dimensions,
+                                   const Rml::String& source) override;
+    Rml::TextureHandle GenerateTexture(Rml::Span<const Rml::byte> source,
+                                       Rml::Vector2i source_dimensions) override;
     void ReleaseTexture(Rml::TextureHandle texture) override;
-
-    /// Called by RmlUi when it wants to set the current transform matrix to a new matrix.
+    
+    // Scissoring
+    void EnableScissorRegion(bool enable) override;
+    void SetScissorRegion(Rml::Rectanglei region) override;
+    
+    // Transform handling
     void SetTransform(const Rml::Matrix4f* transform) override;
 
     /// Set UI view ID for bgfx (default: 200).
     void SetViewId(bgfx::ViewId id) { viewId_ = id; }
     /// Get UI view ID.
     bgfx::ViewId GetViewId() const { return viewId_; }
+    
+    /// Get the context for rendering
+    Context* GetContext() const { return context_; }
+    
+    /// Update projection matrix
+    void UpdateProjection(int width, int height);
 
 private:
     /// Compiled geometry structure.
@@ -73,8 +74,6 @@ private:
         int numIndices;
     };
 
-    /// Update projection matrix.
-    void UpdateProjection();
     /// Get or create shader program for UI rendering.
     bgfx::ProgramHandle GetShaderProgram();
 

@@ -46,7 +46,12 @@ add_custom_target(tina2d_bgfx_shaders)
 
 # 2D-only 构建：开启 Tools 以构建编辑器等工具（可用 -DURHO3D_TOOLS=ON/OFF 覆盖）
 set (URHO3D_TOOLS            ON  CACHE BOOL "Build Urho3D tools (Editor, Tina2D_Editor)" )
-set (URHO3D_SAMPLES          ON  CACHE BOOL "Enable samples for 2D-only build" FORCE)
+# 暂时禁用示例，因为它们依赖旧的 UI 系统
+if (TINA2D_USE_RMLUI)
+    set (URHO3D_SAMPLES      OFF CACHE BOOL "Disable samples when using RmlUI" FORCE)
+else()
+    set (URHO3D_SAMPLES      ON  CACHE BOOL "Enable samples for 2D-only build" FORCE)
+endif()
 set (URHO3D_ANGELSCRIPT      OFF CACHE BOOL "Disable AngelScript for 2D-only" FORCE)
 set (URHO3D_GENERATEBINDINGS OFF CACHE BOOL "Disable binding generation for 2D-only" FORCE)
 set (URHO3D_NAVIGATION       OFF CACHE BOOL "Disable Navigation in 2D-only build" FORCE)
@@ -57,7 +62,7 @@ set (URHO3D_OPENGL           OFF CACHE BOOL "Disable OpenGL backend for 2D-only 
 set (URHO3D_D3D11            OFF CACHE BOOL "Disable Direct3D11 backend for 2D-only build" FORCE)
 
 # RmlUI 集成选项 - 使用 RmlUI 替换原生 UI 系统
-option(TINA2D_USE_RMLUI "Enable RmlUI and disable legacy UI" ON)
+option(TINA2D_USE_RMLUI "Use RmlUI instead of legacy UI system (legacy UI will be removed)" ON)
 
 # 已全面集成 bgfx 渲染后端，不再通过开关变量控制。
 

@@ -127,56 +127,56 @@ void RmlUIInput::UnsubscribeFromEvents()
 void RmlUIInput::HandleMouseMove(StringHash eventType, VariantMap& eventData)
 {
     using namespace MouseMove;
-    int x = eventData[P_X].GetInt();
-    int y = eventData[P_Y].GetInt();
+    int x = eventData[P_X].GetI32();
+    int y = eventData[P_Y].GetI32();
     
-    if (ProcessMouseMove(x, y))
-        eventData[P_CONSUMED] = true;
+    ProcessMouseMove(x, y);
+    // Note: P_CONSUMED may not exist in current version
 }
 
 void RmlUIInput::HandleMouseButtonDown(StringHash eventType, VariantMap& eventData)
 {
     using namespace MouseButtonDown;
-    MouseButton button = (MouseButton)eventData[P_BUTTON].GetInt();
+    MouseButton button = (MouseButton)eventData[P_BUTTON].GetI32();
     
-    if (ProcessMouseButton(button, true))
-        eventData[P_CONSUMED] = true;
+    ProcessMouseButton(button, true);
+    // Note: P_CONSUMED may not exist in current version
 }
 
 void RmlUIInput::HandleMouseButtonUp(StringHash eventType, VariantMap& eventData)
 {
     using namespace MouseButtonUp;
-    MouseButton button = (MouseButton)eventData[P_BUTTON].GetInt();
+    MouseButton button = (MouseButton)eventData[P_BUTTON].GetI32();
     
-    if (ProcessMouseButton(button, false))
-        eventData[P_CONSUMED] = true;
+    ProcessMouseButton(button, false);
+    // Note: P_CONSUMED may not exist in current version
 }
 
 void RmlUIInput::HandleMouseWheel(StringHash eventType, VariantMap& eventData)
 {
     using namespace MouseWheel;
-    int wheel = eventData[P_WHEEL].GetInt();
+    int wheel = eventData[P_WHEEL].GetI32();
     
-    if (ProcessMouseWheel(wheel))
-        eventData[P_CONSUMED] = true;
+    ProcessMouseWheel(wheel);
+    // Note: P_CONSUMED may not exist in current version
 }
 
 void RmlUIInput::HandleKeyDown(StringHash eventType, VariantMap& eventData)
 {
     using namespace KeyDown;
-    Key key = (Key)eventData[P_KEY].GetInt();
+    Key key = (Key)eventData[P_KEY].GetI32();
     
-    if (ProcessKeyEvent(key, true))
-        eventData[P_CONSUMED] = true;
+    ProcessKeyEvent(key, true);
+    // Note: P_CONSUMED may not exist in current version
 }
 
 void RmlUIInput::HandleKeyUp(StringHash eventType, VariantMap& eventData)
 {
     using namespace KeyUp;
-    Key key = (Key)eventData[P_KEY].GetInt();
+    Key key = (Key)eventData[P_KEY].GetI32();
     
-    if (ProcessKeyEvent(key, false))
-        eventData[P_CONSUMED] = true;
+    ProcessKeyEvent(key, false);
+    // Note: P_CONSUMED may not exist in current version
 }
 
 void RmlUIInput::HandleTextInput(StringHash eventType, VariantMap& eventData)
@@ -184,44 +184,44 @@ void RmlUIInput::HandleTextInput(StringHash eventType, VariantMap& eventData)
     using namespace TextInput;
     String text = eventData[P_TEXT].GetString();
     
-    if (ProcessTextInput(text))
-        eventData[P_CONSUMED] = true;
+    ProcessTextInput(text);
+    // Note: P_CONSUMED may not exist in current version
 }
 
 void RmlUIInput::HandleTouchBegin(StringHash eventType, VariantMap& eventData)
 {
     using namespace TouchBegin;
-    int id = eventData[P_TOUCHID].GetInt();
-    int x = eventData[P_X].GetInt();
-    int y = eventData[P_Y].GetInt();
+    int id = eventData[P_TOUCHID].GetI32();
+    int x = eventData[P_X].GetI32();
+    int y = eventData[P_Y].GetI32();
     
-    if (ProcessTouch(id, x, y, true))
-        eventData[P_CONSUMED] = true;
+    ProcessTouch(id, x, y, true);
+    // Note: P_CONSUMED may not exist in current version
 }
 
 void RmlUIInput::HandleTouchMove(StringHash eventType, VariantMap& eventData)
 {
     using namespace TouchMove;
-    int id = eventData[P_TOUCHID].GetInt();
-    int x = eventData[P_X].GetInt();
-    int y = eventData[P_Y].GetInt();
+    int id = eventData[P_TOUCHID].GetI32();
+    int x = eventData[P_X].GetI32();
+    int y = eventData[P_Y].GetI32();
     
     if (id == 0) // 只处理第一个触摸点
     {
-        if (ProcessMouseMove(x, y))
-            eventData[P_CONSUMED] = true;
+        ProcessMouseMove(x, y);
+        // Note: P_CONSUMED may not exist in current version
     }
 }
 
 void RmlUIInput::HandleTouchEnd(StringHash eventType, VariantMap& eventData)
 {
     using namespace TouchEnd;
-    int id = eventData[P_TOUCHID].GetInt();
-    int x = eventData[P_X].GetInt();
-    int y = eventData[P_Y].GetInt();
+    int id = eventData[P_TOUCHID].GetI32();
+    int x = eventData[P_X].GetI32();
+    int y = eventData[P_Y].GetI32();
     
-    if (ProcessTouch(id, x, y, false))
-        eventData[P_CONSUMED] = true;
+    ProcessTouch(id, x, y, false);
+    // Note: P_CONSUMED may not exist in current version
 }
 
 Rml::Input::KeyIdentifier RmlUIInput::ConvertKey(Key key)

@@ -6,7 +6,7 @@
 #include "../Core/Timer.h"
 #include "../IO/Log.h"
 #include "../Input/Input.h"
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
 namespace Urho3D
 {

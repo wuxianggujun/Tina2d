@@ -49,6 +49,8 @@ public:
     
     /// Handle screen mode change.
     void HandleScreenModeChanged(StringHash eventType, VariantMap& eventData);
+    /// Handle update.
+    void HandleUpdate(StringHash eventType, VariantMap& eventData);
     /// Handle render update.
     void HandleRenderUpdate(StringHash eventType, VariantMap& eventData);
     /// Handle post render update.
@@ -60,8 +62,8 @@ private:
     /// Shutdown RmlUI.
     void Shutdown();
     
-    /// RmlUI render interface.
-    SharedPtr<RmlUIRenderer> renderInterface_;
+    /// RmlUI renderer interface.
+    SharedPtr<RmlUIRenderer> renderer_;
     /// RmlUI file interface.
     SharedPtr<RmlUIFile> fileInterface_;
     /// RmlUI system interface.
