@@ -17,6 +17,12 @@ ResourcePanel::ResourcePanel(Context* context, UIElement* parent)
 {
     list_ = parent->CreateChild<ListView>("ResourceList");
     list_->SetStyleAuto();
+    // 填充父容器
+    list_->SetEnableAnchor(true);
+    list_->SetMinAnchor(0.0f, 0.0f);
+    list_->SetMaxAnchor(1.0f, 1.0f);
+    list_->SetMinOffset(IntVector2(0, 0));
+    list_->SetMaxOffset(IntVector2(0, 0));
     const char* cats[] = {"Textures/", "UI/", "Fonts/", "Techniques/", "Materials/"};
     for (auto* c : cats)
     {
@@ -28,4 +34,3 @@ ResourcePanel::ResourcePanel(Context* context, UIElement* parent)
 }
 
 } // namespace Urho3D
-

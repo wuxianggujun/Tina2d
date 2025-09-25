@@ -13,6 +13,7 @@ class EditorApp final : public Application
     URHO3D_OBJECT(EditorApp, Application);
 public:
     explicit EditorApp(Context* context);
+    ~EditorApp() override;
 
     void Setup() override;
     void Start() override;
@@ -20,7 +21,14 @@ public:
 
 private:
     void CreateUI();
+    void CreateScene();
+
+private:
+    SharedPtr<class Scene> scene_;
+    SharedPtr<class HierarchyPanel> hierarchyPanel_;
+    SharedPtr<class InspectorPanel> inspectorPanel_;
+    SharedPtr<class ResourcePanel> resourcePanel_;
+    SharedPtr<class LogPanel> logPanel_;
 };
 
 } // namespace Urho3D
-

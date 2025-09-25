@@ -26,6 +26,12 @@ HierarchyPanel::HierarchyPanel(Context* context, UIElement* parent, Scene* scene
 
     list_ = parent->CreateChild<ListView>("HierarchyList");
     list_->SetStyleAuto();
+    // 让列表填充父容器大小
+    list_->SetEnableAnchor(true);
+    list_->SetMinAnchor(0.0f, 0.0f);
+    list_->SetMaxAnchor(1.0f, 1.0f);
+    list_->SetMinOffset(IntVector2(0, 0));
+    list_->SetMaxOffset(IntVector2(0, 0));
     list_->SetHierarchyMode(true);
     list_->SetSelectOnClickEnd(true);
     SubscribeToEvent(list_, E_ITEMCLICKED, URHO3D_HANDLER(HierarchyPanel, HandleItemClick));
@@ -40,6 +46,7 @@ void HierarchyPanel::Rebuild()
         return;
     // 根节点显示
     auto* rootItem = new UIElement(context_);
+    rootItem->SetMinHeight(20);
     auto* t = rootItem->CreateChild<Text>();
     t->SetStyleAuto();
     t->SetText("Scene");
@@ -53,6 +60,7 @@ void HierarchyPanel::Rebuild()
 void HierarchyPanel::AddNodeItem(Node* node, UIElement* parentItem)
 {
     auto* item = new UIElement(context_);
+    item->SetMinHeight(20);
     auto* t = item->CreateChild<Text>();
     t->SetStyleAuto();
     t->SetText(node->GetName().Empty() ? String("Node ") + String(node->GetID()) : node->GetName());

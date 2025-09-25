@@ -20,6 +20,12 @@ LogPanel::LogPanel(Context* context, UIElement* parent)
 {
     list_ = parent->CreateChild<ListView>("LogList");
     list_->SetStyleAuto();
+    // 填充父容器
+    list_->SetEnableAnchor(true);
+    list_->SetMinAnchor(0.0f, 0.0f);
+    list_->SetMaxAnchor(1.0f, 1.0f);
+    list_->SetMinOffset(IntVector2(0, 0));
+    list_->SetMaxOffset(IntVector2(0, 0));
     list_->SetSelectOnClickEnd(true);
 
     SubscribeToEvent(E_LOGMESSAGE, URHO3D_HANDLER(LogPanel, HandleLogMessage));
