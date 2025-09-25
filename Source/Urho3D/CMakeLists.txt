@@ -200,48 +200,24 @@ list (APPEND EXCLUDE_PATTERNS ${EXCLUDE_3D_PATTERNS})
 # 已删除 3D 类与脚本系统
 
 # RmlUI 模块集成
-if (TINA2D_USE_RMLUI AND RMLUI_FOUND)
-    # 添加 RmlUI 源文件
-    set (RMLUI_SOURCES
-        RmlUI/RmlUISystem.cpp
-        RmlUI/RmlUISystem.h
-        RmlUI/RmlUIRenderer.cpp
-        RmlUI/RmlUIRenderer.h
-        RmlUI/RmlUIFile.cpp
-        RmlUI/RmlUIFile.h
-        RmlUI/RmlUISystemInterface.cpp
-        RmlUI/RmlUISystemInterface.h
-        RmlUI/RmlUIInput.cpp
-        RmlUI/RmlUIInput.h
-    )
-    
-    # 添加UI存根文件
-    set (UI_STUB_SOURCES
-        UI/UIStub.cpp
-        Engine/ConsoleStub.cpp
-        Engine/DebugHudStub.cpp
-        Urho2D/Urho2DStub.cpp
-    )
-    
-    # 排除原生 UI 系统文件（如果启用 RmlUI）
-    list (APPEND EXCLUDE_PATTERNS "UI/.*\\.[^;]+")
-    
-    # 排除Urho2D（依赖旧UI系统）
-    list (APPEND EXCLUDE_PATTERNS "Urho2D/.*\\.[^;]+")
-    
-    # 排除原始的Console和DebugHud实现
-    list (APPEND EXCLUDE_PATTERNS "Engine/Console\\.cpp")
-    list (APPEND EXCLUDE_PATTERNS "Engine/DebugHud\\.cpp")
-    
-    # 将 RmlUI 源文件加入编译
-    list (APPEND SOURCE_FILES ${RMLUI_SOURCES})
-    list (APPEND SOURCE_FILES ${UI_STUB_SOURCES})
-    source_group ("Source Files\\RmlUI" FILES ${RMLUI_SOURCES})
-    source_group ("Source Files\\UI Stubs" FILES ${UI_STUB_SOURCES})
-    
-    # 添加 RmlUI 编译定义
-    add_definitions (-DTINA2D_USE_RMLUI=1)
-endif ()
+# RmlUI Integration (always enabled)
+# 添加 RmlUI 源文件
+set (RMLUI_SOURCES
+    RmlUI/RmlUISystem.cpp
+    RmlUI/RmlUISystem.h
+    RmlUI/RmlUIRenderer.cpp
+    RmlUI/RmlUIRenderer.h
+    RmlUI/RmlUIFile.cpp
+    RmlUI/RmlUIFile.h
+    RmlUI/RmlUISystemInterface.cpp
+    RmlUI/RmlUISystemInterface.h
+    RmlUI/RmlUIInput.cpp
+    RmlUI/RmlUIInput.h
+)
+
+# 将 RmlUI 源文件加入编译
+list (APPEND SOURCE_FILES ${RMLUI_SOURCES})
+source_group ("Source Files\\RmlUI" FILES ${RMLUI_SOURCES})
 
 define_source_files (EXCLUDE_PATTERNS ${EXCLUDE_PATTERNS} GLOB_CPP_PATTERNS *.cpp ${GLOB_OBJC_PATTERN} RECURSE GROUP)
 
@@ -471,8 +447,8 @@ if (NOT DEFINED MIMALLOC_TARGET)
 endif ()
 target_link_libraries(${TARGET_NAME} ${MIMALLOC_TARGET})
 
-# 链接 RmlUI（如果启用）
-if (TINA2D_USE_RMLUI AND RMLUI_FOUND)
+# 链接 RmlUI (always enabled)
+if (RMLUI_FOUND)
     target_link_libraries(${TARGET_NAME} rmlui_core)
     target_include_directories(${TARGET_NAME} PUBLIC ${RMLUI_INCLUDE_DIR})
 endif ()

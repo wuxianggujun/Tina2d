@@ -37,6 +37,9 @@ public:
     /// Reload all style sheets.
     void ReloadStyleSheets();
     
+    /// Initialize RmlUI interfaces.
+    bool Initialize();
+    
     /// Update UI logic.
     void Update(float timeStep);
     /// Render UI.
@@ -57,8 +60,6 @@ public:
     void HandlePostRenderUpdate(StringHash eventType, VariantMap& eventData);
     
 private:
-    /// Initialize RmlUI interfaces.
-    bool Initialize();
     /// Shutdown RmlUI.
     void Shutdown();
     
