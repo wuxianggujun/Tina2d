@@ -44,8 +44,8 @@ include (UrhoCommon)
 # 稍后在真正创建完 shaders 目标后再把依赖关系补上。
 add_custom_target(tina2d_bgfx_shaders)
 
-# 2D-only 构建：在加入 Source 子目录前，统一关闭 3D/脚本系统以避免引用 3D 头和符号
-set (URHO3D_TOOLS            OFF CACHE BOOL "Disable tools for 2D-only build" FORCE)
+# 2D-only 构建：开启 Tools 以构建编辑器等工具（可用 -DURHO3D_TOOLS=ON/OFF 覆盖）
+set (URHO3D_TOOLS            ON  CACHE BOOL "Build Urho3D tools (Editor, Tina2D_Editor)" )
 set (URHO3D_SAMPLES          ON  CACHE BOOL "Enable samples for 2D-only build" FORCE)
 set (URHO3D_ANGELSCRIPT      OFF CACHE BOOL "Disable AngelScript for 2D-only" FORCE)
 set (URHO3D_GENERATEBINDINGS OFF CACHE BOOL "Disable binding generation for 2D-only" FORCE)

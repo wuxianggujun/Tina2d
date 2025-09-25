@@ -6,7 +6,10 @@
 #include <Urho3D/Core/CoreEvents.h>
 #include <Urho3D/Engine/Engine.h>
 #include <Urho3D/Engine/Application.h>
+#include <Urho3D/Engine/EngineDefs.h>
 #include <Urho3D/Graphics/Graphics.h>
+#include <Urho3D/Graphics/GraphicsEvents.h>
+#include <Urho3D/Graphics/Octree.h>
 #include <Urho3D/IO/Log.h>
 #include <Urho3D/Resource/ResourceCache.h>
 #include <Urho3D/UI/UI.h>
@@ -82,7 +85,8 @@ void EditorApp::CreateUI()
     });
 }
 
-URHO3D_DEFINE_APPLICATION_MAIN(EditorApp)
-
 } // namespace Urho3D
+
+// 将入口宏放在全局命名空间，确保在 Win32 子系统下导出全局 WinMain 符号
+URHO3D_DEFINE_APPLICATION_MAIN(Urho3D::EditorApp)
 
