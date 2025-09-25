@@ -215,12 +215,29 @@ if (TINA2D_USE_RMLUI AND RMLUI_FOUND)
         RmlUI/RmlUIInput.h
     )
     
+    # 添加UI存根文件
+    set (UI_STUB_SOURCES
+        UI/UIStub.cpp
+        Engine/ConsoleStub.cpp
+        Engine/DebugHudStub.cpp
+        Urho2D/Urho2DStub.cpp
+    )
+    
     # 排除原生 UI 系统文件（如果启用 RmlUI）
     list (APPEND EXCLUDE_PATTERNS "UI/.*\\.[^;]+")
     
+    # 排除Urho2D（依赖旧UI系统）
+    list (APPEND EXCLUDE_PATTERNS "Urho2D/.*\\.[^;]+")
+    
+    # 排除原始的Console和DebugHud实现
+    list (APPEND EXCLUDE_PATTERNS "Engine/Console\\.cpp")
+    list (APPEND EXCLUDE_PATTERNS "Engine/DebugHud\\.cpp")
+    
     # 将 RmlUI 源文件加入编译
     list (APPEND SOURCE_FILES ${RMLUI_SOURCES})
+    list (APPEND SOURCE_FILES ${UI_STUB_SOURCES})
     source_group ("Source Files\\RmlUI" FILES ${RMLUI_SOURCES})
+    source_group ("Source Files\\UI Stubs" FILES ${UI_STUB_SOURCES})
     
     # 添加 RmlUI 编译定义
     add_definitions (-DTINA2D_USE_RMLUI=1)
